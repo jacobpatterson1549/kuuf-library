@@ -1,0 +1,9 @@
+# Ignore everything
+*
+
+# Necessary files
+!internal
+!*.go
+!Makefile
+!go.mod
+!go.sum

@@ -1,0 +1,14 @@
+:root {
+    --c1: black;
+    --c2: snow;
+}
+
+body {
+    background-color: var(--c2);
+    color: var(--c1);
+}
+
+table, th, td {
+    border-width: 1px;
+    border-style: solid;
+}

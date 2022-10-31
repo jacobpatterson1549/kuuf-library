@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+	<meta name="Description" content="Jacob Patterson">
+	<title>{{.Name}}</title>
+	<link rel="shortcut icon" href="data:image/x-icon;base64," type="image/x-icon"><!-- TODO: create favicon -->
+    <style>
+{{template "index.css" .}}
+	</style>
+</head>
+
+<body>
+
+{{- if eq .Name "list"}}
+{{template "list.html" .Data}}
+{{- else if eq .Name "book"}}
+{{template "book.html" .Data}}
+{{- else if eq .Name "admin"}}
+{{template "admin.html" .Data}}
+{{- end}}
+
+</body>
+
+</html>
