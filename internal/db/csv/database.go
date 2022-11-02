@@ -79,7 +79,7 @@ func (db Database) notAllowed() error {
 }
 
 func bookFromRecord(r []string) (*book.Book, error) {
-	// id,title,author,description,subject,dewey_decimal_classification,pages,publisher,publish_date,added_date,ean_isbn13,upc_isbn10,image_base64
+	// id,title,author,description,subject,dewey-dec-class,pages,publisher,publish-date,added-date,ean-isbn13,upc-isbn10,image-base64
 	if n := len(r); n != 13 {
 		return nil, fmt.Errorf("expected 13 rows, got %v", n)
 	}
@@ -93,13 +93,13 @@ func bookFromRecord(r []string) (*book.Book, error) {
 		{&b.Author, "author"},
 		{&b.Description, "description"},
 		{&b.Subject, "subject"},
-		{&b.DeweyDecimalClassification, "dewey-decimal-classification"},
+		{&b.DeweyDecClass, "dewey-dec-class"},
 		{&b.Pages, "pages"},
 		{&b.Publisher, "publisher"},
 		{&b.PublishDate, "publish-date"},
 		{&b.AddedDate, "added-date"},
-		{&b.EAN_ISBN13, "ean-isbn13"},
-		{&b.UPC_ISBN10, "upc-isbn10"},
+		{&b.EAN_ISBN13, "ean-isbn-13"},
+		{&b.UPC_ISBN10, "upc-isbn-10"},
 		{&b.ImageBase64, "image-base64"},
 	}
 	for i, f := range fields {
@@ -132,7 +132,8 @@ func parseFormValue(p interface{}, key string, i int, r []string) error {
 		*ptr = i
 	case *time.Time:
 		var t time.Time
-		t, err = time.Parse("01/02/2006", v) // mm/dd/yyyy
+		const DateLayout = "01/02/2006"
+		t, err = time.Parse(DateLayout, v)
 		if err != nil {
 			break
 		}

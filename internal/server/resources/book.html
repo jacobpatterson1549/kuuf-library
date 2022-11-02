@@ -1,9 +1,6 @@
-<div>
+<div class="book">
         <h1>{{.Title}}</h2>
-        <div>
-            <span>ImageBase64</span>
-            <span>{{.ImageBase64}}</span>
-        </div>
+        {{- if .ImageBase64}}<img alt="Picture of book" src="data:image/webp;base64,{{.ImageBase64}}">{{end}}
         <div>
             <span>Author</span>
             <span>{{.Author}}</span>
@@ -18,10 +15,10 @@
         </div>
         <div>
             <span><abbr title="Dewey Decimal Classification">DDC</abbr></span>
-            <span>{{.DeweyDecimalClassification}}</span>
+            <span>{{.DeweyDecClass}}</span>
         </div>
         <div>
-            <span>Pages</span>
+            <span>Page Count</span>
             <span>{{.Pages}}</span>
         </div>
         <div>
@@ -30,11 +27,11 @@
         </div>
         <div>
             <span>Publish Date</span>
-            <span>{{.PublishDate}}</span>
+            <span>{{dateInputValue .PublishDate}}</span>
         </div>
         <div>
             <span>Added Date</span>
-            <span>{{.AddedDate}}</span>
+            <span>{{dateInputValue .AddedDate}}</span>
         </div>
         <div>
             <span>EAN_ISBN13</span>
@@ -44,5 +41,5 @@
             <span>UPC_ISBN10</span>
             <span>{{.UPC_ISBN10}}</span>
         </div>
-        <!-- TODO: create link to admin page -->
+        <a href="/admin?id={{.ID}}">Admin</a>
 </div>

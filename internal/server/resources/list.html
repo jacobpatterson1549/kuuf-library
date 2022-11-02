@@ -1,23 +1,24 @@
-<h1>Books list</h1>
-<table>
-	<caption>Books</caption>
-	<thead>
-		<tr>
-			<th>Title</th>
-			<th>Author</th>
-			<th>Subject</th>
-		</tr>
-	</thead>
-	<tbody>
-		{{- range .}}
-		<tr>
-			<td><a href="/book?id={{.ID}}">{{.Title}}</a></td>
-			<td>{{.Author}}</td>
-			<td>{{.Subject}}</td>
-			<!-- TODO: only show 100 books at a time -->
-		</tr>
-		{{- end}}
-	</tbody>
-</table>
-
-<!-- TODO: create link to admin page (without book id) -->
+<div class="list">
+	<h1>Books list</h1>
+	<table>
+		<caption>Books</caption>
+		<thead>
+			<tr>
+				<th>Title</th>
+				<th>Author</th>
+				<th>Subject</th>
+			</tr>
+		</thead>
+		<tbody>
+			{{- range .}}
+			<tr>
+				<td><a href="/book?id={{.ID}}">{{.Title}}</a></td>
+				<td>{{.Author}}</td>
+				<td>{{.Subject}}</td>
+				<!-- TODO: only show 100 books at a time -->
+			</tr>
+			{{- end}}
+		</tbody>
+	</table>
+	<a href="/admin">Admin</a>
+</div>

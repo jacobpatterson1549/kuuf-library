@@ -21,7 +21,12 @@ import (
 var (
 	//go:embed resources/*
 	embedFS embed.FS
-	tmpl    = template.Must(template.New("index.html").ParseFS(embedFS, "resources/*"))
+	tmpl    = template.Must(template.New("index.html").
+		Funcs(template.FuncMap{
+			"pretty":         prettyInputValue,
+			"dateInputValue": dateInputValue,
+		}).
+		ParseFS(embedFS, "resources/*"))
 )
 
 type (
@@ -102,18 +107,23 @@ func (s *Server) mux() http.Handler {
 		http.MethodGet: map[string]http.HandlerFunc{
 			"/":           s.getBooks,
 			"/book":       s.getBook,
+			"/admin":      s.getAdmin,
 			"/robots.txt": static.ServeHTTP,
 		},
 		http.MethodPost: map[string]http.HandlerFunc{
-			"/book": s.withAdminPassword(s.postBook),
+			"/book/create": s.postBook,
+			"/book/delete":  s.deleteBook,
+			"/book/update":  s.putBook,
+			"/admin/update": s.putAdminPassword,
 		},
-		http.MethodDelete: map[string]http.HandlerFunc{
-			"/book": s.withAdminPassword(s.deleteBook),
-		},
-		http.MethodPut: map[string]http.HandlerFunc{
-			"/book":          s.withAdminPassword(s.putBook),
-			"/adminPassword": s.withAdminPassword(s.putAdminPassword),
-		},
+	}
+	authenticatedMethods := []string{
+		http.MethodPost,
+	}
+	for _, n := range authenticatedMethods {
+		for p, h := range m[n] {
+			m[n][p] = s.withAdminPassword(h)
+		}
 	}
 	day := time.Hour * 24
 	return withCacheControl(withContentEncoding(m), day)
@@ -138,6 +148,21 @@ func (s *Server) getBook(w http.ResponseWriter, r *http.Request) {
 	serveTemplate(w, "book", b)
 }
 
+func (s *Server) getAdmin(w http.ResponseWriter, r *http.Request) {
+	var data interface{}
+	hasID := r.URL.Query().Has("id")
+	if hasID {
+		id := r.URL.Query().Get("id")
+		b, err := s.db.ReadBook(id)
+		if err != nil {
+			httpInternalServerError(w, err)
+			return
+		}
+		data = b
+	}
+	serveTemplate(w, "admin", data)
+}
+
 func (s *Server) postBook(w http.ResponseWriter, r *http.Request) {
 	b, err := bookFrom(r)
 	if err != nil {
@@ -155,17 +180,11 @@ func (s *Server) postBook(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) putBook(w http.ResponseWriter, r *http.Request) {
 	b, err := bookFrom(r)
-	var updateImage bool
-	switch r.FormValue("updateImage") {
-	case "clear":
-		updateImage, b.ImageBase64 = true, ""
-	case "true":
-		updateImage = true
-	}
 	if err != nil {
 		httpBadRequest(w, err)
 		return
 	}
+	updateImage := r.FormValue("update-image") == "true"
 	if err := s.db.UpdateBook(*b, updateImage); err != nil {
 		httpInternalServerError(w, err)
 		return
@@ -314,58 +333,104 @@ func bookIDFrom(r *http.Request) string {
 func bookFrom(r *http.Request) (*book.Book, error) {
 	var b book.Book
 	fields := []struct {
-		p   interface{}
-		key string
+		p        interface{}
+		key      string
+		required bool
 	}{
-		{&b.ID, "id"},
-		{&b.Title, "title"},
-		{&b.Author, "author"},
-		{&b.Description, "description"},
-		{&b.Subject, "subject"},
-		{&b.DeweyDecimalClassification, "dewey-decimal-classification"},
-		{&b.Pages, "pages"},
-		{&b.Publisher, "publisher"},
-		{&b.PublishDate, "publish-date"},
-		{&b.AddedDate, "added-date"},
-		{&b.EAN_ISBN13, "ean-isbn13"},
-		{&b.UPC_ISBN10, "upc-isbn10"},
-		// {&b.ImageBase64,""}, // TODO: handle uploading of images (in image.go)
+		{&b.ID, "id", false}, // TODO: handle create vs update
+		{&b.Title, "title", true},
+		{&b.Author, "author", true},
+		{&b.Description, "description", false},
+		{&b.Subject, "subject", true},
+		{&b.DeweyDecClass, "dewey-dec-class", false},
+		{&b.Pages, "pages", true},
+		{&b.Publisher, "publisher", false},
+		{&b.PublishDate, "publish-date", false},
+		{&b.AddedDate, "added-date", true},
+		{&b.EAN_ISBN13, "ean-isbn-13", false},
+		{&b.UPC_ISBN10, "upc-isbn-10", false},
+		// {&b.ImageBase64, "image", false}, // TODO
 	}
 	for _, f := range fields {
-		if err := parseFormValue(f.p, f.key, r); err != nil {
+		if err := parseFormValue(f.p, f.key, f.required, r); err != nil {
 			return nil, err
 		}
 	}
 	return &b, nil
 }
 
-func parseFormValue(p interface{}, key string, r *http.Request) error {
+func parseFormValue(p interface{}, key string, required bool, r *http.Request) error {
 	v := r.FormValue(key)
 	var err error
-	switch ptr := p.(type) {
-	case *string:
-		if len(v) == 0 {
+	if len(v) == 0 {
+		if required {
 			err = fmt.Errorf("value not set")
-			break
 		}
-		*ptr = v
-	case *int:
-		var i int
-		i, err = strconv.Atoi(v)
-		if err != nil {
-			break
+	} else {
+		switch ptr := p.(type) {
+		case *string:
+
+			*ptr = v
+		case *int:
+			var i int
+			i, err = strconv.Atoi(v)
+			if err != nil {
+				break
+			}
+			*ptr = i
+		case *time.Time:
+			var t time.Time
+			t, err = time.Parse(dateLayout, v)
+			// TODO: Look into normalizing the logic a similar function in csv.Database.
+			if err != nil {
+				break
+			}
+			*ptr = t
 		}
-		*ptr = i
-	case *time.Time:
-		var t time.Time
-		t, err = time.Parse(time.RFC3339, v)
-		if err != nil {
-			break
-		}
-		*ptr = t
 	}
 	if err != nil {
 		return fmt.Errorf("parsing key %q (%q) as %T: %v", key, v, p, err)
 	}
 	return nil
 }
+
+const dateLayout = "2006-01-02"
+
+func dateInputValue(i interface{}) string {
+	switch t := i.(type) {
+	case time.Time:
+		return t.Format(dateLayout)
+	}
+	return ""
+}
+
+func prettyInputValue(i interface{}) interface{} {
+	if i == nil {
+		return ""
+	}
+	return i
+}
+
+// // webP should be used in the kuuf-library server to encode uploaded jpg/png images
+// func webP(b []byte, title string) ([]byte, error) {
+// 	// return b, nil
+// 	// TODO: stream b to cwebp command.  As of 2022, this is not possible.
+// 	f, err := os.CreateTemp("", title)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("creating temp file: %v", err)
+// 	}
+// 	n := f.Name()
+// 	defer os.Remove(n)
+// 	cmd := exec.Command("cwebp", n, "-o", "-")
+// 	b2, err := cmd.Output()
+// 	if err != nil {
+// 		return nil, fmt.Errorf("running cwebp: %v", err)
+// 	}
+// 	all := base64.URLEncoding.EncodeToString(b2)
+// 	// r := base64.NewDecoder(base64.URLEncoding, stdout)
+// 	// all, err := io.ReadAll(r)
+// 	// if err != nil {
+// 	// 	return nil, fmt.Errorf("decoding webp to base64: %v", err)
+// 	// }
+// 	return []byte(all), nil
+// }

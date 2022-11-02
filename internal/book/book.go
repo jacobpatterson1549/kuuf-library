@@ -16,14 +16,14 @@ type (
 	// Book contains common book fields
 	Book struct {
 		Header
-		Description                string
-		DeweyDecimalClassification string
-		Pages                      int
-		Publisher                  string
-		PublishDate                time.Time
-		AddedDate                  time.Time
-		EAN_ISBN13                 string
-		UPC_ISBN10                 string
-		ImageBase64                string
+		Description   string
+		DeweyDecClass string
+		Pages         int
+		Publisher     string
+		PublishDate   time.Time
+		AddedDate     time.Time
+		EAN_ISBN13    string
+		UPC_ISBN10    string
+		ImageBase64   string
 	}
 )
