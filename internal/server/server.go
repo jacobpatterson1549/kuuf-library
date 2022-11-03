@@ -151,7 +151,6 @@ func (s *Server) mux() http.Handler {
 		}
 	}
 	// TODO: figure out how to handle cache-control after updating.  Maybe books should get new ids when updating?
-	// TODO: blacklist /admin from robots.txt
 	// day := time.Hour * 24
 	// return withCacheControl(withContentEncoding(m), day)
 	return withContentEncoding(m)
