@@ -178,14 +178,14 @@ func (d *Database) ReadBook(id string) (*book.Book, error) {
 	return &b, nil
 }
 
-func (d *Database) UpdateBook(b book.Book, updateImage bool) error {
-	cmd := `UPDATE books SET title = $1, author = $2, subject = $3, description = $4, dewey_dec_class = $5, pages = $6, publisher = $7, publish_date = $8, added_date = $9, ean_isbn13 = $10, upc_isbn10 = $11`
-	args := []interface{}{b.Title, b.Author, b.Subject, b.Description, b.DeweyDecClass, b.Pages, b.Publisher, b.PublishDate, b.AddedDate, b.EAN_ISBN13, b.UPC_ISBN10}
+func (d *Database) UpdateBook(b book.Book, newID string, updateImage bool) error {
+	cmd := `UPDATE books SET id = $1, title = $2, author = $3, subject = $4, description = $5, dewey_dec_class = $6, pages = $7, publisher = $8, publish_date = $9, added_date = $10, ean_isbn13 = $11, upc_isbn10 = $12`
+	args := []interface{}{newID, b.Title, b.Author, b.Subject, b.Description, b.DeweyDecClass, b.Pages, b.Publisher, b.PublishDate, b.AddedDate, b.EAN_ISBN13, b.UPC_ISBN10}
 	if updateImage {
-		cmd += `, image_base64 = $12 WHERE id = $13`
+		cmd += `, image_base64 = $13 WHERE id = $14`
 		args = append(args, b.ImageBase64, b.ID)
 	} else {
-		cmd += ` WHERE id = $12`
+		cmd += ` WHERE id = $13`
 		args = append(args, b.ID)
 	}
 	q := query{

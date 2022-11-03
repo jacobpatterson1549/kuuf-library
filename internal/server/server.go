@@ -52,7 +52,7 @@ type (
 		CreateBooks(books ...book.Book) ([]book.Book, error)
 		ReadBookHeaders(limit, offset int) ([]book.Header, error)
 		ReadBook(id string) (*book.Book, error)
-		UpdateBook(b book.Book, updateImage bool) error
+		UpdateBook(b book.Book, newID string, updateImage bool) (error)
 		DeleteBook(id string) error
 		ReadAdminPassword() (hashedPassword []byte, err error)
 		UpdateAdminPassword(hashedPassword string) error
@@ -150,10 +150,8 @@ func (s *Server) mux() http.Handler {
 			m[n][p] = s.withAdminPassword(h)
 		}
 	}
-	// TODO: figure out how to handle cache-control after updating.  Maybe books should get new ids when updating?
-	// day := time.Hour * 24
-	// return withCacheControl(withContentEncoding(m), day)
-	return withContentEncoding(m)
+	day := time.Hour * 24
+	return withCacheControl(withContentEncoding(m), day)
 }
 
 func (s *Server) getBookHeaders(w http.ResponseWriter, r *http.Request) {
@@ -233,12 +231,14 @@ func (s *Server) putBook(w http.ResponseWriter, r *http.Request) {
 		httpBadRequest(w, err)
 		return
 	}
+	newID := book.NewID()
 	updateImage := r.FormValue("update-image") == "true"
-	if err := s.db.UpdateBook(*b, updateImage); err != nil {
+	err = s.db.UpdateBook(*b, newID, updateImage)
+	if err != nil {
 		httpInternalServerError(w, err)
 		return
 	}
-	httpRedirect(w, r, "/book?id="+string(b.ID))
+	httpRedirect(w, r, "/book?id="+newID)
 }
 
 func (s *Server) deleteBook(w http.ResponseWriter, r *http.Request) {
