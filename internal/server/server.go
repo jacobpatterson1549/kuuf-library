@@ -15,6 +15,7 @@ import (
 
 	"github.com/jacobpatterson1549/kuuf-library/internal/book"
 	"github.com/jacobpatterson1549/kuuf-library/internal/db/csv"
+	"github.com/jacobpatterson1549/kuuf-library/internal/db/postgres"
 	"github.com/jacobpatterson1549/kuuf-library/internal/server/bcrypt"
 )
 
@@ -36,6 +37,7 @@ type (
 		BackfillCSV   bool
 		AdminPassword string
 		MaxRows       int
+		DBTimeoutSec  int
 	}
 	Server struct {
 		Config
@@ -48,7 +50,7 @@ type (
 	}
 	Database interface {
 		CreateBooks(books ...book.Book) ([]book.Book, error)
-		ReadBooks() ([]book.Header, error)
+		ReadBooks() ([]*book.Header, error) // TODO: think about adding Header interface here to avoid using array of pointers
 		ReadBook(id string) (*book.Book, error)
 		UpdateBook(b book.Book, updateImage bool) error
 		DeleteBook(id string) error
@@ -66,6 +68,8 @@ func (cfg Config) NewServer() (*Server, error) {
 	switch s := url.Scheme; s {
 	case "csv":
 		db, err = csv.NewDatabase()
+	case postgres.DriverName:
+		db, err = postgres.NewDatabase(url.String(), time.Second*time.Duration(cfg.DBTimeoutSec))
 	default:
 		err = fmt.Errorf("unknown database: %q", s)
 	}
@@ -85,20 +89,41 @@ func (cfg Config) NewServer() (*Server, error) {
 // Initialization reads the config to set the admin password and backfill books from the csv database if desired.
 func (s *Server) Run() error {
 	if len(s.Config.AdminPassword) != 0 { // setup
-		hashedPassword, err := s.ph.Hash([]byte(s.Config.AdminPassword))
-		if err != nil {
-			return fmt.Errorf("hashing admin password: %w", err)
-		}
-		if err := s.db.UpdateAdminPassword(string(hashedPassword)); err != nil {
-			return fmt.Errorf("setting admin password: %w", err)
+		if err := s.initAdminPassword(); err != nil {
+			return fmt.Errorf("initializing admin password from server configuration: %v", err)
 		}
 	}
-	// if _, ok := dao.(csv.Dao); !ok && cfg.BackfillCSV { // setup
-	// 	// TODO
-	// }
+	if _, ok := s.db.(*csv.Database); !ok && s.BackfillCSV { // setup
+		if err := s.backfillCSV(); err != nil {
+			return fmt.Errorf("backfilling database from internal CSV file: %v", err)
+		}
+	}
 	fmt.Println("Serving resume site at at http://localhost:" + s.Port)
 	fmt.Println("Press Ctrl-C to stop")
 	return http.ListenAndServe(":"+s.Port, s.mux())
+}
+
+func (s *Server) initAdminPassword() error {
+	hashedPassword, err := s.ph.Hash([]byte(s.Config.AdminPassword))
+	if err != nil {
+		return fmt.Errorf("hashing admin password: %w", err)
+	}
+	if err := s.db.UpdateAdminPassword(string(hashedPassword)); err != nil {
+		return fmt.Errorf("setting admin password: %w", err)
+	}
+	return nil
+}
+
+func (s *Server) backfillCSV() error {
+	src, err := csv.NewDatabase()
+	if err != nil {
+		return fmt.Errorf("loading csv database: %v", err)
+	}
+	books := src.Books
+	if _, err := s.db.CreateBooks(books...); err != nil {
+		return fmt.Errorf("creating books: %v", err)
+	}
+	return nil
 }
 
 func (s *Server) mux() http.Handler {
@@ -111,7 +136,7 @@ func (s *Server) mux() http.Handler {
 			"/robots.txt": static.ServeHTTP,
 		},
 		http.MethodPost: map[string]http.HandlerFunc{
-			"/book/create": s.postBook,
+			"/book/create":  s.postBook,
 			"/book/delete":  s.deleteBook,
 			"/book/update":  s.putBook,
 			"/admin/update": s.putAdminPassword,
@@ -125,8 +150,11 @@ func (s *Server) mux() http.Handler {
 			m[n][p] = s.withAdminPassword(h)
 		}
 	}
-	day := time.Hour * 24
-	return withCacheControl(withContentEncoding(m), day)
+	// TODO: figure out how to handle cache-control after updating.  Maybe books should get new ids when updating?
+	// TODO: blacklist /admin from robots.txt
+	// day := time.Hour * 24
+	// return withCacheControl(withContentEncoding(m), day)
+	return withContentEncoding(m)
 }
 
 func (s *Server) getBooks(w http.ResponseWriter, r *http.Request) {

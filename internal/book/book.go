@@ -1,7 +1,11 @@
 // Package book contains shared book structures
 package book
 
-import "time"
+import (
+	"crypto/rand"
+	"encoding/base64"
+	"time"
+)
 
 type (
 
@@ -27,3 +31,28 @@ type (
 		ImageBase64   string
 	}
 )
+
+// NewID creates a random, url-safe, base64 string.
+func NewID() string {
+	var src [24]byte
+	if _, err := rand.Read(src[:]); err != nil {
+		panic("reading random bytes from crypto/rand: " + err.Error())
+	}
+	return base64.URLEncoding.EncodeToString(src[:])
+}
+
+// func (b Book) ID() string {
+// 	return b.ID
+// }
+
+// func (b Book) Title() string {
+// 	return b.Title
+// }
+
+// func (b Book) Author() string {
+// 	return b.Author
+// }
+
+// func (b Book) Subject() string {
+// 	return b.Subject
+// }

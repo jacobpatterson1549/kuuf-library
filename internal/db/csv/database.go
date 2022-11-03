@@ -1,3 +1,4 @@
+// Package csv provides a read-only database for the library from the embedded CSV file.
 package csv
 
 import (
@@ -17,7 +18,7 @@ var libraryCSV []byte
 
 type Database struct {
 	Books       []book.Book
-	BookHeaders []book.Header
+	BookHeaders []*book.Header
 }
 
 func NewDatabase() (*Database, error) {
@@ -26,31 +27,36 @@ func NewDatabase() (*Database, error) {
 	if err != nil {
 		log.Fatalf("reading library csv: %v", err)
 	}
-	db := Database{
-		Books:       make([]book.Book, len(records)),
-		BookHeaders: make([]book.Header, len(records)),
+	wantHeader := "id,title,author,description,subject,dewey-dec-class,pages,publisher,publish-date,added-date,ean-isbn13,upc-isbn10,image-base64\n"
+	if len(records) == 0 || len(libraryCSV) < len(wantHeader) || string(libraryCSV[:len(wantHeader)]) != wantHeader {
+		return nil, fmt.Errorf("invalid header row")
 	}
-	for i, r := range records[1:] { // skip header row
+	records = records[1:] // skip header row
+	d := Database{
+		Books:       make([]book.Book, len(records)),
+		BookHeaders: make([]*book.Header, len(records)),
+	}
+	for i, r := range records {
 		b, err := bookFromRecord(r)
 		if err != nil {
 			return nil, fmt.Errorf("reading book %v: %v", i, err)
 		}
-		db.Books[i] = *b
-		db.BookHeaders[i] = b.Header
+		d.Books[i] = *b
+		d.BookHeaders[i] = &b.Header
 	}
-	return &db, nil
+	return &d, nil
 }
 
-func (db *Database) CreateBooks(books ...book.Book) ([]book.Book, error) {
-	return nil, db.notAllowed()
+func (d *Database) CreateBooks(books ...book.Book) ([]book.Book, error) {
+	return nil, d.notAllowed()
 }
 
-func (db *Database) ReadBooks() ([]book.Header, error) {
-	return db.BookHeaders, nil
+func (d *Database) ReadBooks() ([]*book.Header, error) {
+	return d.BookHeaders, nil
 }
 
-func (db *Database) ReadBook(id string) (*book.Book, error) {
-	for _, b := range db.Books {
+func (d *Database) ReadBook(id string) (*book.Book, error) {
+	for _, b := range d.Books {
 		if b.ID == id {
 			return &b, nil
 		}
@@ -58,28 +64,27 @@ func (db *Database) ReadBook(id string) (*book.Book, error) {
 	return nil, fmt.Errorf("no book with id of %q", id)
 }
 
-func (db *Database) UpdateBook(b book.Book, updateImage bool) error {
-	return db.notAllowed()
+func (d *Database) UpdateBook(b book.Book, updateImage bool) error {
+	return d.notAllowed()
 }
 
-func (db *Database) DeleteBook(id string) error {
-	return db.notAllowed()
+func (d *Database) DeleteBook(id string) error {
+	return d.notAllowed()
 }
 
-func (db *Database) ReadAdminPassword() (hashedPassword []byte, err error) {
-	return nil, db.notAllowed()
+func (d *Database) ReadAdminPassword() (hashedPassword []byte, err error) {
+	return nil, d.notAllowed()
 }
 
-func (db *Database) UpdateAdminPassword(hashedPassword string) error {
-	return db.notAllowed()
+func (d *Database) UpdateAdminPassword(hashedPassword string) error {
+	return d.notAllowed()
 }
 
-func (db Database) notAllowed() error {
-	return fmt.Errorf("not supported by %T", db)
+func (d Database) notAllowed() error {
+	return fmt.Errorf("not supported by %T", d)
 }
 
 func bookFromRecord(r []string) (*book.Book, error) {
-	// id,title,author,description,subject,dewey-dec-class,pages,publisher,publish-date,added-date,ean-isbn13,upc-isbn10,image-base64
 	if n := len(r); n != 13 {
 		return nil, fmt.Errorf("expected 13 rows, got %v", n)
 	}

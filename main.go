@@ -28,6 +28,7 @@ func main() {
 	fs.StringVar(&cfg.AdminPassword, "admin-password", "", "password to set for the administrator, if supplied")
 	fs.BoolVar(&cfg.BackfillCSV, "csv-backfill", false, "backfill the database from the internal library.csv file")
 	fs.IntVar(&cfg.MaxRows, "max-rows", 100, "the maximum number of books to display as rows on the filter page")
+	fs.IntVar(&cfg.DBTimeoutSec, "db-timeout-sec", 5, "the number of seconds each database operation can take")
 	if err := parseFlags(fs, programArgs); err != nil {
 		log.Fatalf("parsing server args: %v", err)
 	}
