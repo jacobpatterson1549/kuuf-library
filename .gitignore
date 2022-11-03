@@ -3,9 +3,6 @@
 # environment variables
 /.env
 
-# csv database files
-*.csv
-
 # Visual Studio Code files
 /.vscode/
 /__debug_bin
