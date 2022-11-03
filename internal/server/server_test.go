@@ -5,11 +5,12 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 )
 
-func TestHandler(t *testing.T) {
+func TestMux(t *testing.T) {
 	cfg := Config{
 		DatabaseURL: "csv://",
 	}
@@ -33,7 +34,6 @@ func TestHandler(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-
 			r := httptest.NewRequest(test.method, test.url, nil)
 			w := httptest.NewRecorder()
 			h.ServeHTTP(w, r)
@@ -91,5 +91,27 @@ func TestWithContentEncoding(t *testing.T) {
 		if want, got := msg, string(b); want != got {
 			t.Errorf("body not encoded as desired: wanted %q, got %q", want, got)
 		}
+	}
+}
+
+func TestMissingKeyZero(t *testing.T) {
+	cfg := Config{
+		DatabaseURL: "csv://",
+	}
+	s, err := cfg.NewServer()
+	if err != nil {
+		t.Fatal(err)
+	}
+	h := s.mux()
+	r := httptest.NewRequest("GET", "/admin", nil)
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	if want, got := 200, w.Code; want != got {
+		t.Fatalf("codes: wanted %v, got %v", want, got)
+	}
+	want := `name="title" value="" required`
+	got := w.Body.String()
+	if !strings.Contains(got, want) {
+		t.Errorf("response body did not contain empty title when creating new book: %s", got)
 	}
 }
