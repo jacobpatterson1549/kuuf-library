@@ -28,7 +28,7 @@ func TestHandler(t *testing.T) {
 		{"list", "GET", "/", 200},
 		{"book", "GET", "/book", 500}, // Missing id
 		{"admin", "GET", "/admin", 200},
-		// {"robots.txt", "GET", "/robots.txt", 200},
+		{"robots.txt", "GET", "/robots.txt", 200},
 		{"not found", "GET", "/bad.html", 404},
 	}
 	for _, test := range tests {

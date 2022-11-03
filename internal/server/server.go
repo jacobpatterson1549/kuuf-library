@@ -6,6 +6,7 @@ import (
 	"embed"
 	"fmt"
 	"io"
+	"io/fs"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -21,13 +22,14 @@ import (
 
 var (
 	//go:embed resources/*
-	embedFS embed.FS
-	tmpl    = template.Must(template.New("index.html").
-		Funcs(template.FuncMap{
+	embedFS     embed.FS
+	staticFS, _ = fs.Sub(embedFS, "resources")
+	tmpl        = template.Must(template.New("index.html").
+			Funcs(template.FuncMap{
 			"pretty":         prettyInputValue,
 			"dateInputValue": dateInputValue,
 		}).
-		ParseFS(embedFS, "resources/*"))
+		ParseFS(staticFS, "*"))
 )
 
 type (
@@ -52,7 +54,7 @@ type (
 		CreateBooks(books ...book.Book) ([]book.Book, error)
 		ReadBookHeaders(limit, offset int) ([]book.Header, error)
 		ReadBook(id string) (*book.Book, error)
-		UpdateBook(b book.Book, newID string, updateImage bool) (error)
+		UpdateBook(b book.Book, newID string, updateImage bool) error
 		DeleteBook(id string) error
 		ReadAdminPassword() (hashedPassword []byte, err error)
 		UpdateAdminPassword(hashedPassword string) error
@@ -127,7 +129,7 @@ func (s *Server) backfillCSV() error {
 }
 
 func (s *Server) mux() http.Handler {
-	static := http.FileServer(http.FS(embedFS))
+	static := http.FileServer(http.FS(staticFS))
 	m := mux{
 		http.MethodGet: map[string]http.HandlerFunc{
 			"/":           s.getBookHeaders,
