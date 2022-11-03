@@ -10,15 +10,20 @@
 			</tr>
 		</thead>
 		<tbody>
-			{{- range .}}
+			{{- range .Books}}
 			<tr>
 				<td><a href="/book?id={{.ID}}">{{.Title}}</a></td>
 				<td>{{.Author}}</td>
 				<td>{{.Subject}}</td>
-				<!-- TODO: only show 100 books at a time -->
 			</tr>
 			{{- end}}
 		</tbody>
 	</table>
+	{{- if .NextPage}}
+	<form method="get">
+		<input type="hidden" name="page" value="{{.NextPage}}">
+		<input type="submit" value="Load More books">
+	</form>
+	{{- end}}
 	<a href="/admin">Admin</a>
 </div>

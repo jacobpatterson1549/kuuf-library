@@ -50,7 +50,7 @@ type (
 	}
 	Database interface {
 		CreateBooks(books ...book.Book) ([]book.Book, error)
-		ReadBooks() ([]*book.Header, error) // TODO: think about adding Header interface here to avoid using array of pointers
+		ReadBookHeaders(limit, offset int) ([]book.Header, error)
 		ReadBook(id string) (*book.Book, error)
 		UpdateBook(b book.Book, updateImage bool) error
 		DeleteBook(id string) error
@@ -130,7 +130,7 @@ func (s *Server) mux() http.Handler {
 	static := http.FileServer(http.FS(embedFS))
 	m := mux{
 		http.MethodGet: map[string]http.HandlerFunc{
-			"/":           s.getBooks,
+			"/":           s.getBookHeaders,
 			"/book":       s.getBook,
 			"/admin":      s.getAdmin,
 			"/robots.txt": static.ServeHTTP,
@@ -157,13 +157,35 @@ func (s *Server) mux() http.Handler {
 	return withContentEncoding(m)
 }
 
-func (s *Server) getBooks(w http.ResponseWriter, r *http.Request) {
-	books, err := s.db.ReadBooks()
+func (s *Server) getBookHeaders(w http.ResponseWriter, r *http.Request) {
+	var page int
+	if a := r.FormValue("page"); len(a) != 0 {
+		i, err := strconv.Atoi(a)
+		if err != nil {
+			err = fmt.Errorf("invalid page: %w", err)
+			httpBadRequest(w, err)
+			return
+		}
+		page = i
+	}
+	offset := page * s.MaxRows
+	limit := s.MaxRows + 1
+	books, err := s.db.ReadBookHeaders(limit, offset)
 	if err != nil {
 		httpInternalServerError(w, err)
 		return
 	}
-	serveTemplate(w, "list", books)
+	data := struct {
+		Books    []book.Header
+		NextPage int
+	}{
+		Books: books,
+	}
+	if len(data.Books) > s.MaxRows {
+		data.Books = data.Books[1:]
+		data.NextPage = page + 1
+	}
+	serveTemplate(w, "list", data)
 }
 
 func (s *Server) getBook(w http.ResponseWriter, r *http.Request) {

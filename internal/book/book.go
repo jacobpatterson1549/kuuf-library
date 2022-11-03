@@ -40,19 +40,3 @@ func NewID() string {
 	}
 	return base64.URLEncoding.EncodeToString(src[:])
 }
-
-// func (b Book) ID() string {
-// 	return b.ID
-// }
-
-// func (b Book) Title() string {
-// 	return b.Title
-// }
-
-// func (b Book) Author() string {
-// 	return b.Author
-// }
-
-// func (b Book) Subject() string {
-// 	return b.Subject
-// }

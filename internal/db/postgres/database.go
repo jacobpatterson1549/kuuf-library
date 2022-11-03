@@ -135,11 +135,14 @@ func (d *Database) CreateBooks(books ...book.Book) ([]book.Book, error) {
 	return books, nil
 }
 
-func (d *Database) ReadBooks() ([]*book.Header, error) {
+func (d *Database) ReadBookHeaders(limit, offset int) ([]book.Header, error) {
 	cmd := `SELECT id, title, author, subject
-	FROM books`
+	FROM books
+	LIMIT $1
+	OFFSET $2`
 	q := query{
-		cmd: cmd,
+		cmd:  cmd,
+		args: []interface{}{limit, offset},
 	}
 	var refs []*book.Header
 	dest := func() []interface{} {
@@ -150,12 +153,11 @@ func (d *Database) ReadBooks() ([]*book.Header, error) {
 	if err := d.query(q, dest); err != nil {
 		return nil, fmt.Errorf("making query: %w", err)
 	}
-	return refs, nil
-	// headers := make([]book.Header, len(refs))
-	// for i, h := range refs {
-	// 	headers[i] = *h
-	// }
-	// return headers, nil
+	headers := make([]book.Header, len(refs))
+	for i, h := range refs {
+		headers[i] = *h
+	}
+	return headers, nil
 }
 
 func (d *Database) ReadBook(id string) (*book.Book, error) {

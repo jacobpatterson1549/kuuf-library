@@ -17,8 +17,7 @@ import (
 var libraryCSV []byte
 
 type Database struct {
-	Books       []book.Book
-	BookHeaders []*book.Header
+	Books []book.Book
 }
 
 func NewDatabase() (*Database, error) {
@@ -33,8 +32,7 @@ func NewDatabase() (*Database, error) {
 	}
 	records = records[1:] // skip header row
 	d := Database{
-		Books:       make([]book.Book, len(records)),
-		BookHeaders: make([]*book.Header, len(records)),
+		Books: make([]book.Book, len(records)),
 	}
 	for i, r := range records {
 		b, err := bookFromRecord(r)
@@ -42,7 +40,6 @@ func NewDatabase() (*Database, error) {
 			return nil, fmt.Errorf("reading book %v: %v", i, err)
 		}
 		d.Books[i] = *b
-		d.BookHeaders[i] = &b.Header
 	}
 	return &d, nil
 }
@@ -51,8 +48,27 @@ func (d *Database) CreateBooks(books ...book.Book) ([]book.Book, error) {
 	return nil, d.notAllowed()
 }
 
-func (d *Database) ReadBooks() ([]*book.Header, error) {
-	return d.BookHeaders, nil
+func (d *Database) ReadBookHeaders(limit, offset int) ([]book.Header, error) {
+	books := d.Books
+	switch {
+	case offset >= len(books):
+		offset = len(books)
+	case offset < 0:
+		offset = 0
+	}
+	books = books[offset:]
+	switch {
+	case limit >= len(books):
+		limit = len(books)
+	case limit < 0:
+		limit = 0
+	}
+	books = books[:limit]
+	headers := make([]book.Header, len(books))
+	for i, b := range books {
+		headers[i] = b.Header
+	}
+	return headers, nil
 }
 
 func (d *Database) ReadBook(id string) (*book.Book, error) {
