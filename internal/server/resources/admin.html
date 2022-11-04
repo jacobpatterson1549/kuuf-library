@@ -1,10 +1,10 @@
 <div class="admin">
     <h1>Admin</h1>
-        <form method="post" action="/book/{{if .ID}}update{{else}}create{{end}}">
+        <form method="post" action="/book/{{if .ID}}update{{else}}create{{end}}" enctype="multipart/form-data">
             <fieldset>
                 <legend>{{if .}}Update{{else}}Create{{end}} Book</legend>
                 <div hidden>
-                    <input id="b-id" type="text" name="id" value="{{.ID}}">
+                    <input id="b-id" type="text" name="id" value="{{pretty .ID}}">
                 </div>
                 <div>
                     <label for="b-title">Title</label>
@@ -59,7 +59,7 @@
                         </div>
                         <div>
                             <label for="b-image-file">Image File</label>
-                            <input id="b-image-file" type="file" name="image">
+                            <input id="b-image-file" type="file" name="image" accept="image/png,image/jpeg,image/webp">
                         </div>
                     </fieldset>
                 </div>

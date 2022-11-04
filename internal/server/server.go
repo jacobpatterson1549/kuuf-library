@@ -4,11 +4,14 @@ package server
 import (
 	"compress/gzip"
 	"embed"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"io/fs"
 	"net/http"
 	"net/url"
+	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 	"text/template"
@@ -388,7 +391,7 @@ func bookFrom(r *http.Request) (*book.Book, error) {
 		key      string
 		required bool
 	}{
-		{&b.ID, "id", false}, // TODO: handle create vs update
+		{&b.ID, "id", false},
 		{&b.Title, "title", true},
 		{&b.Author, "author", true},
 		{&b.Description, "description", false},
@@ -400,13 +403,17 @@ func bookFrom(r *http.Request) (*book.Book, error) {
 		{&b.AddedDate, "added-date", true},
 		{&b.EAN_ISBN13, "ean-isbn-13", false},
 		{&b.UPC_ISBN10, "upc-isbn-10", false},
-		// {&b.ImageBase64, "image", false}, // TODO
 	}
 	for _, f := range fields {
 		if err := parseFormValue(f.p, f.key, f.required, r); err != nil {
 			return nil, err
 		}
 	}
+	imageBase64, err := parseImage(r)
+	if err != nil {
+		return nil, err
+	}
+	b.ImageBase64 = string(imageBase64)
 	return &b, nil
 }
 
@@ -462,26 +469,43 @@ func prettyInputValue(i interface{}) interface{} {
 	return i
 }
 
-// // webP should be used in the kuuf-library server to encode uploaded jpg/png images
-// func webP(b []byte, title string) ([]byte, error) {
-// 	// return b, nil
-// 	// TODO: stream b to cwebp command.  As of 2022, this is not possible.
-// 	f, err := os.CreateTemp("", title)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("creating temp file: %v", err)
-// 	}
-// 	n := f.Name()
-// 	defer os.Remove(n)
-// 	cmd := exec.Command("cwebp", n, "-o", "-")
-// 	b2, err := cmd.Output()
-// 	if err != nil {
-// 		return nil, fmt.Errorf("running cwebp: %v", err)
-// 	}
-// 	all := base64.URLEncoding.EncodeToString(b2)
-// 	// r := base64.NewDecoder(base64.URLEncoding, stdout)
-// 	// all, err := io.ReadAll(r)
-// 	// if err != nil {
-// 	// 	return nil, fmt.Errorf("decoding webp to base64: %v", err)
-// 	// }
-// 	return []byte(all), nil
-// }
+func parseImage(r *http.Request) (imageBase64 []byte, err error) {
+	f, fh, err := r.FormFile("image")
+	if err != nil {
+		if err == http.ErrMissingFile {
+			return nil, nil
+		}
+		return nil, err
+	}
+	b, err := io.ReadAll(f)
+	if err != nil {
+		return nil, fmt.Errorf("reading image: %w", err)
+	}
+	title := fh.Filename
+	b2, err := webP(b, title)
+	if err != nil {
+		return nil, fmt.Errorf("converting image to webp: %w", err)
+	}
+	imageBase64 = []byte(base64.StdEncoding.EncodeToString(b2))
+	return
+}
+
+// webP should be used in the kuuf-library server to encode uploaded jpg/png images
+func webP(b []byte, title string) ([]byte, error) {
+	// TODO: stream b to cwebp command.  As of 2022, this is not possible.
+	f, err := os.CreateTemp("", title)
+	if err != nil {
+		return nil, fmt.Errorf("creating temp file: %w", err)
+	}
+	n := f.Name()
+	if err := os.WriteFile(n, b, 0664); err != nil { // HACKY
+		return nil, fmt.Errorf("writing image to temporary file: %w", err)
+	}
+	defer os.Remove(n)
+	cmd := exec.Command("cwebp", n, "-o", "-")
+	b2, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("running cwebp: %w", err)
+	}
+	return b2, nil
+}
