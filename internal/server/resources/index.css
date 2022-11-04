@@ -12,3 +12,9 @@ table, th, td {
     border-width: 1px;
     border-style: solid;
 }
+
+form[action^="/book"] div:has(input:not([type="hidden"]):not([type="password"]):not(:valid)) {
+    border-color: red;
+    border-width: 1px;
+    border-style: solid;
+}
