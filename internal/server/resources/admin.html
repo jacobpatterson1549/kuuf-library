@@ -40,7 +40,7 @@
                 </div>
                 <div>
                     <label for="b-added-date">Added Date</label>
-                    <input id="b-added-date" type="date" name="added-date" value="{{pretty .AddedDate | dateInputValue}}" required>
+                    <input id="b-added-date" type="date" name="added-date" value="{{if .}}{{pretty .AddedDate | dateInputValue}}{{else}}{{newDate | dateInputValue}}{{end}}" required>
                 </div>
                 <div>
                     <label for="b-ean-isbn-13">EAN ISBN 13</label>

@@ -30,6 +30,7 @@ var (
 	tmpl        = template.Must(template.New("index.html").
 			Funcs(template.FuncMap{
 			"pretty":         prettyInputValue,
+			"newDate":        time.Now,
 			"dateInputValue": dateInputValue,
 		}).
 		ParseFS(staticFS, "*"))
