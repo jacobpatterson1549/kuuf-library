@@ -9,6 +9,7 @@ import (
 	"io/fs"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"text/template"
@@ -38,6 +39,7 @@ type (
 		Port          string
 		DatabaseURL   string
 		BackfillCSV   bool
+		DumpCSV       bool
 		AdminPassword string
 		MaxRows       int
 		DBTimeoutSec  int
@@ -101,6 +103,11 @@ func (s *Server) Run() error {
 			return fmt.Errorf("backfilling database from internal CSV file: %v", err)
 		}
 	}
+	if s.DumpCSV { // setup
+		if err := s.dumpCSV(); err != nil {
+			return fmt.Errorf("writing database to console as CSV: %v", err)
+		}
+	}
 	fmt.Println("Serving resume site at at http://localhost:" + s.Port)
 	fmt.Println("Press Ctrl-C to stop")
 	return http.ListenAndServe(":"+s.Port, s.mux())
@@ -127,6 +134,35 @@ func (s *Server) backfillCSV() error {
 		return fmt.Errorf("creating books: %v", err)
 	}
 	return nil
+}
+
+func (s *Server) dumpCSV() error {
+	w := os.Stdout
+	d := csv.NewDump(w)
+	offset := 0
+	for {
+		headers, err := s.db.ReadBookHeaders(s.MaxRows+1, offset)
+		if err != nil {
+			return fmt.Errorf("reading books at offset %v: %w", offset, err)
+		}
+		hasMore := len(headers) > s.MaxRows
+		if hasMore {
+			headers = headers[:s.MaxRows]
+		}
+		books := make([]book.Book, len(headers))
+		for i, h := range headers {
+			b, err := s.db.ReadBook(h.ID)
+			if err != nil {
+				return fmt.Errorf("reading book %q: %w", h.ID, err)
+			}
+			books[i] = *b
+		}
+		d.Write(books...)
+		if !hasMore {
+			return nil
+		}
+		offset += s.MaxRows
+	}
 }
 
 func (s *Server) mux() http.Handler {

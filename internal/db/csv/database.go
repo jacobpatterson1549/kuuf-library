@@ -6,8 +6,10 @@ import (
 	_ "embed"
 	"encoding/csv"
 	"fmt"
+	"io"
 	"log"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/jacobpatterson1549/kuuf-library/internal/book"
@@ -20,13 +22,18 @@ type Database struct {
 	Books []book.Book
 }
 
+const header = "id,title,author,description,subject,dewey-dec-class,pages,publisher,publish-date,added-date,ean-isbn13,upc-isbn10,image-base64"
+const DateLayout = "01/02/2006"
+
+var headerRecord = strings.Split(header, ",")
+
 func NewDatabase() (*Database, error) {
 	r := csv.NewReader(bytes.NewReader(libraryCSV))
 	records, err := r.ReadAll()
 	if err != nil {
 		log.Fatalf("reading library csv: %v", err)
 	}
-	wantHeader := "id,title,author,description,subject,dewey-dec-class,pages,publisher,publish-date,added-date,ean-isbn13,upc-isbn10,image-base64\n"
+	wantHeader := header + "\n"
 	if len(records) == 0 || len(libraryCSV) < len(wantHeader) || string(libraryCSV[:len(wantHeader)]) != wantHeader {
 		return nil, fmt.Errorf("invalid header row")
 	}
@@ -101,8 +108,8 @@ func (d Database) notAllowed() error {
 }
 
 func bookFromRecord(r []string) (*book.Book, error) {
-	if n := len(r); n != 13 {
-		return nil, fmt.Errorf("expected 13 rows, got %v", n)
+	if want, got := len(headerRecord), len(r); want != got {
+		return nil, fmt.Errorf("expected %v columns, got %v", want, got)
 	}
 	var b book.Book
 	fields := []struct {
@@ -131,6 +138,24 @@ func bookFromRecord(r []string) (*book.Book, error) {
 	return &b, nil
 }
 
+func record(b book.Book) []string {
+	return []string{
+		b.ID,
+		b.Title,
+		b.Author,
+		b.Description,
+		b.Subject,
+		b.DeweyDecClass,
+		strconv.Itoa(b.Pages),
+		b.Publisher,
+		b.PublishDate.Format(DateLayout),
+		b.AddedDate.Format(DateLayout),
+		b.EAN_ISBN13,
+		b.UPC_ISBN10,
+		b.ImageBase64,
+	}
+}
+
 func parseFormValue(p interface{}, key string, i int, r []string) error {
 	v := r[i]
 	if len(v) == 0 {
@@ -153,7 +178,6 @@ func parseFormValue(p interface{}, key string, i int, r []string) error {
 		*ptr = i
 	case *time.Time:
 		var t time.Time
-		const DateLayout = "01/02/2006"
 		t, err = time.Parse(DateLayout, v)
 		if err != nil {
 			break
@@ -164,4 +188,23 @@ func parseFormValue(p interface{}, key string, i int, r []string) error {
 		return fmt.Errorf("parsing key %q (column %v) (%q) as %T: %v", key, i, v, p, err)
 	}
 	return nil
+}
+
+type Dump struct {
+	w *csv.Writer
+}
+
+func NewDump(w io.Writer) *Dump {
+	d := Dump{
+		w: csv.NewWriter(w),
+	}
+	d.w.Write(headerRecord)
+	return &d
+}
+
+func (d *Dump) Write(books ...book.Book) {
+	for _, b := range books {
+		d.w.Write(record(b))
+	}
+	d.w.Flush()
 }
