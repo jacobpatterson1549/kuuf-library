@@ -24,6 +24,9 @@ func parseImage(r *http.Request) (imageBase64 []byte, err error) {
 		}
 		return nil, err
 	}
+	if maxSize := int64(10_000_000); fh.Size > maxSize { // 10mb
+		return nil, fmt.Errorf("file to large (%v), max size the server will process is %v bytes", fh.Size, maxSize)
+	}
 	title := fh.Filename
 	contentType := fh.Header.Get("Content-Type")
 	img, err := readImage(f, contentType)
