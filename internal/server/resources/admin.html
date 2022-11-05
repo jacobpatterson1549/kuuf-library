@@ -51,17 +51,25 @@
                     <input id="b-upc-isbn-10" type="text" name="upc-isbn-10" value="{{pretty .UPC_ISBN10}}">
                 </div>
                 <div>
-                    <fieldset>
-                        <legend>Image</legend>
-                        <div>
-                            <input id="b-image-add" type="checkbox" name="update-image" {{if not .ID}}checked{{end}}>
-                            <label for="b-image-add">Replace image</label>
-                        </div>
-                        <div>
-                            <label for="b-image-file">Image File</label>
-                            <input id="b-image-file" type="file" name="image" accept="image/png,image/jpeg,image/webp">
-                        </div>
-                    </fieldset>
+                <div>
+                    {{- if .}}
+                    <div>
+                        <input id="b-image-keep" type="radio" name="update-image" value="false" checked>
+                        <label for="b-image-keep">Keep image</label>
+                    </div>
+                    <div>
+                        <input id="b-image-replace" type="radio" name="update-image" value="true">
+                        <label for="b-image-replace">Replace image</label>
+                    </div>
+                    <div>
+                        <input id="b-image-clear" type="radio" name="update-image" value="clear">
+                        <label for="b-image-clear">Clear image</label>
+                    </div>
+                    {{- end}}
+                    <div>
+                        <label for="b-image-file">Image File</label>
+                        <input id="b-image-file" type="file" name="image" accept="image/png,image/jpeg,image/webp">
+                    </div>
                 </div>
                 <div>
                     <label for="b-p">Admin Password</label>

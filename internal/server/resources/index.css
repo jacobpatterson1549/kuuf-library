@@ -18,3 +18,7 @@ form[action^="/book"] div:has(input:not([type="hidden"]):not([type="password"]):
     border-width: 1px;
     border-style: solid;
 }
+
+div:has(input:checked:not([value="true"])) ~ div:has(input[type="file"]) {
+    display: none;
+}

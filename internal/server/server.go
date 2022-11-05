@@ -238,7 +238,14 @@ func (s *Server) putBook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	newID := book.NewID()
-	updateImage := r.FormValue("update-image") == "true"
+	var updateImage bool
+	switch r.FormValue("update-image") {
+	case "true":
+		updateImage = true
+	case "clear":
+		updateImage = true
+		b.ImageBase64 = ""
+	}
 	err = s.db.UpdateBook(*b, newID, updateImage)
 	if err != nil {
 		httpInternalServerError(w, err)
