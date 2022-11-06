@@ -39,6 +39,7 @@ type (
 		Port          string
 		DatabaseURL   string
 		BackfillCSV   bool
+		UpdateImages  bool
 		DumpCSV       bool
 		AdminPassword string
 		MaxRows       int
@@ -103,6 +104,11 @@ func (s *Server) Run() error {
 			return fmt.Errorf("backfilling database from internal CSV file: %v", err)
 		}
 	}
+	if s.UpdateImages { // setup
+		if err := s.updateImages(); err != nil {
+			return fmt.Errorf("updating images: %w", err)
+		}
+	}
 	if s.DumpCSV { // setup
 		if err := s.dumpCSV(); err != nil {
 			return fmt.Errorf("writing database to console as CSV: %v", err)
@@ -134,6 +140,42 @@ func (s *Server) backfillCSV() error {
 		return fmt.Errorf("creating books: %v", err)
 	}
 	return nil
+}
+
+func (s *Server) updateImages() error {
+	offset := 0
+	for {
+		// TODO: This logic is duplicated in dumpCSV.  Consolidate it so that the books are only read ONCE if both flags are enabled.
+		headers, err := s.db.ReadBookHeaders(s.MaxRows+1, offset)
+		if err != nil {
+			return fmt.Errorf("reading books at offset %v: %w", offset, err)
+		}
+		hasMore := len(headers) > s.MaxRows
+		if hasMore {
+			headers = headers[:s.MaxRows]
+		}
+		for _, h := range headers {
+			b, err := s.db.ReadBook(h.ID)
+			if err != nil {
+				return fmt.Errorf("reading book %q: %w", h.ID, err)
+			}
+			if len(b.ImageBase64) == 0 {
+				continue
+			}
+			imageBase64, err := updateImage(b.ImageBase64, b.ID)
+			if err != nil {
+				return fmt.Errorf("updating image for book %q: %w", b.ID, err)
+			}
+			b.ImageBase64 = string(imageBase64)
+			if err := s.db.UpdateBook(*b, b.ID, true); err != nil {
+				return fmt.Errorf("writing updated image to db for book %q: %w", b.ID, err)
+			}
+		}
+		if !hasMore {
+			return nil
+		}
+		offset += s.MaxRows
+	}
 }
 
 func (s *Server) dumpCSV() error {

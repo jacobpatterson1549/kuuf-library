@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bytes"
 	"encoding/base64"
 	"fmt"
 	"image"
@@ -29,7 +30,21 @@ func parseImage(r *http.Request) (imageBase64 []byte, err error) {
 	}
 	title := fh.Filename
 	contentType := fh.Header.Get("Content-Type")
-	img, err := readImage(f, contentType)
+	return convertImage(f, title, contentType)
+}
+
+func updateImage(imageBase64 string, id string) ([]byte, error) {
+	b, err := base64.StdEncoding.DecodeString(imageBase64)
+	if err != nil {
+		return nil, fmt.Errorf("decoding image from database: %w", err)
+	}
+	r := bytes.NewReader(b)
+	title, contentType := id+"_converted", "image/webp"
+	return convertImage(r, title, contentType)
+}
+
+func convertImage(r io.Reader, title, contentType string) ([]byte, error) {
+	img, err := readImage(r, contentType)
 	if err != nil {
 		return nil, fmt.Errorf("reading image: %w", err)
 	}
@@ -38,8 +53,8 @@ func parseImage(r *http.Request) (imageBase64 []byte, err error) {
 	if err != nil {
 		return nil, fmt.Errorf("converting image to webp: %w", err)
 	}
-	imageBase64 = []byte(base64.StdEncoding.EncodeToString(b2))
-	return
+	imageBase64 := base64.StdEncoding.EncodeToString(b2)
+	return []byte(imageBase64), nil
 }
 
 func readImage(r io.Reader, contentType string) (image.Image, error) {
