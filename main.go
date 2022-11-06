@@ -42,14 +42,14 @@ func main() {
 }
 
 // parseFlags parses the flagSet after overlaying environment flags.
-// Flags that match the uppercase version of their name are overwritten.
+// Flags that match the uppercase version of their name, with underscores instead of hyphens are overwritten.
 func parseFlags(fs *flag.FlagSet, programArgs []string) error {
 	if err := fs.Parse(programArgs); err != nil {
 		return fmt.Errorf("parsing program args: %w", err)
 	}
 	var lastErr error
 	fs.VisitAll(func(f *flag.Flag) {
-		name := strings.ToUpper(f.Name)
+		name := strings.ReplaceAll(strings.ToUpper(f.Name), "-", "_")
 		if val, ok := os.LookupEnv(name); ok {
 			if err := f.Value.Set(val); err != nil {
 				lastErr = err

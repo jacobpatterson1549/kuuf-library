@@ -12,8 +12,7 @@ The administrator for the site can edit information about books and add and remo
 
 The server defaults to run on port 8000.
 This can be configured by setting the `PORT` environment variable or the `-port` application argument.
-All application arguments are attempted to be read as environment variables that are the same name, but all uppercase.
-All environment variables use the same hyphens as application arguments, excluding the leading hyphen.
+All application arguments are attempted to be read as environment variables that are the same name, but all uppercase and with underscores instead of hyphens and no leading hyphen.
 
 ## database
 
@@ -23,7 +22,7 @@ The library can run on an internal, readonly CSV database.  This database can al
 
 ### Postgres
 
-A Postgres database will be used by setting the `-database-URL` application argument or the `DATABASE-URL` environment variable.
+A Postgres database will be used by setting the `-database-URL` application argument or the `DATABASE_URL` environment variable.
 The script below initializes a Postgres user and database.
 Remember to set the password.
 (a password can be generated with `openssl rand --hex 10`)
