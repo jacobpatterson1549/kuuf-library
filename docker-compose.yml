@@ -1,0 +1,17 @@
+version: '3.1'
+services:
+  postgres-db:
+    image: postgres:14.5-alpine
+    container_name: "kuuf-library-db-postgres"
+    env_file: ./.env
+    environment:
+      POSTGRES_USER: kuuf-library
+      POSTGRES_PASSWORD: ${DOCKER_POSTGRES_PASSWORD}
+  web:
+    build: .
+    container_name: "kuuf-library"
+    env_file: ./.env
+    ports:
+      - "${PORT}:${PORT}"
+    environment:
+      - DATABASE_URL=postgres://kuuf-library:${DOCKER_POSTGRES_PASSWORD}@postgres-db/?sslmode=disable

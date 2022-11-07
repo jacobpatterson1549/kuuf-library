@@ -13,7 +13,8 @@ RUN apk add --no-cache \
 
 # build the server
 COPY . ./
-RUN make build/kuuf-library
+RUN make build/kuuf-library \
+        GO_ARGS="CGO_ENABLED=0"
 
 # copy the server to a minimal build image
 FROM scratch
