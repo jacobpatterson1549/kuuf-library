@@ -80,7 +80,7 @@ func (cfg Config) NewServer(out io.Writer) (*Server, error) {
 		err = fmt.Errorf("unknown database: %q", s)
 	}
 	if err != nil {
-		return nil, fmt.Errorf("creating database: %v", err)
+		return nil, fmt.Errorf("creating database: %W", err)
 	}
 	ph := bcrypt.NewPasswordHandler()
 	s := Server{
@@ -97,12 +97,12 @@ func (cfg Config) NewServer(out io.Writer) (*Server, error) {
 func (s *Server) Run() error {
 	if len(s.Config.AdminPassword) != 0 { // setup
 		if err := s.initAdminPassword(); err != nil {
-			return fmt.Errorf("initializing admin password from server configuration: %v", err)
+			return fmt.Errorf("initializing admin password from server configuration: %w", err)
 		}
 	}
 	if _, ok := s.db.(*csv.Database); !ok && s.BackfillCSV { // setup
 		if err := s.backfillCSV(); err != nil {
-			return fmt.Errorf("backfilling database from internal CSV file: %v", err)
+			return fmt.Errorf("backfilling database from internal CSV file: %w", err)
 		}
 	}
 	if s.UpdateImages { // setup
@@ -112,7 +112,7 @@ func (s *Server) Run() error {
 	}
 	if s.DumpCSV { // setup
 		if err := s.dumpCSV(); err != nil {
-			return fmt.Errorf("writing database to console as CSV: %v", err)
+			return fmt.Errorf("writing database to console as CSV: %w", err)
 		}
 	}
 	fmt.Fprintln(s.out, "Serving resume site at at http://localhost:"+s.Port)
@@ -134,11 +134,11 @@ func (s *Server) initAdminPassword() error {
 func (s *Server) backfillCSV() error {
 	src, err := csv.NewDatabase()
 	if err != nil {
-		return fmt.Errorf("loading csv database: %v", err)
+		return fmt.Errorf("loading csv database: %w", err)
 	}
 	books := src.Books
 	if _, err := s.db.CreateBooks(books...); err != nil {
-		return fmt.Errorf("creating books: %v", err)
+		return fmt.Errorf("creating books: %w", err)
 	}
 	return nil
 }
@@ -530,7 +530,7 @@ func parseFormValue(p interface{}, key string, required bool, r *http.Request) e
 		}
 	}
 	if err != nil {
-		return fmt.Errorf("parsing key %q (%q) as %T: %v", key, v, p, err)
+		return fmt.Errorf("parsing key %q (%q) as %T: %w", key, v, p, err)
 	}
 	return nil
 }

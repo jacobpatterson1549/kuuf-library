@@ -44,7 +44,7 @@ func NewDatabase() (*Database, error) {
 	for i, r := range records {
 		b, err := bookFromRecord(r)
 		if err != nil {
-			return nil, fmt.Errorf("reading book %v: %v", i, err)
+			return nil, fmt.Errorf("reading book %v: %w", i, err)
 		}
 		d.Books[i] = *b
 	}
@@ -185,7 +185,7 @@ func parseFormValue(p interface{}, key string, i int, r []string) error {
 		*ptr = t
 	}
 	if err != nil {
-		return fmt.Errorf("parsing key %q (column %v) (%q) as %T: %v", key, i, v, p, err)
+		return fmt.Errorf("parsing key %q (column %v) (%q) as %T: %w", key, i, v, p, err)
 	}
 	return nil
 }
