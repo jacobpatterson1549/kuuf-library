@@ -1,5 +1,5 @@
 <div class="admin">
-    <h1>Admin</h1>
+    <h2>Admin</h2>
         <form method="post" action="/book/{{if .ID}}update{{else}}create{{end}}" enctype="multipart/form-data">
             <fieldset>
                 <legend>{{if .}}Update{{else}}Create{{end}} Book</legend>
