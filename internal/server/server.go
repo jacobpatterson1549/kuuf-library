@@ -95,20 +95,8 @@ func (cfg Config) NewServer(out io.Writer) (*Server, error) {
 // Run initializes the server and then serves it.
 // Initialization reads the config to set the admin password and backfill books from the csv database if desired.
 func (s *Server) Run() error {
-	if len(s.Config.AdminPassword) != 0 { // setup
-		if err := s.initAdminPassword(); err != nil {
-			return fmt.Errorf("initializing admin password from server configuration: %w", err)
-		}
-	}
-	if _, ok := s.db.(*csv.Database); !ok && s.BackfillCSV { // setup
-		if err := s.backfillCSV(); err != nil {
-			return fmt.Errorf("backfilling database from internal CSV file: %w", err)
-		}
-	}
-	if s.UpdateImages || s.DumpCSV { // setup
-		if err := s.updateImages(); err != nil {
-			return fmt.Errorf("updating images / dumping csv;: %w", err)
-		}
+	if err := s.setup(); err != nil {
+		return fmt.Errorf("setting up server: %w", err)
 	}
 	fmt.Fprintln(s.out, "Serving resume site at at http://localhost:"+s.Port)
 	fmt.Fprintln(s.out, "Press Ctrl-C to stop")
@@ -122,6 +110,25 @@ func (s *Server) initAdminPassword() error {
 	}
 	if err := s.db.UpdateAdminPassword(string(hashedPassword)); err != nil {
 		return fmt.Errorf("setting admin password: %w", err)
+	}
+	return nil
+}
+
+func (s *Server) setup() error {
+	if len(s.Config.AdminPassword) != 0 {
+		if err := s.initAdminPassword(); err != nil {
+			return fmt.Errorf("initializing admin password from server configuration: %w", err)
+		}
+	}
+	if _, ok := s.db.(*csv.Database); !ok && s.BackfillCSV {
+		if err := s.backfillCSV(); err != nil {
+			return fmt.Errorf("backfilling database from internal CSV file: %w", err)
+		}
+	}
+	if s.UpdateImages || s.DumpCSV {
+		if err := s.updateImages(); err != nil {
+			return fmt.Errorf("updating images / dumping csv;: %w", err)
+		}
 	}
 	return nil
 }
