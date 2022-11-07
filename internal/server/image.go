@@ -108,7 +108,7 @@ func scaleRect(srcR, boundsR image.Rectangle) image.Rectangle {
 // webP should be used in the kuuf-library server to encode uploaded jpg/png images
 func webP(img image.Image, title string) ([]byte, error) {
 	// TODO: stream b to cwebp command.  As of 2022, this is not possible.
-	f, err := os.CreateTemp("", title)
+	f, err := os.CreateTemp(".", title)
 	if err != nil {
 		return nil, fmt.Errorf("creating temp file: %w", err)
 	}
