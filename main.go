@@ -12,6 +12,9 @@ import (
 
 func main() {
 	programName, programArgs := os.Args[0], os.Args[1:]
+	out := os.Stdout
+	logFlags := log.Ldate | log.Ltime | log.LUTC | log.Lshortfile | log.Lmsgprefix
+	log := log.New(out, "", logFlags)
 	usage := []string{
 		"runs a library web server",
 	}
@@ -19,7 +22,7 @@ func main() {
 	fs := flag.NewFlagSet(programName, flag.ExitOnError)
 	fs.Usage = func() {
 		for _, u := range usage {
-			fmt.Println(fs.Output(), u)
+			fmt.Fprintln(fs.Output(), u)
 		}
 		fs.PrintDefaults()
 	}
@@ -34,7 +37,7 @@ func main() {
 	if err := parseFlags(fs, programArgs); err != nil {
 		log.Fatalf("parsing server args: %v", err)
 	}
-	s, err := cfg.NewServer()
+	s, err := cfg.NewServer(out)
 	if err != nil {
 		log.Fatalf("creating server: %v", err)
 	}

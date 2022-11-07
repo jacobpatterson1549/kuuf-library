@@ -9,7 +9,6 @@ import (
 	"io/fs"
 	"net/http"
 	"net/url"
-	"os"
 	"strconv"
 	"strings"
 	"text/template"
@@ -47,8 +46,9 @@ type (
 	}
 	Server struct {
 		Config
-		db Database
-		ph PasswordHandler
+		db  Database
+		ph  PasswordHandler
+		out io.Writer
 	}
 	PasswordHandler interface {
 		Hash(password []byte) (hashedPassword []byte, err error)
@@ -65,7 +65,7 @@ type (
 	}
 )
 
-func (cfg Config) NewServer() (*Server, error) {
+func (cfg Config) NewServer(out io.Writer) (*Server, error) {
 	url, err := url.Parse(cfg.DatabaseURL)
 	if err != nil {
 		return nil, fmt.Errorf("parsing database url: %w", err)
@@ -87,6 +87,7 @@ func (cfg Config) NewServer() (*Server, error) {
 		Config: cfg,
 		db:     db,
 		ph:     ph,
+		out:    out,
 	}
 	return &s, nil
 }
@@ -114,8 +115,8 @@ func (s *Server) Run() error {
 			return fmt.Errorf("writing database to console as CSV: %v", err)
 		}
 	}
-	fmt.Println("Serving resume site at at http://localhost:" + s.Port)
-	fmt.Println("Press Ctrl-C to stop")
+	fmt.Fprintln(s.out, "Serving resume site at at http://localhost:"+s.Port)
+	fmt.Fprintln(s.out, "Press Ctrl-C to stop")
 	return http.ListenAndServe(":"+s.Port, s.mux())
 }
 
@@ -179,8 +180,7 @@ func (s *Server) updateImages() error {
 }
 
 func (s *Server) dumpCSV() error {
-	w := os.Stdout
-	d := csv.NewDump(w)
+	d := csv.NewDump(s.out)
 	offset := 0
 	for {
 		headers, err := s.db.ReadBookHeaders(s.MaxRows+1, offset)
@@ -263,7 +263,7 @@ func (s *Server) getBookHeaders(w http.ResponseWriter, r *http.Request) {
 		data.Books = data.Books[1:]
 		data.NextPage = page + 1
 	}
-	serveTemplate(w, "list", data)
+	s.serveTemplate(w, "list", data)
 }
 
 func (s *Server) getBook(w http.ResponseWriter, r *http.Request) {
@@ -273,7 +273,7 @@ func (s *Server) getBook(w http.ResponseWriter, r *http.Request) {
 		httpInternalServerError(w, err)
 		return
 	}
-	serveTemplate(w, "book", b)
+	s.serveTemplate(w, "book", b)
 }
 
 func (s *Server) getAdmin(w http.ResponseWriter, r *http.Request) {
@@ -288,7 +288,7 @@ func (s *Server) getAdmin(w http.ResponseWriter, r *http.Request) {
 		}
 		data = b
 	}
-	serveTemplate(w, "admin", data)
+	s.serveTemplate(w, "admin", data)
 }
 
 func (s *Server) postBook(w http.ResponseWriter, r *http.Request) {
@@ -358,14 +358,14 @@ func (s *Server) putAdminPassword(w http.ResponseWriter, r *http.Request) {
 	httpRedirect(w, r, "/")
 }
 
-func serveTemplate(w http.ResponseWriter, name string, data interface{}) {
+func (s *Server) serveTemplate(w http.ResponseWriter, name string, data interface{}) {
 	type Page struct {
 		Name string
 		Data interface{}
 	}
 	p := Page{name, data}
 	if err := tmpl.Execute(w, p); err != nil {
-		fmt.Println(err)
+		fmt.Fprintln(s.out, err)
 	}
 }
 

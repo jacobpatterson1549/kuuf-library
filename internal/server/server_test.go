@@ -14,7 +14,7 @@ func TestMux(t *testing.T) {
 	cfg := Config{
 		DatabaseURL: "csv://",
 	}
-	s, err := cfg.NewServer()
+	s, err := cfg.NewServer(io.Discard)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -98,7 +98,7 @@ func TestMissingKeyZero(t *testing.T) {
 	cfg := Config{
 		DatabaseURL: "csv://",
 	}
-	s, err := cfg.NewServer()
+	s, err := cfg.NewServer(io.Discard)
 	if err != nil {
 		t.Fatal(err)
 	}
