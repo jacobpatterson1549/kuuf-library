@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/jacobpatterson1549/kuuf-library/internal/book"
 )
 
 func TestMux(t *testing.T) {
@@ -94,24 +96,40 @@ func TestWithContentEncoding(t *testing.T) {
 	}
 }
 
-func TestMissingKeyZero(t *testing.T) {
-	cfg := Config{
-		DatabaseURL: "csv://",
+func TestResponseContains(t *testing.T) {
+	tests := []struct {
+		name         string
+		url          string
+		wantBodyPart string
+		db           Database
+	}{
+		{"MissingKeyZero", "/admin", `name="title" value="" required`, nil},
+		{"TitleContainsQuote", "/admin?id=wow", `name="title" value="&#34;Wow,&#34; A Memoir" required`, mockDatabase{
+			mockReadBookFunc: func(id string) (*book.Book, error) {
+				b := book.Book{
+					Header: book.Header{
+						Title: `"Wow," A Memoir`,
+					},
+				}
+				return &b, nil
+			},
+		}},
 	}
-	s, err := cfg.NewServer(io.Discard)
-	if err != nil {
-		t.Fatal(err)
-	}
-	h := s.mux()
-	r := httptest.NewRequest("GET", "/admin", nil)
-	w := httptest.NewRecorder()
-	h.ServeHTTP(w, r)
-	if want, got := 200, w.Code; want != got {
-		t.Fatalf("codes: wanted %v, got %v", want, got)
-	}
-	want := `name="title" value="" required`
-	got := w.Body.String()
-	if !strings.Contains(got, want) {
-		t.Errorf("response body did not contain empty title when creating new book: %s", got)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			s := Server{
+				db: test.db,
+			}
+			h := s.mux()
+			r := httptest.NewRequest("GET", test.url, nil)
+			w := httptest.NewRecorder()
+			h.ServeHTTP(w, r)
+			if want, got := 200, w.Code; want != got {
+				t.Fatalf("codes: wanted %v, got %v", want, got)
+			}
+			if want, got := test.wantBodyPart, w.Body.String(); !strings.Contains(got, want) {
+				t.Errorf("response body did not contain %q: \n %s", want, got)
+			}
+		})
 	}
 }

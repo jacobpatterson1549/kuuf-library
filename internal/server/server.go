@@ -536,5 +536,8 @@ func prettyInputValue(i interface{}) interface{} {
 	if i == nil {
 		return ""
 	}
+	if s, ok := i.(string); ok {
+		return template.HTMLEscapeString(s)
+	}
 	return i
 }
