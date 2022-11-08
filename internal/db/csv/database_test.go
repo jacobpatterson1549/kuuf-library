@@ -32,7 +32,7 @@ func TestReadBookHeaders(t *testing.T) {
 			d := Database{
 				Books: books,
 			}
-			got, err := d.ReadBookHeaders(test.limit, test.offset)
+			got, err := d.ReadBookHeaders(nil, test.limit, test.offset)
 			switch {
 			case err != nil:
 				t.Errorf("unwanted error: %v", err)

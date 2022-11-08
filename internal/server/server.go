@@ -56,7 +56,7 @@ type (
 	}
 	Database interface {
 		CreateBooks(books ...book.Book) ([]book.Book, error)
-		ReadBookHeaders(limit, offset int) ([]book.Header, error)
+		ReadBookHeaders(f book.Filter, limit, offset int) ([]book.Header, error)
 		ReadBook(id string) (*book.Book, error)
 		UpdateBook(b book.Book, newID string, updateImage bool) error
 		DeleteBook(id string) error
@@ -149,7 +149,7 @@ func (s *Server) updateImages() error {
 	d := csv.NewDump(s.out)
 	offset := 0
 	for {
-		headers, err := s.db.ReadBookHeaders(s.MaxRows+1, offset)
+		headers, err := s.db.ReadBookHeaders(nil, s.MaxRows+1, offset)
 		if err != nil {
 			return fmt.Errorf("reading books at offset %v: %w", offset, err)
 		}
@@ -225,18 +225,26 @@ func (s *Server) getBookHeaders(w http.ResponseWriter, r *http.Request) {
 		}
 		page = i
 	}
+	q := r.FormValue("q")
+	filter, err := book.NewFilter(q)
+	if err != nil {
+		httpBadRequest(w, err)
+		return
+	}
 	offset := page * s.MaxRows
 	limit := s.MaxRows + 1
-	books, err := s.db.ReadBookHeaders(limit, offset)
+	books, err := s.db.ReadBookHeaders(*filter, limit, offset)
 	if err != nil {
 		httpInternalServerError(w, err)
 		return
 	}
 	data := struct {
 		Books    []book.Header
+		Filter   string
 		NextPage int
 	}{
-		Books: books,
+		Filter: q,
+		Books:  books,
 	}
 	if len(data.Books) > s.MaxRows {
 		data.Books = data.Books[1:]

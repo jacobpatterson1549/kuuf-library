@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jacobpatterson1549/kuuf-library/internal/book"
@@ -136,14 +137,21 @@ func (d *Database) CreateBooks(books ...book.Book) ([]book.Book, error) {
 	return books, nil
 }
 
-func (d *Database) ReadBookHeaders(limit, offset int) ([]book.Header, error) {
+func (d *Database) ReadBookHeaders(filter book.Filter, limit, offset int) ([]book.Header, error) {
+	hasFilter := len(filter) != 0
+	joinedFilter := strings.Join(filter, "|")
 	cmd := `SELECT id, title, author, subject
 	FROM books
-	LIMIT $1
-	OFFSET $2`
+	WHERE $1
+		OR title   ~* $2
+		OR author  ~* $2
+		OR subject ~* $2
+	ORDER BY subject ASC, Title ASC
+	LIMIT $3
+	OFFSET $4`
 	q := query{
 		cmd:  cmd,
-		args: []interface{}{limit, offset},
+		args: []interface{}{!hasFilter, joinedFilter, limit, offset},
 	}
 	var refs []*book.Header
 	dest := func() []interface{} {

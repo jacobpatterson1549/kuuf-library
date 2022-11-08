@@ -1,5 +1,14 @@
 <div class="list">
 	<h2>Books list</h2>
+	<form method="get">
+		<div>
+			<label for="b-filter">Filter</label>
+			<input id="b-filter" type="text" name="q" value="{{pretty .Filter}}">
+		</div>
+		<div>
+			<input type="submit" value="Submit">
+		</div>
+	</form>
 	<table>
 		<caption>Books</caption>
 		<thead>
@@ -22,6 +31,7 @@
 	{{- if .NextPage}}
 	<form method="get">
 		<input type="hidden" name="page" value="{{.NextPage}}">
+		<input type="hidden" name="q" value="{{pretty .Filter}}">
 		<input type="submit" value="Load More books">
 	</form>
 	{{- end}}

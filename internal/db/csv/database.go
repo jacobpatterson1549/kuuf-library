@@ -48,6 +48,7 @@ func NewDatabase() (*Database, error) {
 		}
 		d.Books[i] = *b
 	}
+	book.Books(d.Books).Sort()
 	return &d, nil
 }
 
@@ -55,25 +56,26 @@ func (d *Database) CreateBooks(books ...book.Book) ([]book.Book, error) {
 	return nil, d.notAllowed()
 }
 
-func (d *Database) ReadBookHeaders(limit, offset int) ([]book.Header, error) {
+func (d *Database) ReadBookHeaders(filter book.Filter, limit, offset int) ([]book.Header, error) {
 	books := d.Books
-	switch {
-	case offset >= len(books):
-		offset = len(books)
-	case offset < 0:
-		offset = 0
-	}
-	books = books[offset:]
-	switch {
-	case limit >= len(books):
-		limit = len(books)
-	case limit < 0:
+	if limit < 0 {
 		limit = 0
 	}
-	books = books[:limit]
-	headers := make([]book.Header, len(books))
-	for i, b := range books {
-		headers[i] = b.Header
+	if offset < 0 {
+		offset = 0
+	}
+	headers := make([]book.Header, 0, limit+offset)
+	for _, b := range books {
+		if filter.Matches(b) {
+			headers = append(headers, b.Header)
+			if len(headers) == cap(headers) {
+				break
+			}
+		}
+	}
+	headers = headers[offset:]
+	if len(headers) > limit {
+		headers = headers[:limit]
 	}
 	return headers, nil
 }
