@@ -9,25 +9,16 @@
 			<input type="submit" value="Submit">
 		</div>
 	</form>
-	<table>
-		<caption>Books</caption>
-		<thead>
-			<tr>
-				<th>Title</th>
-				<th>Author</th>
-				<th>Subject</th>
-			</tr>
-		</thead>
-		<tbody>
-			{{- range .Books}}
-			<tr>
-				<td><a href="/book?id={{.ID}}">{{.Title}}</a></td>
-				<td>{{.Author}}</td>
-				<td>{{.Subject}}</td>
-			</tr>
-			{{- end}}
-		</tbody>
-	</table>
+	<div>
+	<h3>Books</h3>
+	{{- range .Books}}
+	<div class="book">
+		<div title="Title"><a href="/book?id={{.ID}}">{{.Title}}</a></div>
+		<div title="Author">{{.Author}}</div>
+		<div title="Subject">{{.Subject}}</div>
+	</div>
+	{{- end}}
+	</div>
 	{{- if .NextPage}}
 	<form method="get">
 		<input type="hidden" name="page" value="{{.NextPage}}">

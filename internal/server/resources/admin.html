@@ -3,9 +3,7 @@
         <form method="post" action="/book/{{if .ID}}update{{else}}create{{end}}" enctype="multipart/form-data">
             <fieldset>
                 <legend>{{if .}}Update{{else}}Create{{end}} Book</legend>
-                <div hidden>
-                    <input id="b-id" type="text" name="id" value="{{pretty .ID}}">
-                </div>
+                <input id="b-id" type="text" name="id" value="{{pretty .ID}}" readonly hidden>
                 <div>
                     <label for="b-title">Title</label>
                     <input id="b-title" type="text" name="title" value="{{pretty .Title}}" required>
@@ -50,28 +48,25 @@
                     <label for="b-upc-isbn-10">UPC ISBN 10</label>
                     <input id="b-upc-isbn-10" type="text" name="upc-isbn-10" value="{{pretty .UPC_ISBN10}}">
                 </div>
+                {{- if .}}
+                {{- if .ImageBase64}}
                 <div>
+                    <input id="b-image-keep" type="radio" name="update-image" value="false" checked>
+                    <label for="b-image-keep">Keep image</label>
+                </div>
+                {{- end}}
                 <div>
-                    {{- if .}}
-                    {{- if .ImageBase64}}
-                    <div>
-                        <input id="b-image-keep" type="radio" name="update-image" value="false" checked>
-                        <label for="b-image-keep">Keep image</label>
-                    </div>
-                    {{- end}}
-                    <div>
-                        <input id="b-image-replace" type="radio" name="update-image" value="true" {{if not .ImageBase64}}checked{{end}}>
-                        <label for="b-image-replace">{{if .ImageBase64}}Replace{{else}}Set{{end}} image</label>
-                    </div>
-                    <div>
-                        <input id="b-image-clear" type="radio" name="update-image" value="clear">
-                        <label for="b-image-clear">Clear image</label>
-                    </div>
-                    {{- end}}
-                    <div>
-                        <label for="b-image-file">Image File</label>
-                        <input id="b-image-file" type="file" name="image" accept="image/png,image/jpeg,image/webp">
-                    </div>
+                    <input id="b-image-replace" type="radio" name="update-image" value="true" {{if not .ImageBase64}}checked{{end}}>
+                    <label for="b-image-replace">{{if .ImageBase64}}Replace{{else}}Set{{end}} image</label>
+                </div>
+                <div>
+                    <input id="b-image-clear" type="radio" name="update-image" value="clear">
+                    <label for="b-image-clear">Clear image</label>
+                </div>
+                {{- end}}
+                <div>
+                    <label for="b-image-file">Image File</label>
+                    <input id="b-image-file" type="file" name="image" accept="image/png,image/jpeg,image/webp">
                 </div>
                 <div>
                     <label for="b-p">Admin Password</label>
@@ -86,9 +81,7 @@
         <form method="post" action="/book/delete">
             <fieldset>
                 <legend>Delete Book</legend>
-                <div hidden>
-                    <input id="db-id" type="text" name="id" value="{{.ID}}">
-                </div>
+                <input id="db-id" type="text" name="id" value="{{.ID}}" readonly hidden>
                 <div>
                     <label for="db-p">Admin Password</label>
                     <input id="db-p" type="password" name="p" required>

@@ -1,20 +1,37 @@
-:root {
-    --c1: black;
-    --c2: snow;
-}
-
 body {
-    background-color: var(--c2);
-    color: var(--c1);
+    background-color: #f0f4f4;
+    color: #263333;
 }
 
 h1 a {
     text-decoration: none;
+    color: inherit;
 }
 
-table, th, td {
-    border-width: 1px;
-    border-style: solid;
+h1, h2, h3 {
+    color: rgba(13,94,21,.9);
+}
+
+label::after {
+    content: ':';
+}
+
+*[title="Author"]::before {
+    content: 'by ';
+}
+
+.admin fieldset {
+    display: table;
+    width: min-content;
+}
+.admin fieldset > *:not([hidden]) {
+    display: table-row;
+}
+.admin fieldset > * > * {
+    display: table-cell;
+}
+.admin input[type="radio"] {
+    float: right;
 }
 
 form[action^="/book"] div:has( input:not([type="hidden"]):not([type="password"]):not(:valid)) {
