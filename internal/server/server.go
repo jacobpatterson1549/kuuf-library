@@ -513,7 +513,6 @@ func parseFormValue(p interface{}, key string, required bool, r *http.Request) e
 		case *time.Time:
 			var t time.Time
 			t, err = time.Parse(dateLayout, v)
-			// TODO: Look into normalizing the logic a similar function in csv.Database.
 			if err != nil {
 				break
 			}
