@@ -95,7 +95,7 @@ func (cfg Config) NewServer(out io.Writer) (*Server, error) {
 // Run initializes the server and then serves it.
 // Initialization reads the config to set the admin password and backfill books from the csv database if desired.
 func (s *Server) Run() error {
-	if err := s.setup(); err != nil {
+	if err := s.Config.setup(s.db, s.ph, s.out); err != nil {
 		return fmt.Errorf("setting up server: %w", err)
 	}
 	fmt.Fprintln(s.out, "Serving resume site at at http://localhost:"+s.Port)
@@ -103,66 +103,66 @@ func (s *Server) Run() error {
 	return http.ListenAndServe(":"+s.Port, s.mux())
 }
 
-func (s *Server) initAdminPassword() error {
-	hashedPassword, err := s.ph.Hash([]byte(s.Config.AdminPassword))
-	if err != nil {
-		return fmt.Errorf("hashing admin password: %w", err)
-	}
-	if err := s.db.UpdateAdminPassword(string(hashedPassword)); err != nil {
-		return fmt.Errorf("setting admin password: %w", err)
-	}
-	return nil
-}
-
-func (s *Server) setup() error {
-	if len(s.Config.AdminPassword) != 0 {
-		if err := s.initAdminPassword(); err != nil {
+func (cfg Config) setup(db Database, ph PasswordHandler, out io.Writer) error {
+	if len(cfg.AdminPassword) != 0 {
+		if err := cfg.initAdminPassword(db, ph); err != nil {
 			return fmt.Errorf("initializing admin password from server configuration: %w", err)
 		}
 	}
-	if _, ok := s.db.(*csv.Database); !ok && s.BackfillCSV {
-		if err := s.backfillCSV(); err != nil {
+	if _, ok := db.(*csv.Database); !ok && cfg.BackfillCSV {
+		if err := cfg.backfillCSV(db); err != nil {
 			return fmt.Errorf("backfilling database from internal CSV file: %w", err)
 		}
 	}
-	if s.UpdateImages || s.DumpCSV {
-		if err := s.updateImages(); err != nil {
+	if cfg.UpdateImages || cfg.DumpCSV {
+		if err := cfg.updateImages(db, out); err != nil {
 			return fmt.Errorf("updating images / dumping csv;: %w", err)
 		}
 	}
 	return nil
 }
 
-func (s *Server) backfillCSV() error {
+func (cfg Config) initAdminPassword(db Database, ph PasswordHandler) error {
+	hashedPassword, err := ph.Hash([]byte(cfg.AdminPassword))
+	if err != nil {
+		return fmt.Errorf("hashing admin password: %w", err)
+	}
+	if err := db.UpdateAdminPassword(string(hashedPassword)); err != nil {
+		return fmt.Errorf("setting admin password: %w", err)
+	}
+	return nil
+}
+
+func (cfg Config) backfillCSV(db Database) error {
 	src, err := csv.NewDatabase()
 	if err != nil {
 		return fmt.Errorf("loading csv database: %w", err)
 	}
 	books := src.Books
-	if _, err := s.db.CreateBooks(books...); err != nil {
+	if _, err := db.CreateBooks(books...); err != nil {
 		return fmt.Errorf("creating books: %w", err)
 	}
 	return nil
 }
 
-func (s *Server) updateImages() error {
-	d := csv.NewDump(s.out)
+func (cfg Config) updateImages(db Database, out io.Writer) error {
+	d := csv.NewDump(out)
 	offset := 0
 	for {
-		headers, err := s.db.ReadBookHeaders(nil, s.MaxRows+1, offset)
+		headers, err := db.ReadBookHeaders(nil, cfg.MaxRows+1, offset)
 		if err != nil {
 			return fmt.Errorf("reading books at offset %v: %w", offset, err)
 		}
-		hasMore := len(headers) > s.MaxRows
+		hasMore := len(headers) > cfg.MaxRows
 		if hasMore {
-			headers = headers[:s.MaxRows]
+			headers = headers[:cfg.MaxRows]
 		}
 		for _, h := range headers {
-			b, err := s.db.ReadBook(h.ID)
+			b, err := db.ReadBook(h.ID)
 			if err != nil {
 				return fmt.Errorf("reading book %q: %w", h.ID, err)
 			}
-			if s.UpdateImages {
+			if cfg.UpdateImages {
 				if len(b.ImageBase64) == 0 {
 					continue
 				}
@@ -171,18 +171,18 @@ func (s *Server) updateImages() error {
 					return fmt.Errorf("updating image for book %q: %w", b.ID, err)
 				}
 				b.ImageBase64 = string(imageBase64)
-				if err := s.db.UpdateBook(*b, b.ID, true); err != nil {
+				if err := db.UpdateBook(*b, b.ID, true); err != nil {
 					return fmt.Errorf("writing updated image to db for book %q: %w", b.ID, err)
 				}
 			}
-			if s.DumpCSV {
+			if cfg.DumpCSV {
 				d.Write(*b)
 			}
 		}
 		if !hasMore {
 			return nil
 		}
-		offset += s.MaxRows
+		offset += cfg.MaxRows
 	}
 }
 
