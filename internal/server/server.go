@@ -158,25 +158,8 @@ func (cfg Config) updateImages(db Database, out io.Writer) error {
 			headers = headers[:cfg.MaxRows]
 		}
 		for _, h := range headers {
-			b, err := db.ReadBook(h.ID)
-			if err != nil {
-				return fmt.Errorf("reading book %q: %w", h.ID, err)
-			}
-			if cfg.UpdateImages {
-				if len(b.ImageBase64) == 0 {
-					continue
-				}
-				imageBase64, err := updateImage(b.ImageBase64, b.ID)
-				if err != nil {
-					return fmt.Errorf("updating image for book %q: %w", b.ID, err)
-				}
-				b.ImageBase64 = string(imageBase64)
-				if err := db.UpdateBook(*b, b.ID, true); err != nil {
-					return fmt.Errorf("writing updated image to db for book %q: %w", b.ID, err)
-				}
-			}
-			if cfg.DumpCSV {
-				d.Write(*b)
+			if err := cfg.updateImage(h, db, *d); err != nil {
+				return err
 			}
 		}
 		if !hasMore {
@@ -184,6 +167,27 @@ func (cfg Config) updateImages(db Database, out io.Writer) error {
 		}
 		offset += cfg.MaxRows
 	}
+}
+
+func (cfg Config) updateImage(h book.Header, db Database, d csv.Dump) error {
+	b, err := db.ReadBook(h.ID)
+	if err != nil {
+		return fmt.Errorf("reading book %q: %w", h.ID, err)
+	}
+	if cfg.UpdateImages && len(b.ImageBase64) != 0 {
+		imageBase64, err := updateImage(b.ImageBase64, b.ID)
+		if err != nil {
+			return fmt.Errorf("updating image for book %q: %w", b.ID, err)
+		}
+		b.ImageBase64 = string(imageBase64)
+		if err := db.UpdateBook(*b, b.ID, true); err != nil {
+			return fmt.Errorf("writing updated image to db for book %q: %w", b.ID, err)
+		}
+	}
+	if cfg.DumpCSV {
+		d.Write(*b)
+	}
+	return nil
 }
 
 func (s *Server) mux() http.Handler {
