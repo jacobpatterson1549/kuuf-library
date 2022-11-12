@@ -459,78 +459,54 @@ func bookIDFrom(r *http.Request) string {
 }
 
 func bookFrom(r *http.Request) (*book.Book, error) {
-	var b book.Book
-	fields := []struct {
-		p        interface{}
-		key      string
-		required bool
-	}{
-		{&b.ID, "id", false},
-		{&b.Title, "title", true},
-		{&b.Author, "author", true},
-		{&b.Description, "description", false},
-		{&b.Subject, "subject", true},
-		{&b.DeweyDecClass, "dewey-dec-class", false},
-		{&b.Pages, "pages", true},
-		{&b.Publisher, "publisher", false},
-		{&b.PublishDate, "publish-date", false},
-		{&b.AddedDate, "added-date", true},
-		{&b.EAN_ISBN13, "ean-isbn-13", false},
-		{&b.UPC_ISBN10, "upc-isbn-10", false},
+	if err := r.ParseForm(); err != nil {
+		return nil, fmt.Errorf("parsing form: %w", err)
 	}
-	for _, f := range fields {
-		if err := parseFormValue(f.p, f.key, f.required, r); err != nil {
-			return nil, err
-		}
+	sb := book.StringBook{
+		ID:            r.FormValue("id"),
+		Title:         r.FormValue("title"),
+		Author:        r.FormValue("author"),
+		Description:   r.FormValue("description"),
+		Subject:       r.FormValue("subject"),
+		DeweyDecClass: r.FormValue("dewey-dec-class"),
+		Pages:         r.FormValue("pages"),
+		Publisher:     r.FormValue("publisher"),
+		PublishDate:   r.FormValue("publish-date"),
+		AddedDate:     r.FormValue("added-date"),
+		EAN_ISBN13:    r.FormValue("ean-isbn-13"),
+		UPC_ISBN10:    r.FormValue("upc-isbn-10"),
+	}
+	switch {
+	case len(sb.Title) == 0:
+		return nil, fmt.Errorf("title required")
+	case len(sb.Author) == 0:
+		return nil, fmt.Errorf("author required")
+	case len(sb.Subject) == 0:
+		return nil, fmt.Errorf("subject required")
+	case len(sb.AddedDate) == 0:
+		return nil, fmt.Errorf("added date required")
+	}
+	b, err := sb.Book(dateLayout)
+	switch {
+	case err != nil:
+		return nil, fmt.Errorf("parsing book from text: %w", err)
+	case b.Pages <= 0:
+		return nil, fmt.Errorf("pages required")
 	}
 	imageBase64, err := parseImage(r)
 	if err != nil {
 		return nil, err
 	}
 	b.ImageBase64 = string(imageBase64)
-	return &b, nil
+	return b, nil
 }
 
-func parseFormValue(p interface{}, key string, required bool, r *http.Request) error {
-	v := r.FormValue(key)
-	var err error
-	if len(v) == 0 {
-		if required {
-			err = fmt.Errorf("value not set")
-		}
-	} else {
-		switch ptr := p.(type) {
-		case *string:
-
-			*ptr = v
-		case *int:
-			var i int
-			i, err = strconv.Atoi(v)
-			if err != nil {
-				break
-			}
-			*ptr = i
-		case *time.Time:
-			var t time.Time
-			t, err = time.Parse(dateLayout, v)
-			if err != nil {
-				break
-			}
-			*ptr = t
-		}
-	}
-	if err != nil {
-		return fmt.Errorf("parsing key %q (%q) as %T: %w", key, v, p, err)
-	}
-	return nil
-}
-
-const dateLayout = "2006-01-02"
+const dateLayout = book.HyphenatedYYYYMMDD
 
 func dateInputValue(i interface{}) string {
 	switch t := i.(type) {
 	case time.Time:
-		return t.Format(dateLayout)
+		return t.Format(string(dateLayout))
 	}
 	return ""
 }

@@ -10,7 +10,6 @@ import (
 	"log"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/jacobpatterson1549/kuuf-library/internal/book"
 )
@@ -23,7 +22,7 @@ type Database struct {
 }
 
 const header = "id,title,author,description,subject,dewey-dec-class,pages,publisher,publish-date,added-date,ean-isbn13,upc-isbn10,image-base64"
-const DateLayout = "01/02/2006"
+const dateLayout = book.SlashMMDDYYYY
 
 var headerRecord = strings.Split(header, ",")
 
@@ -113,31 +112,21 @@ func bookFromRecord(r []string) (*book.Book, error) {
 	if want, got := len(headerRecord), len(r); want != got {
 		return nil, fmt.Errorf("expected %v columns, got %v", want, got)
 	}
-	var b book.Book
-	fields := []struct {
-		p   interface{}
-		key string
-	}{
-		{&b.ID, "id"},
-		{&b.Title, "title"},
-		{&b.Author, "author"},
-		{&b.Description, "description"},
-		{&b.Subject, "subject"},
-		{&b.DeweyDecClass, "dewey-dec-class"},
-		{&b.Pages, "pages"},
-		{&b.Publisher, "publisher"},
-		{&b.PublishDate, "publish-date"},
-		{&b.AddedDate, "added-date"},
-		{&b.EAN_ISBN13, "ean-isbn-13"},
-		{&b.UPC_ISBN10, "upc-isbn-10"},
-		{&b.ImageBase64, "image-base64"},
-	}
-	for i, f := range fields {
-		if err := parseFormValue(f.p, f.key, i, r); err != nil {
-			return nil, err
-		}
-	}
-	return &b, nil
+	var sb book.StringBook
+	sb.ID = r[0]
+	sb.Title = r[1]
+	sb.Author = r[2]
+	sb.Description = r[3]
+	sb.Subject = r[4]
+	sb.DeweyDecClass = r[5]
+	sb.Pages = r[6]
+	sb.Publisher = r[7]
+	sb.PublishDate = r[8]
+	sb.AddedDate = r[9]
+	sb.EAN_ISBN13 = r[10]
+	sb.UPC_ISBN10 = r[11]
+	sb.ImageBase64 = r[12]
+	return sb.Book(dateLayout)
 }
 
 func record(b book.Book) []string {
@@ -150,46 +139,12 @@ func record(b book.Book) []string {
 		b.DeweyDecClass,
 		strconv.Itoa(b.Pages),
 		b.Publisher,
-		b.PublishDate.Format(DateLayout),
-		b.AddedDate.Format(DateLayout),
+		b.PublishDate.Format(string(dateLayout)),
+		b.AddedDate.Format(string(dateLayout)),
 		b.EAN_ISBN13,
 		b.UPC_ISBN10,
 		b.ImageBase64,
 	}
-}
-
-func parseFormValue(p interface{}, key string, i int, r []string) error {
-	v := r[i]
-	if len(v) == 0 {
-		return nil
-	}
-	var err error
-	switch ptr := p.(type) {
-	case *string:
-		if len(v) == 0 {
-			err = fmt.Errorf("value not set")
-			break
-		}
-		*ptr = v
-	case *int:
-		var i int
-		i, err = strconv.Atoi(v)
-		if err != nil {
-			break
-		}
-		*ptr = i
-	case *time.Time:
-		var t time.Time
-		t, err = time.Parse(DateLayout, v)
-		if err != nil {
-			break
-		}
-		*ptr = t
-	}
-	if err != nil {
-		return fmt.Errorf("parsing key %q (column %v) (%q) as %T: %w", key, i, v, p, err)
-	}
-	return nil
 }
 
 type Dump struct {

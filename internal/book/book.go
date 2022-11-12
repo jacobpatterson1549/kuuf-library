@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -33,6 +34,27 @@ type (
 		UPC_ISBN10    string
 		ImageBase64   string
 	}
+	StringBook struct {
+		ID            string
+		Title         string
+		Author        string
+		Subject       string
+		Description   string
+		DeweyDecClass string
+		Pages         string
+		Publisher     string
+		PublishDate   string
+		AddedDate     string
+		EAN_ISBN13    string
+		UPC_ISBN10    string
+		ImageBase64   string
+	}
+	DateLayout string
+)
+
+const (
+	HyphenatedYYYYMMDD DateLayout = "2006-01-02"
+	SlashMMDDYYYY      DateLayout = "01/02/2006"
 )
 
 // NewID creates a random, url-safe, base64 string.
@@ -86,4 +108,35 @@ func isSpecial(r rune) bool {
 		!('a' <= r && r <= 'z') &&
 		!('A' <= r && r <= 'Z') &&
 		!('0' <= r && r <= '9')
+}
+
+func (sb StringBook) Book(dl DateLayout) (*Book, error) {
+	var b Book
+	var err error
+	b.ID = sb.ID
+	b.Title = sb.Title
+	b.Author = sb.Author
+	b.Description = sb.Description
+	b.Subject = sb.Subject
+	b.DeweyDecClass = sb.DeweyDecClass
+	if len(sb.Pages) != 0 {
+		if b.Pages, err = strconv.Atoi(sb.Pages); err != nil {
+			return nil, fmt.Errorf("pages: %w", err)
+		}
+	}
+	b.Publisher = sb.Publisher
+	if len(sb.PublishDate) != 0 {
+		if b.PublishDate, err = time.Parse(string(dl), sb.PublishDate); err != nil {
+			return nil, fmt.Errorf("publish date: %w", err)
+		}
+	}
+	if len(sb.AddedDate) != 0 {
+		if b.AddedDate, err = time.Parse(string(dl), sb.AddedDate); err != nil {
+			return nil, fmt.Errorf("added date: %w", err)
+		}
+	}
+	b.EAN_ISBN13 = sb.EAN_ISBN13
+	b.UPC_ISBN10 = sb.UPC_ISBN10
+	b.ImageBase64 = sb.ImageBase64
+	return &b, nil
 }

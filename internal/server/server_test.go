@@ -3,8 +3,10 @@ package server
 import (
 	"compress/gzip"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -132,4 +134,94 @@ func TestResponseContains(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestBookFrom(t *testing.T) {
+	dateP := time.Date(2001, 6, 9, 0, 0, 0, 0, time.UTC)
+	dateA := time.Date(2012, 12, 31, 0, 0, 0, 0, time.UTC)
+	textPD := "2001-06-09"
+	textAD := "2012-12-31"
+	tests := []struct {
+		name   string
+		form   map[string]string
+		want   *book.Book
+		wantOk bool
+	}{
+		{"no title", map[string]string{}, nil, false},
+		{"no author", map[string]string{"title": "a"}, nil, false},
+		{"no subject", map[string]string{"title": "a", "author": "b"}, nil, false},
+		{"no added Date", map[string]string{"title": "a", "author": "b", "subject": "c"}, nil, false},
+		{"bad parse", map[string]string{"title": "a", "author": "b", "subject": "c", "added-date": textAD, "pages": "eight"}, nil, false},
+		{"bad pages", map[string]string{"title": "a", "author": "b", "subject": "c", "added-date": textAD, "pages": "-1"}, nil, false},
+		{
+			name:   "minimal",
+			form:   map[string]string{"title": "a", "author": "b", "subject": "c", "added-date": textAD, "pages": "8"},
+			want:   &book.Book{Header: book.Header{Title: "a", Author: "b", Subject: "c"}, AddedDate: dateA, Pages: 8},
+			wantOk: true,
+		},
+		{
+			name: "all fields",
+			form: map[string]string{
+				"title":           "a",
+				"author":          "b",
+				"subject":         "c",
+				"added-date":      textAD,
+				"pages":           "8",
+				"id":              "d",
+				"description":     "e",
+				"dewey-dec-class": "f",
+				"publisher":       "g",
+				"publish-date":    textPD,
+				"ean-isbn-13":     "h",
+				"upc-isbn-10":     "i",
+			},
+			want: &book.Book{
+				Header: book.Header{
+					ID:      "d",
+					Title:   "a",
+					Author:  "b",
+					Subject: "c",
+				},
+				Description:   "e",
+				DeweyDecClass: "f",
+				Publisher:     "g",
+				PublishDate:   dateP,
+				AddedDate:     dateA,
+				Pages:         8,
+				EAN_ISBN13:    "h",
+				UPC_ISBN10:    "i",
+			},
+			wantOk: true,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			r := multipartFormHelper(t, test.form)
+			got, err := bookFrom(r)
+			switch {
+			case !test.wantOk:
+				if err == nil {
+					t.Errorf("wanted error")
+				}
+			case err != nil:
+				t.Errorf("unwanted error: %v", err)
+			case *test.want != *got:
+				t.Errorf("not equal: \n wanted: %+v \n got:    %+v", *test.want, *got)
+			}
+		})
+	}
+}
+
+func multipartFormHelper(t *testing.T, form map[string]string) *http.Request {
+	t.Helper()
+	var sb strings.Builder
+	mpw := multipart.NewWriter(&sb)
+	mpw.Close()
+	r := httptest.NewRequest("POST", "/", strings.NewReader(sb.String()))
+	r.Form = make(url.Values, len(form))
+	for k, v := range form {
+		r.Form.Set(k, v)
+	}
+	r.Header.Set("Content-Type", mpw.FormDataContentType())
+	return r
 }
