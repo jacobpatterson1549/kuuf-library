@@ -459,9 +459,6 @@ func bookIDFrom(r *http.Request) string {
 }
 
 func bookFrom(r *http.Request) (*book.Book, error) {
-	if err := r.ParseForm(); err != nil {
-		return nil, fmt.Errorf("parsing form: %w", err)
-	}
 	sb := book.StringBook{
 		ID:            r.FormValue("id"),
 		Title:         r.FormValue("title"),
