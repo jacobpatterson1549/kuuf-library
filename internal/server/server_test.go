@@ -554,6 +554,22 @@ func TestGetAdmin(t *testing.T) {
 	}
 }
 
+func TestPostBook(t *testing.T) {
+	// TODO
+}
+
+func TestPutBook(t *testing.T) {
+	// TODO
+}
+
+func TestDeleteBook(t *testing.T) {
+	// TODO
+}
+
+func TestPutAdminPassword(t *testing.T) {
+	// TODO
+}
+
 func TestWithAdminPassword(t *testing.T) {
 	tests := []struct {
 		name              string
