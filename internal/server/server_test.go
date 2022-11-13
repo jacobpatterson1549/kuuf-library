@@ -469,3 +469,87 @@ func TestGetBook(t *testing.T) {
 		})
 	}
 }
+
+func TestGetAdmin(t *testing.T) {
+	tests := []struct {
+		name         string
+		url          string
+		readBook     func(id string) (*book.Book, error)
+		wantCode     int
+		wantData     []string
+		unwantedData []string
+	}{
+		{
+			name:     "no id",
+			url:      "/admin",
+			wantCode: 200,
+			wantData: []string{
+				"Create Book",
+				"Set Admin Password",
+			},
+			unwantedData: []string{
+				"Delete Book",
+				"Update Book",
+			},
+		},
+		{
+			name: "db error",
+			url:  "/admin?id=BAD",
+			readBook: func(id string) (*book.Book, error) {
+				return nil, fmt.Errorf("db error")
+			},
+			wantCode: 500,
+		},
+		{
+			name: "update book",
+			url:  "/admin?id=5618941",
+			readBook: func(id string) (*book.Book, error) {
+				if id != "5618941" {
+					return nil, fmt.Errorf("unwanted id: %v", id)
+				}
+				b := book.Book{
+					Description: "info397",
+				}
+				return &b, nil
+			},
+			wantCode: 200,
+			wantData: []string{
+				"Delete Book",
+				"Update Book",
+				"Set Admin Password",
+				"info397",
+			},
+			unwantedData: []string{
+				"Create Book",
+			},
+		},
+	}
+	for _, test := range tests {
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest("get", test.url, nil)
+		s := Server{
+			db: mockDatabase{
+				mockReadBookFunc: test.readBook,
+			},
+		}
+		s.getAdmin(w, r)
+		t.Run(test.name, func(t *testing.T) {
+			switch {
+			case test.wantCode != w.Code:
+				t.Errorf("codes not equal: wanted %v, got %v", test.wantCode, w.Code)
+			case w.Code == 200:
+				got := w.Body.String()
+				for _, want := range test.wantData {
+					if !strings.Contains(got, want) {
+						t.Errorf("wanted %q in body, got: \n %v", want, got)
+					}
+				}
+				for _, exclude := range test.unwantedData {
+					if strings.Contains(got, exclude) {
+						t.Errorf("unwanted %q in body, got: \n %v", exclude, got)
+					}
+				}
+			}
+		})
+	}
+}
