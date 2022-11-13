@@ -2,6 +2,20 @@ package server
 
 import "github.com/jacobpatterson1549/kuuf-library/internal/book"
 
+type mockPasswordHandler struct {
+	mockHashFunc func(password []byte) (hashedPassword []byte, err error)
+	mockIsCorrectPasswordFunc func(hashedPassword, password []byte) (ok bool, err error)
+}
+
+func (m mockPasswordHandler)	Hash(password []byte) (hashedPassword []byte, err error) {
+	return m.mockHashFunc(password)
+}
+
+func (m mockPasswordHandler)	IsCorrectPassword(hashedPassword, password []byte) (ok bool, err error) {
+	return m.mockIsCorrectPasswordFunc(hashedPassword, password)
+}
+
+
 type mockDatabase struct {
 	mockCreateBooksFunc         func(books ...book.Book) ([]book.Book, error)
 	mockReadBookHeadersFunc     func(f book.Filter, limit, offset int) ([]book.Header, error)

@@ -553,3 +553,92 @@ func TestGetAdmin(t *testing.T) {
 		})
 	}
 }
+
+func TestWithAdminPassword(t *testing.T) {
+	tests := []struct {
+		name              string
+		form              url.Values
+		readAdminPassword func() (hashedPassword []byte, err error)
+		isCorrectPassword func(hashedPassword, password []byte) (ok bool, err error)
+		wantCode          int
+		wantData          string
+	}{
+		{
+			name: "read error",
+			readAdminPassword: func() (hashedPassword []byte, err error) {
+				return nil, fmt.Errorf("read error")
+			},
+			wantCode: 500,
+			wantData: "read error",
+		},
+		{
+			name: "is correct error",
+			readAdminPassword: func() (hashedPassword []byte, err error) {
+				return nil, nil
+			},
+			isCorrectPassword: func(hashedPassword, password []byte) (ok bool, err error) {
+				return false, fmt.Errorf("is correct error")
+			},
+			wantCode: 500,
+			wantData: "is correct error",
+		},
+		{
+			name: "incorrect",
+			readAdminPassword: func() (hashedPassword []byte, err error) {
+				return nil, nil
+			},
+			isCorrectPassword: func(hashedPassword, password []byte) (ok bool, err error) {
+				return false, nil
+			},
+			wantCode: 401,
+			wantData: "Unauthorized",
+		},
+		{
+			name: "happy path",
+			form: url.Values{
+				"p": {"top_Secret-007"},
+			},
+			readAdminPassword: func() (hashedPassword []byte, err error) {
+				return []byte("HAsh#"), nil
+			},
+			isCorrectPassword: func(hashedPassword, password []byte) (ok bool, err error) {
+				switch {
+				case string(hashedPassword) != "HAsh#":
+					t.Errorf("unwanted hashed password: %s", hashedPassword)
+				case string(password) != "top_Secret-007":
+					t.Errorf("unwanted password: %s", password)
+				}
+				return true, nil
+			},
+			wantCode: 200,
+			wantData: "validated",
+		},
+	}
+	h1 := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("validated"))
+	})
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			r := http.Request{
+				Form: test.form,
+			}
+			s := Server{
+				db: mockDatabase{
+					mockReadAdminPasswordFunc: test.readAdminPassword,
+				},
+				ph: mockPasswordHandler{
+					mockIsCorrectPasswordFunc: test.isCorrectPassword,
+				},
+			}
+			h2 := s.withAdminPassword(h1)
+			h2.ServeHTTP(w, &r)
+			if test.wantCode != w.Code {
+				t.Errorf("codes not equal: wanted %v, got %v", test.wantCode, w.Code)
+			}
+			if want, got := test.wantData, w.Body.String(); !strings.Contains(got, want) {
+				t.Errorf("wanted %q in body, got: \n %v", want, got)
+			}
+		})
+	}
+}
