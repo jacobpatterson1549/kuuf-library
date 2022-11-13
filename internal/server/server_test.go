@@ -405,3 +405,67 @@ func TestGetBookHeaders(t *testing.T) {
 		})
 	}
 }
+
+func TestGetBook(t *testing.T) {
+	tests := []struct {
+		name     string
+		form     url.Values
+		readBook func(id string) (*book.Book, error)
+		wantCode int
+		wantData []string
+	}{
+		{
+			name: "db error",
+			readBook: func(id string) (*book.Book, error) {
+				return nil, fmt.Errorf("db error")
+			},
+			wantCode: 500,
+		},
+		{
+			name: "happy path",
+			form: url.Values{
+				"id": {"id7"},
+			},
+			readBook: func(id string) (*book.Book, error) {
+				if id != "id7" {
+					t.Errorf("unwanted id: %q", id)
+				}
+				b := book.Book{
+					Header: book.Header{
+						ID:    "id7",
+						Title: "title8",
+					},
+					EAN_ISBN13: "weird_isbn",
+				}
+				return &b, nil
+			},
+			wantCode: 200,
+			wantData: []string{"id7", "title8", "weird_isbn"},
+		},
+	}
+	for _, test := range tests {
+		w := httptest.NewRecorder()
+		r := http.Request{
+			Form: test.form,
+		}
+		s := Server{
+			db: mockDatabase{
+				mockReadBookFunc: test.readBook,
+			},
+		}
+		s.getBook(w, &r)
+		t.Run(test.name, func(t *testing.T) {
+			switch {
+			case test.wantCode != w.Code:
+				t.Errorf("codes not equal: wanted %v, got %v", test.wantCode, w.Code)
+			case w.Code == 200:
+				got := w.Body.String()
+				for _, want := range test.wantData {
+					if !strings.Contains(got, want) {
+						t.Errorf("wanted %q in body, got: \n %v", want, got)
+					}
+				}
+			}
+		})
+	}
+}
