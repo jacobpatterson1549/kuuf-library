@@ -14,6 +14,60 @@ import (
 	"github.com/jacobpatterson1549/kuuf-library/internal/book"
 )
 
+func TestNewServer(t *testing.T) {
+	tests := []struct {
+		name   string
+		cfg    Config
+		wantOk bool
+	}{
+		{
+			name: "empty database url",
+		},
+		{
+			name: "database url parse error",
+			cfg: Config{
+				DatabaseURL: "csv ://",
+			},
+		},
+		{
+			name: "unknown database url",
+			cfg: Config{
+				DatabaseURL: "oracle://some_db99:1234/ORCL",
+			},
+		},
+		{
+			name: "csv",
+			cfg: Config{
+				DatabaseURL: "csv://",
+				MaxRows: 42,
+			},
+			wantOk: true,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var sb strings.Builder
+			got, err := test.cfg.NewServer(&sb)
+			switch {
+			case !test.wantOk:
+				if err == nil {
+					t.Errorf("wanted error")
+				}
+			case err != nil:
+				t.Errorf("unwanted error: %v", err)
+			case got.Config != test.cfg:
+				t.Errorf("configs not equal: \n wanted: %v \n got:     %v", got.Config, test.cfg)
+			case got.db == nil:
+				t.Errorf("database not set")
+			case got.ph == nil:
+				t.Errorf("password handler not set")
+			case got.out != &sb:
+				t.Errorf("output writers not equal: \n wanted: %v \n got:     %v", got.out, &sb)
+			}
+		})
+	}
+}
+
 func TestMux(t *testing.T) {
 	s := Server{
 		db: mockDatabase{
