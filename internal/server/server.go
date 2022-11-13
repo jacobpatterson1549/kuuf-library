@@ -251,7 +251,7 @@ func (s *Server) getBookHeaders(w http.ResponseWriter, r *http.Request) {
 		Books:  books,
 	}
 	if len(data.Books) > s.MaxRows {
-		data.Books = data.Books[1:]
+		data.Books = data.Books[:s.MaxRows]
 		data.NextPage = page + 1
 	}
 	s.serveTemplate(w, "list", data)

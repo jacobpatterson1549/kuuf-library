@@ -2,11 +2,13 @@ package server
 
 import (
 	"compress/gzip"
+	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -39,7 +41,7 @@ func TestNewServer(t *testing.T) {
 			name: "csv",
 			cfg: Config{
 				DatabaseURL: "csv://",
-				MaxRows: 42,
+				MaxRows:     42,
 			},
 			wantOk: true,
 		},
@@ -281,4 +283,125 @@ func multipartFormHelper(t *testing.T, form map[string]string) *http.Request {
 	}
 	r.Header.Set("Content-Type", mpw.FormDataContentType())
 	return r
+}
+
+func TestGetBookHeaders(t *testing.T) {
+	tests := []struct {
+		name         string
+		form         url.Values
+		s            Server
+		wantCode     int
+		wantData     []string
+		unwantedData []string
+	}{
+		{
+			name: "bad page",
+			form: url.Values{
+				"page": {"last"},
+			},
+			wantCode: 400,
+		},
+		{
+			name: "bad filter",
+			form: url.Values{
+				"q": {"~!@#$%^&*(){}"},
+			},
+			wantCode: 400,
+		},
+		{
+			name:     "db error form",
+			wantCode: 500,
+			s: Server{
+				db: mockDatabase{
+					mockReadBookHeadersFunc: func(f book.Filter, limit, offset int) ([]book.Header, error) {
+						return nil, fmt.Errorf("db error")
+					},
+				},
+			},
+		},
+		{
+			name:     "empty form",
+			wantCode: 200,
+			s: Server{
+				Config: Config{
+					MaxRows: 5,
+				},
+				db: mockDatabase{
+					mockReadBookHeadersFunc: func(f book.Filter, limit, offset int) ([]book.Header, error) {
+						headers := []book.Header{
+							{Title: "hello"},
+						}
+						return headers, nil
+					},
+				},
+			},
+			wantData:     []string{"hello"},
+			unwantedData: []string{`value="Load More books"`},
+		},
+		{
+			name: "page 23",
+			form: url.Values{
+				"page": {"3"},
+				"q":    {"many items"},
+			},
+			wantCode: 200,
+			s: Server{
+				Config: Config{
+					MaxRows: 2,
+				},
+				db: mockDatabase{
+					mockReadBookHeadersFunc: func(f book.Filter, limit, offset int) ([]book.Header, error) {
+						wantFilter := book.Filter{"many", "items"}
+						switch {
+						case !reflect.DeepEqual(wantFilter, f):
+							return nil, fmt.Errorf("filters not equal: \n wanted: %v \n got:    %v", wantFilter, f)
+						case limit < 2:
+							return nil, fmt.Errorf("limit should be at least maxRows: %v", limit)
+						case offset != 6:
+							return nil, fmt.Errorf("unwanted offset: %v", offset)
+						}
+						headers := []book.Header{
+							{Title: "Memo"},
+							{Author: "Poe"},
+							{ID: "MASTER_ID"}, // should be excluded because MaxRows is 2
+						}
+						return headers, nil
+					},
+				},
+			},
+			wantData: []string{
+				"Memo",
+				"Poe",
+				`name="page" value="4"`,       // next page
+				`name="q" value="many items"`, // preserve query when loading next page
+				`value="Load More books"`,
+			},
+			unwantedData: []string{"MASTER_ID"},
+		},
+	}
+	for _, test := range tests {
+		w := httptest.NewRecorder()
+		r := http.Request{
+			Form: test.form,
+		}
+		test.s.getBookHeaders(w, &r)
+		t.Run(test.name, func(t *testing.T) {
+			switch {
+			case test.wantCode != w.Code:
+				t.Errorf("codes not equal: wanted %v, got %v", test.wantCode, w.Code)
+			case w.Code == 200:
+				got := w.Body.String()
+				for _, want := range test.wantData {
+					if !strings.Contains(got, want) {
+						t.Errorf("wanted %q in body, got: \n %v", want, got)
+					}
+				}
+				for _, exclude := range test.unwantedData {
+					if strings.Contains(got, exclude) {
+						t.Errorf("unwanted %q in body, got: \n %v", exclude, got)
+					}
+				}
+			}
+		})
+	}
 }
