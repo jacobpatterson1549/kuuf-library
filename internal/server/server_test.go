@@ -15,12 +15,15 @@ import (
 )
 
 func TestMux(t *testing.T) {
-	cfg := Config{
-		DatabaseURL: "csv://",
-	}
-	s, err := cfg.NewServer(io.Discard)
-	if err != nil {
-		t.Fatal(err)
+	s := Server{
+		db: mockDatabase{
+			mockReadBookHeadersFunc: func(f book.Filter, limit, offset int) ([]book.Header, error) {
+				return nil, nil
+			},
+			mockReadBookFunc: func(id string) (*book.Book, error) {
+				return new(book.Book), nil
+			},
+		},
 	}
 	h := s.mux()
 	tests := []struct {
@@ -31,7 +34,7 @@ func TestMux(t *testing.T) {
 	}{
 		{"bad method", "patch", "/", 405},
 		{"list", "GET", "/", 200},
-		{"book", "GET", "/book", 500}, // Missing id
+		{"book", "GET", "/book", 200},
 		{"admin", "GET", "/admin", 200},
 		{"robots.txt", "GET", "/robots.txt", 200},
 		{"not found", "GET", "/bad.html", 404},
