@@ -15,6 +15,20 @@ func main() {
 	out := os.Stdout
 	logFlags := log.Ldate | log.Ltime | log.LUTC | log.Lshortfile | log.Lmsgprefix
 	log := log.New(out, "", logFlags)
+	cfg, err := serverConfig(programName, programArgs)
+	if err != nil {
+		log.Fatalf("parsing server config:  %v", err)
+	}
+	s, err := cfg.NewServer(out)
+	if err != nil {
+		log.Fatalf("creating server: %v", err)
+	}
+	if err := s.Run(); err != nil {
+		log.Fatalf("running server: %v", err)
+	}
+}
+
+func serverConfig(programName string, programArgs []string) (*server.Config, error) {
 	usage := []string{
 		"runs a library web server",
 	}
@@ -35,13 +49,9 @@ func main() {
 	fs.IntVar(&cfg.MaxRows, "max-rows", 100, "the maximum number of books to display as rows on the filter page")
 	fs.IntVar(&cfg.DBTimeoutSec, "db-timeout-sec", 5, "the number of seconds each database operation can take")
 	if err := parseFlags(fs, programArgs); err != nil {
-		log.Fatalf("parsing server args: %v", err)
+		return nil, err
 	}
-	s, err := cfg.NewServer(out)
-	if err != nil {
-		log.Fatalf("creating server: %v", err)
-	}
-	log.Fatal(s.Run())
+	return &cfg, nil
 }
 
 // parseFlags parses the flagSet after overlaying environment flags.
