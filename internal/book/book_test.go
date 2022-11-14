@@ -51,6 +51,52 @@ func TestSort(t *testing.T) {
 	}
 }
 
+func TestNewFilter(t *testing.T) {
+	tests := []struct {
+		name   string
+		s      string
+		wantOk bool
+		want   Filter
+	}{
+		{
+			name:   "empty",
+			wantOk: true,
+			want: Filter{},
+		},
+		{
+			name: "alphaNumeric only",
+			s:    "not-allowed",
+		},
+		{
+			name:   "happy path",
+			s:      "How 2  make a   FILTER",
+			wantOk: true,
+			want: Filter{
+				"How",
+				"2",
+				"make",
+				"a",
+				"FILTER",
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, err := NewFilter(test.s)
+			switch {
+			case !test.wantOk:
+				if err == nil {
+					t.Errorf("wanted error")
+				}
+			case err != nil:
+				t.Errorf("unwanted error: %v", err)
+			case !reflect.DeepEqual(&test.want, got):
+				t.Errorf("filters not equal: \n wanted: %v \n got:    %v", &test.want, got)
+			}
+		})
+	}
+}
+
 func TestStringBookBook(t *testing.T) {
 	tests := []struct {
 		name       string
