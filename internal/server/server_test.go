@@ -970,3 +970,66 @@ func TestWithAdminPassword(t *testing.T) {
 		})
 	}
 }
+
+func TestSetupAdminPassword(t *testing.T) {
+	tests := []struct {
+		name                string
+		hash                func(password []byte) (hashedPassword []byte, err error)
+		updateAdminPassword func(hashedPassword string) error
+		wantOk              bool
+	}{
+		{
+			name: "hash error",
+			hash: func(password []byte) (hashedPassword []byte, err error) {
+				return nil, fmt.Errorf("hash error")
+			},
+		},
+		{
+			name: "db error",
+			hash: func(password []byte) (hashedPassword []byte, err error) {
+				return []byte("hash48"), nil
+			},
+			updateAdminPassword: func(hashedPassword string) error {
+				return fmt.Errorf("db error")
+			},
+		},
+		{
+			name: "happy path",
+			hash: func(password []byte) (hashedPassword []byte, err error) {
+				if string(password) != "leap17" {
+					return nil, fmt.Errorf("unwanted password: %q", password)
+				}
+				return []byte("hash48"), nil
+			},
+			updateAdminPassword: func(hashedPassword string) error {
+				if hashedPassword != "hash48" {
+					return fmt.Errorf("unwanted hashedPassword: %q", hashedPassword)
+				}
+				return nil
+			},
+			wantOk: true,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ph := mockPasswordHandler{
+				mockHashFunc: test.hash,
+			}
+			db := mockDatabase{
+				mockUpdateAdminPasswordFunc: test.updateAdminPassword,
+			}
+			cfg := Config{
+				AdminPassword: "leap17",
+			}
+			err := cfg.setup(db, ph, nil)
+			switch {
+			case !test.wantOk:
+				if err == nil {
+					t.Errorf("wanted error")
+				}
+			case err != nil:
+				t.Errorf("unwanted error: %v", err)
+			}
+		})
+	}
+}
