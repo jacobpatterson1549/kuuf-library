@@ -5,13 +5,20 @@ import (
 	"time"
 )
 
+func TestNewIDLength(t *testing.T) {
+	id := NewID()
+	if len(id) != 32 {
+		t.Errorf("unwanted id length: %v", len(id))
+	}
+}
+
 func TestStringBookBook(t *testing.T) {
 	tests := []struct {
 		name       string
 		dateLayout DateLayout
 		sb         StringBook
 		want       *Book
-		wantOk    bool
+		wantOk     bool
 	}{
 		{"empty, no layout", "", StringBook{}, &Book{}, true},
 		{"bad pages", HyphenatedYYYYMMDD, StringBook{Pages: "a"}, nil, false},
