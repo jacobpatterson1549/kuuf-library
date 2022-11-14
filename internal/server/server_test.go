@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/jacobpatterson1549/kuuf-library/internal/book"
+	"github.com/jacobpatterson1549/kuuf-library/internal/db/csv"
 )
 
 func TestNewServer(t *testing.T) {
@@ -1036,36 +1037,41 @@ func TestSetupAdminPassword(t *testing.T) {
 
 func TestSetupBackfillCSV(t *testing.T) {
 	tests := []struct {
-		name        string
-		createBooks func(books ...book.Book) ([]book.Book, error)
-		wantOk      bool
+		name   string
+		db     Database
+		wantOk bool
 	}{
 		{
 			name: "db error",
-			createBooks: func(books ...book.Book) ([]book.Book, error) {
-				return nil, fmt.Errorf("db error")
+			db: mockDatabase{
+				mockCreateBooksFunc: func(books ...book.Book) ([]book.Book, error) {
+					return nil, fmt.Errorf("db error")
+				},
 			},
 		},
 		{
-			name: "db error",
-			createBooks: func(books ...book.Book) ([]book.Book, error) {
-				if len(books) != 0 {
-					return nil, fmt.Errorf("the embedded csv database should be empty when testing: got %v books", len(books))
-				}
-				return books, nil
+			name: "csv db", // should not support createBooks
+			db:   &csv.Database{},
+		},
+		{
+			name: "happy path",
+			db: mockDatabase{
+				mockCreateBooksFunc: func(books ...book.Book) ([]book.Book, error) {
+					if len(books) != 0 {
+						return nil, fmt.Errorf("the embedded csv database should be empty when testing: got %v books", len(books))
+					}
+					return books, nil
+				},
 			},
 			wantOk: true,
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			db := mockDatabase{
-				mockCreateBooksFunc: test.createBooks,
-			}
 			cfg := Config{
 				BackfillCSV: true,
 			}
-			err := cfg.setup(db, nil, nil)
+			err := cfg.setup(test.db, nil, nil)
 			switch {
 			case !test.wantOk:
 				if err == nil {

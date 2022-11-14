@@ -109,7 +109,7 @@ func (cfg Config) setup(db Database, ph PasswordHandler, out io.Writer) error {
 			return fmt.Errorf("initializing admin password from server configuration: %w", err)
 		}
 	}
-	if _, ok := db.(*csv.Database); !ok && cfg.BackfillCSV {
+	if cfg.BackfillCSV {
 		if err := cfg.backfillCSV(db); err != nil {
 			return fmt.Errorf("backfilling database from internal CSV file: %w", err)
 		}
