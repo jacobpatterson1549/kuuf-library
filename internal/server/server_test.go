@@ -594,12 +594,12 @@ func TestPostBook(t *testing.T) {
 			},
 			createBooks: func(books ...book.Book) ([]book.Book, error) {
 				want := book.Book{
-					Header:    book.Header{
-						Title: "t",
-						Author: "a",
+					Header: book.Header{
+						Title:   "t",
+						Author:  "a",
 						Subject: "s",
 					},
-					Pages: 1,
+					Pages:     1,
 					AddedDate: time.Date(2022, 11, 13, 0, 0, 0, 0, time.UTC),
 				}
 				switch {
@@ -637,7 +637,113 @@ func TestPostBook(t *testing.T) {
 }
 
 func TestPutBook(t *testing.T) {
-	// TODO
+	tests := []struct {
+		name          string
+		formOverrides map[string]string
+		updateBook    func(b book.Book, newID string, updateImage bool) error
+		wantCode      int
+		wantLocPrefix string
+	}{
+		{
+			name: "bad book",
+			formOverrides: map[string]string{
+				"pages": "NaN",
+			},
+			wantCode: 400,
+		},
+		{
+			name: "db error",
+			updateBook: func(b book.Book, newID string, updateImage bool) error {
+				return fmt.Errorf("db error")
+			},
+			wantCode: 500,
+		},
+		{
+			name: "minimal happy path",
+			updateBook: func(b book.Book, newID string, updateImage bool) error {
+				want := book.Book{
+					Header: book.Header{
+						Title:   "t",
+						Author:  "a",
+						Subject: "s",
+					},
+					Pages:     1,
+					AddedDate: time.Date(2022, 11, 13, 0, 0, 0, 0, time.UTC),
+				}
+				switch {
+				case want != b:
+					return fmt.Errorf("books not equal: \n wanted: %v \n got:    %v", want, b)
+				case updateImage:
+					return fmt.Errorf("did not want to update image")
+				}
+				return nil
+			},
+			wantCode:      303,
+			wantLocPrefix: "/book?id=",
+		},
+		{
+			name: "update image",
+			formOverrides: map[string]string{
+				"update-image": "true",
+			},
+			updateBook: func(b book.Book, newID string, updateImage bool) error {
+				switch {
+				case !updateImage:
+					return fmt.Errorf("did not want to update image")
+				}
+				return nil
+			},
+			wantCode:      303,
+			wantLocPrefix: "/book?id=",
+		},
+		{
+			name: "clear image",
+			formOverrides: map[string]string{
+				"update-image": "clear",
+			},
+			updateBook: func(b book.Book, newID string, updateImage bool) error {
+				switch {
+				case len(b.ImageBase64) != 0:
+					return fmt.Errorf("wanted image to be zeroed")
+				case !updateImage:
+					return fmt.Errorf("did not want to update image")
+				}
+				return nil
+			},
+			wantCode:      303,
+			wantLocPrefix: "/book?id=",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			form := map[string]string{
+				"title":      "t",
+				"author":     "a",
+				"subject":    "s",
+				"pages":      "1",
+				"added-date": "2022-11-13",
+			}
+			for k, v := range test.formOverrides {
+				form[k] = v
+			}
+			s := Server{
+				db: mockDatabase{
+					mockUpdateBookFunc: test.updateBook,
+				},
+			}
+			w := httptest.NewRecorder()
+			r := multipartFormHelper(t, form)
+			s.putBook(w, r)
+			switch {
+			case test.wantCode != w.Code:
+				t.Errorf("codes not equal: wanted %v, got %v", test.wantCode, w.Code)
+			case test.wantCode == 303:
+				if want, got := test.wantLocPrefix, w.Header().Get("Location"); !strings.HasPrefix(got, want) {
+					t.Errorf("unwanted redirect location: \n wanted: %q \n got: %q", want, got)
+				}
+			}
+		})
+	}
 }
 
 func TestDeleteBook(t *testing.T) {
