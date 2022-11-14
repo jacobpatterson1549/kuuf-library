@@ -70,11 +70,15 @@ type Books []Book
 
 func (books Books) Sort() {
 	sort.Slice(books, func(i, j int) bool {
-		if books[i].Subject != books[j].Subject {
-			return books[i].Subject < books[j].Subject
-		}
-		return books[i].Title != books[j].Title
+		return books[i].less(books[j].Header)
 	})
+}
+
+func (h Header) less(other Header) bool {
+	if h.Subject != other.Subject {
+		return h.Subject < other.Subject
+	}
+	return h.Title != other.Title
 }
 
 type Filter []string
