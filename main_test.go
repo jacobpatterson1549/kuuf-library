@@ -3,8 +3,118 @@ package main
 import (
 	"flag"
 	"io"
+	"strings"
 	"testing"
+
+	"github.com/jacobpatterson1549/kuuf-library/internal/server"
 )
+
+func TestServerConfig(t *testing.T) {
+	tests := []struct {
+		name        string
+		programName string
+		programArgs []string
+		programEnv  [][]string
+		wantOk      bool
+		wantLogPart string
+		want        *server.Config
+	}{
+		{
+			name:        "unknown arg",
+			programArgs: []string{"-delete-db=true"},
+		},
+		{
+			name:        "bad max rows",
+			programArgs: []string{"-max-rows=many"},
+		},
+		{
+			name:        "display help",
+			programName: "libraryXYZ",
+			programArgs: []string{"-h"},
+			wantLogPart: "libraryXYZ",
+		},
+		{
+			name:   "default args",
+			wantOk: true,
+			want: &server.Config{
+				Port:         "8000",
+				DatabaseURL:  "csv://",
+				MaxRows:      100,
+				DBTimeoutSec: 5,
+			},
+		},
+		{
+			name:   "from program args",
+			wantOk: true,
+			programArgs: []string{
+				"-port=8001",
+				"-database-url=postgres://u:p@localhost/kuuf_library_db1",
+				"-admin-password=new-password1",
+				"-csv-backfill=true",
+				"-csv-dump=true",
+				"-update-images=true",
+				"-max-rows=30",
+				"-db-timeout-sec=4",
+			},
+			want: &server.Config{
+				Port:          "8001",
+				DatabaseURL:   "postgres://u:p@localhost/kuuf_library_db1",
+				AdminPassword: "new-password1",
+				BackfillCSV:   true,
+				DumpCSV:       true,
+				UpdateImages:  true,
+				MaxRows:       30,
+				DBTimeoutSec:  4,
+			},
+		},
+		{
+			name:   "from program env",
+			wantOk: true,
+			programEnv: [][]string{
+				{"PORT", "8002"},
+				{"DATABASE_URL", "postgres://u:p@localhost/kuuf_library_db2"},
+				{"ADMIN_PASSWORD", "new-password2"},
+				{"CSV_BACKFILL", "true"},
+				{"CSV_DUMP", "true"},
+				{"UPDATE_IMAGES", "true"},
+				{"MAX_ROWS", "55"},
+				{"DB_TIMEOUT_SEC", "3"},
+			},
+			want: &server.Config{
+				Port:          "8002",
+				DatabaseURL:   "postgres://u:p@localhost/kuuf_library_db2",
+				AdminPassword: "new-password2",
+				BackfillCSV:   true,
+				DumpCSV:       true,
+				UpdateImages:  true,
+				MaxRows:       55,
+				DBTimeoutSec:  3,
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			for _, kv := range test.programEnv {
+				t.Setenv(kv[0], kv[1])
+			}
+			var sb strings.Builder
+			got, err := newServerConfig(&sb, test.programName, test.programArgs...)
+			switch {
+			case !strings.Contains(sb.String(), test.wantLogPart):
+				t.Errorf("wanted log to contain %q, got: %v", test.wantLogPart, sb.String())
+			case !test.wantOk:
+				if err == nil {
+					t.Errorf("wanted error")
+				}
+			case err != nil:
+				t.Errorf("unwanted error: %v", err)
+			case *test.want != *got:
+				t.Errorf("configs not equal: \n wanted: %+v \n got:    %+v", test.want, got)
+			}
+		})
+	}
+}
 
 func TestParseFlagSet(t *testing.T) {
 	tests := []struct {

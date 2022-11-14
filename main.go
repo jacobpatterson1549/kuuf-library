@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"strings"
@@ -11,13 +12,13 @@ import (
 )
 
 func main() {
-	programName, programArgs := os.Args[0], os.Args[1:]
 	out := os.Stdout
+	programName, programArgs := os.Args[0], os.Args[1:]
 	logFlags := log.Ldate | log.Ltime | log.LUTC | log.Lshortfile | log.Lmsgprefix
 	log := log.New(out, "", logFlags)
-	cfg, err := serverConfig(programName, programArgs)
+	cfg, err := newServerConfig(out, programName, programArgs...)
 	if err != nil {
-		log.Fatalf("parsing server config:  %v", err)
+		log.Fatalf("parsing server config: %v", err)
 	}
 	s, err := cfg.NewServer(out)
 	if err != nil {
@@ -28,12 +29,13 @@ func main() {
 	}
 }
 
-func serverConfig(programName string, programArgs []string) (*server.Config, error) {
+func newServerConfig(out io.Writer, programName string, programArgs ...string) (*server.Config, error) {
 	usage := []string{
-		"runs a library web server",
+		programName + " runs a library web server",
 	}
 	var cfg server.Config
-	fs := flag.NewFlagSet(programName, flag.ExitOnError)
+	fs := flag.NewFlagSet(programName, flag.ContinueOnError)
+	fs.SetOutput(out)
 	fs.Usage = func() {
 		for _, u := range usage {
 			fmt.Fprintln(fs.Output(), u)
