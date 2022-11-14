@@ -602,7 +602,7 @@ func TestDeleteBook(t *testing.T) {
 			case test.wantCode != w.Code:
 				t.Errorf("codes not equal: wanted %v, got %v", test.wantCode, w.Code)
 			case test.wantCode == 303:
-				if w.Header().Get("Location") != "/"{
+				if w.Header().Get("Location") != "/" {
 					t.Errorf("wanted redirection to root")
 				}
 			}
@@ -611,7 +611,91 @@ func TestDeleteBook(t *testing.T) {
 }
 
 func TestPutAdminPassword(t *testing.T) {
-	// TODO
+	tests := []struct {
+		name                string
+		form                url.Values
+		hash                func(password []byte) (hashedPassword []byte, err error)
+		updateAdminPassword func(hashedPassword string) error
+		wantCode            int
+	}{
+		{
+			name: "not equal",
+			form: url.Values{
+				"p1": {"bilbo"},
+				"p2": {"Bilbo"},
+			},
+			wantCode: 400,
+		},
+		{
+			name: "hash error",
+			form: url.Values{
+				"p1": {"bilbo"},
+				"p2": {"bilbo"},
+			},
+			hash: func(password []byte) (hashedPassword []byte, err error) {
+				return nil, fmt.Errorf("hash error")
+			},
+			wantCode: 500,
+		},
+		{
+			name: "db error",
+			form: url.Values{
+				"p1": {"bilbo"},
+				"p2": {"bilbo"},
+			},
+			hash: func(password []byte) (hashedPassword []byte, err error) {
+				return []byte("X47"), nil
+			},
+			updateAdminPassword: func(hashedPassword string) error {
+				return fmt.Errorf("db error")
+			},
+			wantCode: 500,
+		},
+		{
+			name: "happy path",
+			form: url.Values{
+				"p1": {"bilbo"},
+				"p2": {"bilbo"},
+			},
+			hash: func(password []byte) (hashedPassword []byte, err error) {
+				if string(password) != "bilbo" {
+					return nil, fmt.Errorf("unwanted password: %s", password)
+				}
+				return []byte("X47"), nil
+			},
+			updateAdminPassword: func(hashedPassword string) error {
+				if hashedPassword != "X47" {
+					return fmt.Errorf("unwanted hashedPassword: %v", hashedPassword)
+				}
+				return nil
+			},
+			wantCode: 303,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			s := Server{
+				ph: mockPasswordHandler{
+					mockHashFunc: test.hash,
+				},
+				db: mockDatabase{
+					mockUpdateAdminPasswordFunc: test.updateAdminPassword,
+				},
+			}
+			w := httptest.NewRecorder()
+			r := httptest.NewRequest("post", "/book?id=x123", nil)
+			r.Form = test.form
+			s.putAdminPassword(w, r)
+			switch {
+			case test.wantCode != w.Code:
+				t.Errorf("codes not equal: wanted %v, got %v", test.wantCode, w.Code)
+			case test.wantCode == 303:
+				if w.Header().Get("Location") != "/" {
+					t.Errorf("wanted redirection to root")
+				}
+			}
+		})
+	}
 }
 
 func TestWithAdminPassword(t *testing.T) {
