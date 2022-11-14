@@ -563,7 +563,51 @@ func TestPutBook(t *testing.T) {
 }
 
 func TestDeleteBook(t *testing.T) {
-	// TODO
+	tests := []struct {
+		name         string
+		deleteBook   func(id string) error
+		wantCode     int
+		wantData     []string
+		unwantedData []string
+	}{
+		{
+			name: "db error",
+			deleteBook: func(id string) error {
+				return fmt.Errorf("db error)")
+			},
+			wantCode: 500,
+		},
+		{
+			name: "happy path",
+			deleteBook: func(id string) error {
+				if id != "x123" {
+					return fmt.Errorf("unwanted id: %q", id)
+				}
+				return nil
+			},
+			wantCode: 303,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			s := Server{
+				db: mockDatabase{
+					mockDeleteBookFunc: test.deleteBook,
+				},
+			}
+			w := httptest.NewRecorder()
+			r := httptest.NewRequest("post", "/book?id=x123", nil)
+			s.deleteBook(w, r)
+			switch {
+			case test.wantCode != w.Code:
+				t.Errorf("codes not equal: wanted %v, got %v", test.wantCode, w.Code)
+			case test.wantCode == 303:
+				if w.Header().Get("Location") != "/"{
+					t.Errorf("wanted redirection to root")
+				}
+			}
+		})
+	}
 }
 
 func TestPutAdminPassword(t *testing.T) {
