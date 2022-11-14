@@ -1,6 +1,7 @@
 package book
 
 import (
+	"reflect"
 	"testing"
 	"time"
 )
@@ -9,6 +10,44 @@ func TestNewIDLength(t *testing.T) {
 	id := NewID()
 	if len(id) != 32 {
 		t.Errorf("unwanted id length: %v", len(id))
+	}
+}
+
+func TestSort(t *testing.T) {
+	tests := []struct {
+		name string
+		s    Books
+		want Books
+	}{
+		{
+			name: "empty",
+		},
+		{
+			name: "single",
+			s:    Books{{Header: Header{Subject: "s"}}},
+			want: Books{{Header: Header{Subject: "s"}}},
+		},
+		{
+			name: "by subject, then title",
+			s: Books{
+				{Header: Header{ID: "7", Title: "Zoology", Author: "Boas", Subject: "Animals"}, Pages: 100},
+				{Header: Header{ID: "9", Title: "Secrets", Author: "Everyone", Subject: "Behind others"}, Pages: 5},
+				{Header: Header{ID: "13", Title: "Lemurs", Author: "Anonymous", Subject: "Animals"}, Pages: 400},
+			},
+			want: Books{
+				{Header: Header{ID: "13", Title: "Lemurs", Author: "Anonymous", Subject: "Animals"}, Pages: 400},
+				{Header: Header{ID: "7", Title: "Zoology", Author: "Boas", Subject: "Animals"}, Pages: 100},
+				{Header: Header{ID: "9", Title: "Secrets", Author: "Everyone", Subject: "Behind others"}, Pages: 5},
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			test.s.Sort()
+			if want, got := test.want, test.s; !reflect.DeepEqual(want, got) {
+				t.Errorf("not equal: \n wanted: %+v \n got:    %+v", want, got)
+			}
+		})
 	}
 }
 
