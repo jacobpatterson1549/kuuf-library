@@ -1077,3 +1077,88 @@ func TestSetupBackfillCSV(t *testing.T) {
 		})
 	}
 }
+
+func TestSetupDumpCSV(t *testing.T) {
+	tests := []struct {
+		name            string
+		readBookHeaders func(f book.Filter, limit, offset int) ([]book.Header, error)
+		readBook        func(id string) (*book.Book, error)
+		wantOk          bool
+		wantOut         string
+	}{
+		{
+			name: "readBookHeaders error",
+			readBookHeaders: func(f book.Filter, limit, offset int) ([]book.Header, error) {
+				return nil, fmt.Errorf("readBookHeaders error")
+			},
+		},
+		{
+			name: "readBook error",
+			readBookHeaders: func(f book.Filter, limit, offset int) ([]book.Header, error) {
+				return []book.Header{{ID: "1"}}, nil
+			},
+			readBook: func(id string) (*book.Book, error) {
+				return nil, fmt.Errorf("readBook error")
+			},
+		},
+		{
+			name: "happy path",
+			readBookHeaders: func(f book.Filter, limit, offset int) ([]book.Header, error) {
+				var headers []book.Header
+				switch {
+				case len(f) != 0:
+					return nil, fmt.Errorf("wanted no filter, got %v", f)
+				case limit == 3 && offset == 0:
+					headers = append(headers,
+						book.Header{ID: "bk1"},
+						book.Header{ID: "bk22"},
+						book.Header{ID: "bk3"})
+				case limit == 3 && offset == 2:
+					headers = append(headers, book.Header{ID: "bk3"})
+				default:
+					return nil, fmt.Errorf("unwanted limit/offset: %v/%v", limit, offset)
+				}
+				return headers, nil
+			},
+			readBook: func(id string) (*book.Book, error) {
+				b := book.Book{
+					Header: book.Header{
+						ID: id,
+					},
+					Description: id + "_description",
+				}
+				return &b, nil
+			},
+			wantOk: true,
+			wantOut: `id,title,author,description,subject,dewey-dec-class,pages,publisher,publish-date,added-date,ean-isbn13,upc-isbn10,image-base64
+bk1,,,bk1_description,,,0,,01/01/0001,01/01/0001,,,
+bk22,,,bk22_description,,,0,,01/01/0001,01/01/0001,,,
+bk3,,,bk3_description,,,0,,01/01/0001,01/01/0001,,,
+`,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			db := mockDatabase{
+				mockReadBookHeadersFunc: test.readBookHeaders,
+				mockReadBookFunc:        test.readBook,
+			}
+			cfg := Config{
+				DumpCSV: true,
+				MaxRows: 2,
+			}
+			var sb strings.Builder
+			err := cfg.setup(db, nil, &sb)
+			switch {
+			case !test.wantOk:
+				if err == nil {
+					t.Errorf("wanted error")
+				}
+			case err != nil:
+				t.Errorf("unwanted error: %v", err)
+			case test.wantOut != sb.String():
+				t.Errorf("dumped csv not equal: \n wanted: %v \n got:    %v", test.wantOut, sb.String())
+			}
+		})
+	}
+}
