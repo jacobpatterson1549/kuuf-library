@@ -1033,3 +1033,47 @@ func TestSetupAdminPassword(t *testing.T) {
 		})
 	}
 }
+
+func TestSetupBackfillCSV(t *testing.T) {
+	tests := []struct {
+		name        string
+		createBooks func(books ...book.Book) ([]book.Book, error)
+		wantOk      bool
+	}{
+		{
+			name: "db error",
+			createBooks: func(books ...book.Book) ([]book.Book, error) {
+				return nil, fmt.Errorf("db error")
+			},
+		},
+		{
+			name: "db error",
+			createBooks: func(books ...book.Book) ([]book.Book, error) {
+				if len(books) != 0 {
+					return nil, fmt.Errorf("the embedded csv database should be empty when testing: got %v books", len(books))
+				}
+				return books, nil
+			},
+			wantOk: true,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			db := mockDatabase{
+				mockCreateBooksFunc: test.createBooks,
+			}
+			cfg := Config{
+				BackfillCSV: true,
+			}
+			err := cfg.setup(db, nil, nil)
+			switch {
+			case !test.wantOk:
+				if err == nil {
+					t.Errorf("wanted error")
+				}
+			case err != nil:
+				t.Errorf("unwanted error: %v", err)
+			}
+		})
+	}
+}
