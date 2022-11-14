@@ -555,7 +555,85 @@ func TestGetAdmin(t *testing.T) {
 }
 
 func TestPostBook(t *testing.T) {
-	// TODO
+	tests := []struct {
+		name         string
+		form         map[string]string
+		createBooks  func(books ...book.Book) ([]book.Book, error)
+		wantCode     int
+		wantLocation string
+	}{
+		{
+			name: "bad book",
+			form: map[string]string{
+				"pages": "NaN",
+			},
+			wantCode: 400,
+		},
+		{
+			name: "db error",
+			form: map[string]string{
+				"title":      "t",
+				"author":     "a",
+				"subject":    "s",
+				"pages":      "1",
+				"added-date": "2022-11-13",
+			},
+			createBooks: func(books ...book.Book) ([]book.Book, error) {
+				return nil, fmt.Errorf("db error")
+			},
+			wantCode: 500,
+		},
+		{
+			name: "minimal happy path",
+			form: map[string]string{
+				"title":      "t",
+				"author":     "a",
+				"subject":    "s",
+				"pages":      "1",
+				"added-date": "2022-11-13",
+			},
+			createBooks: func(books ...book.Book) ([]book.Book, error) {
+				want := book.Book{
+					Header:    book.Header{
+						Title: "t",
+						Author: "a",
+						Subject: "s",
+					},
+					Pages: 1,
+					AddedDate: time.Date(2022, 11, 13, 0, 0, 0, 0, time.UTC),
+				}
+				switch {
+				case len(books) != 1:
+					return nil, fmt.Errorf("wanted 1 book, got %v", len(books))
+				case want != books[0]:
+					return nil, fmt.Errorf("books not equal: \n wanted: %v \n got:    %v", want, books[0])
+				}
+				return []book.Book{{Header: book.Header{ID: "fg34"}}}, nil
+			},
+			wantCode:     303,
+			wantLocation: "/book?id=fg34",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			s := Server{
+				db: mockDatabase{
+					mockCreateBooksFunc: test.createBooks,
+				},
+			}
+			w := httptest.NewRecorder()
+			r := multipartFormHelper(t, test.form)
+			s.postBook(w, r)
+			switch {
+			case test.wantCode != w.Code:
+				t.Errorf("codes not equal: wanted %v, got %v", test.wantCode, w.Code)
+			case test.wantCode == 303:
+				if want, got := test.wantLocation, w.Header().Get("Location"); want != got {
+					t.Errorf("unwanted redirect location: \n wanted: %q \n got: %q", want, got)
+				}
+			}
+		})
+	}
 }
 
 func TestPutBook(t *testing.T) {
