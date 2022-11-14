@@ -61,7 +61,7 @@ func TestNewFilter(t *testing.T) {
 		{
 			name:   "empty",
 			wantOk: true,
-			want: Filter{},
+			want:   Filter{},
 		},
 		{
 			name: "alphaNumeric only",
@@ -92,6 +92,39 @@ func TestNewFilter(t *testing.T) {
 				t.Errorf("unwanted error: %v", err)
 			case !reflect.DeepEqual(&test.want, got):
 				t.Errorf("filters not equal: \n wanted: %v \n got:    %v", &test.want, got)
+			}
+		})
+	}
+}
+
+func TestFilterMatches(t *testing.T) {
+	tests := []struct {
+		name   string
+		book   Book
+		filter Filter
+		want   bool
+	}{
+		{
+			name: "empty",
+			want: true,
+		},
+		{
+			name: "case-insensitive",
+			book: Book{Header: Header{Title: "The big day"}},
+			filter: Filter{"the", "THE"},
+			want: true,
+		},
+		{
+			name: "middle of word",
+			book: Book{Header: Header{Title: "Fruits"}, Description: "Apples, pears, and watermelons are all fruits."},
+			filter: Filter{"the", "term", "ends"},
+			want: false,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if want, got := test.want, test.filter.Matches(test.book); want != got {
+				t.Error()
 			}
 		})
 	}
