@@ -1,7 +1,12 @@
 package server
 
 import (
+	"bytes"
+	"encoding/hex"
 	"image"
+	"image/jpeg"
+	"image/png"
+	"io"
 	"testing"
 )
 
@@ -28,6 +33,82 @@ func TestScaleRect(t *testing.T) {
 			gotR := scaleRect(srcR, boundsR)
 			if wantR != gotR {
 				t.Errorf("not equal: \n wanted: %v \n got:    %v", wantR, gotR)
+			}
+		})
+	}
+}
+
+const webp1pxHex = `524946463600000057454250565038202a0000007001009d012a0100010002003425a0027401400000fef1dc8ffd958fffd077fffa0eff6ab832db4f8000`
+
+func TestReadImage(t *testing.T) {
+	onePxRect := image.Rect(0, 0, 1, 1)
+	tests := []struct {
+		name        string
+		contentType string
+		genImage    func() io.Reader
+		wantOk      bool
+	}{
+		{
+			name:        "jpg",
+			contentType: "image/jpeg",
+			genImage: func() io.Reader {
+				var buf bytes.Buffer
+				img := image.NewGray(onePxRect)
+				jpeg.Encode(&buf, img, nil)
+				return &buf
+			},
+			wantOk: true,
+		},
+		{
+			name:        "png",
+			contentType: "image/png",
+			genImage: func() io.Reader {
+				var buf bytes.Buffer
+				img := image.NewGray(onePxRect)
+				png.Encode(&buf, img)
+				return &buf
+			},
+			wantOk: true,
+		},
+		{
+			name:        "jpg passed as png",
+			contentType: "image/png",
+			genImage: func() io.Reader {
+				var buf bytes.Buffer
+				img := image.NewGray(onePxRect)
+				jpeg.Encode(&buf, img, nil)
+				return &buf
+			},
+		},
+		{
+			name:        "webp",
+			contentType: "image/webp",
+			genImage: func() io.Reader {
+				b, _ := hex.DecodeString(webp1pxHex)
+				return bytes.NewReader(b)
+			},
+			wantOk: true,
+		},
+		{
+			name:        "pbm",
+			contentType: "image/pbm",
+			genImage: func() io.Reader {
+				b := []byte("P1 \n 1 1 \n 0")
+				return bytes.NewReader(b)
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			r := test.genImage()
+			_, err := readImage(r, test.contentType)
+			switch {
+			case !test.wantOk:
+				if err == nil {
+					t.Errorf("wanted error")
+				}
+			case err != nil:
+				t.Errorf("unwanted error: %v", err)
 			}
 		})
 	}
