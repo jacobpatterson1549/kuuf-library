@@ -111,12 +111,10 @@ func (d *Database) query(q query, dest func() []interface{}) error {
 			return fmt.Errorf("running query: %w", err)
 		}
 		defer rows.Close()
-		var i int
-		for rows.Next() {
+		for i := 0; rows.Next(); i++ {
 			if err := rows.Scan(dest()...); err != nil {
 				return fmt.Errorf("scanning row %v: %w", i, err)
 			}
-			i++
 		}
 		return nil
 	})
