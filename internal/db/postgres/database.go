@@ -151,19 +151,17 @@ func (d *Database) ReadBookHeaders(filter book.Filter, limit, offset int) ([]boo
 		cmd:  cmd,
 		args: []interface{}{!hasFilter, joinedFilter, limit, offset},
 	}
-	var refs []*book.Header
+	headers := make([]book.Header, limit)
+	n := 0
 	dest := func() []interface{} {
-		var h book.Header
-		refs = append(refs, &h)
+		h := &headers[n]
+		n++
 		return []interface{}{&h.ID, &h.Title, &h.Author, &h.Subject}
 	}
 	if err := d.query(q, dest); err != nil {
 		return nil, fmt.Errorf("making query: %w", err)
 	}
-	headers := make([]book.Header, len(refs))
-	for i, h := range refs {
-		headers[i] = *h
-	}
+	headers = headers[:n]
 	return headers, nil
 }
 
