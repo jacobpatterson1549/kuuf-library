@@ -17,6 +17,8 @@ import (
 	"golang.org/x/image/webp"
 )
 
+const maxImageWidth, maxImageHeight = 256, 256
+
 func parseImage(r *http.Request) (imageBase64 []byte, err error) {
 	f, fh, err := r.FormFile("image")
 	if err != nil {
@@ -37,6 +39,15 @@ func updateImage(imageBase64 string, id string) ([]byte, error) {
 	b, err := base64.StdEncoding.DecodeString(imageBase64)
 	if err != nil {
 		return nil, fmt.Errorf("decoding image from database: %w", err)
+	}
+	cfg, err := webp.DecodeConfig(bytes.NewReader(b))
+	if err != nil {
+		return nil, fmt.Errorf("decoding webp header from image: %w", err)
+	}
+	switch {
+	case cfg.Width == maxImageWidth && cfg.Height <= maxImageHeight,
+		cfg.Height == maxImageHeight && cfg.Width <= maxImageWidth:
+		return []byte(imageBase64), nil
 	}
 	r := bytes.NewReader(b)
 	title, contentType := id+"_converted", "image/webp"
@@ -81,8 +92,7 @@ func readImage(r io.Reader, contentType string) (image.Image, error) {
 // scaleImages scales the image up/down to fit in a square
 func scaleImage(img image.Image) image.Image {
 	srcR := img.Bounds()
-	const maxW, maxH = 256, 256
-	boundsR := image.Rect(0, 0, maxW, maxH)
+	boundsR := image.Rect(0, 0, maxImageWidth, maxImageHeight)
 	destR := scaleRect(srcR, boundsR)
 	destImg := image.NewRGBA(destR)
 	var s = x_draw.BiLinear
