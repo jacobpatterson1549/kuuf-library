@@ -88,7 +88,7 @@ func (d *Database) ReadBook(id string) (*book.Book, error) {
 	return nil, fmt.Errorf("no book with id of %q", id)
 }
 
-func (d *Database) UpdateBook(b book.Book, newID string, updateImage bool) error {
+func (d *Database) UpdateBook(b book.Book, updateImage bool) error {
 	return d.notAllowed()
 }
 

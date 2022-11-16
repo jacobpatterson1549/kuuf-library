@@ -58,7 +58,7 @@ type (
 		CreateBooks(books ...book.Book) ([]book.Book, error)
 		ReadBookHeaders(f book.Filter, limit, offset int) ([]book.Header, error)
 		ReadBook(id string) (*book.Book, error)
-		UpdateBook(b book.Book, newID string, updateImage bool) error
+		UpdateBook(b book.Book, updateImage bool) error
 		DeleteBook(id string) error
 		ReadAdminPassword() (hashedPassword []byte, err error)
 		UpdateAdminPassword(hashedPassword string) error
@@ -179,8 +179,9 @@ func (cfg Config) updateImage(h book.Header, db Database, d csv.Dump) error {
 		if err != nil {
 			return fmt.Errorf("updating image for book %q: %w", b.ID, err)
 		}
+		// TODO: add shouldUpdate method
 		b.ImageBase64 = string(imageBase64)
-		if err := db.UpdateBook(*b, b.ID, true); err != nil {
+		if err := db.UpdateBook(*b, true); err != nil {
 			return fmt.Errorf("writing updated image to db for book %q: %w", b.ID, err)
 		}
 	}
@@ -215,7 +216,7 @@ func (s *Server) mux() http.Handler {
 		}
 	}
 	day := time.Hour * 24
-	return withCacheControl(withContentEncoding(m), day)
+	return withCacheControl(withContentEncoding(m), day) // update message in admin.html when updating cache age
 }
 
 func (s *Server) getBookHeaders(w http.ResponseWriter, r *http.Request) {
@@ -303,7 +304,6 @@ func (s *Server) putBook(w http.ResponseWriter, r *http.Request) {
 		httpBadRequest(w, err)
 		return
 	}
-	newID := book.NewID()
 	var updateImage bool
 	switch r.FormValue("update-image") {
 	case "true":
@@ -312,12 +312,12 @@ func (s *Server) putBook(w http.ResponseWriter, r *http.Request) {
 		updateImage = true
 		b.ImageBase64 = ""
 	}
-	err = s.db.UpdateBook(*b, newID, updateImage)
+	err = s.db.UpdateBook(*b, updateImage)
 	if err != nil {
 		httpInternalServerError(w, err)
 		return
 	}
-	httpRedirect(w, r, "/book?id="+newID)
+	httpRedirect(w, r, "/book?id="+b.ID+"&updated="+time.Now().String())
 }
 
 func (s *Server) deleteBook(w http.ResponseWriter, r *http.Request) {

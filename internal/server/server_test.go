@@ -641,7 +641,7 @@ func TestPutBook(t *testing.T) {
 	tests := []struct {
 		name          string
 		formOverrides map[string]string
-		updateBook    func(b book.Book, newID string, updateImage bool) error
+		updateBook    func(b book.Book, updateImage bool) error
 		wantCode      int
 		wantLocPrefix string
 	}{
@@ -654,16 +654,17 @@ func TestPutBook(t *testing.T) {
 		},
 		{
 			name: "db error",
-			updateBook: func(b book.Book, newID string, updateImage bool) error {
+			updateBook: func(b book.Book, updateImage bool) error {
 				return fmt.Errorf("db error")
 			},
 			wantCode: 500,
 		},
 		{
 			name: "minimal happy path",
-			updateBook: func(b book.Book, newID string, updateImage bool) error {
+			updateBook: func(b book.Book, updateImage bool) error {
 				want := book.Book{
 					Header: book.Header{
+						ID:      "keep_me",
 						Title:   "t",
 						Author:  "a",
 						Subject: "s",
@@ -680,14 +681,14 @@ func TestPutBook(t *testing.T) {
 				return nil
 			},
 			wantCode:      303,
-			wantLocPrefix: "/book?id=",
+			wantLocPrefix: "/book?id=keep_me",
 		},
 		{
 			name: "update image",
 			formOverrides: map[string]string{
 				"update-image": "true",
 			},
-			updateBook: func(b book.Book, newID string, updateImage bool) error {
+			updateBook: func(b book.Book, updateImage bool) error {
 				switch {
 				case !updateImage:
 					return fmt.Errorf("did not want to update image")
@@ -695,14 +696,14 @@ func TestPutBook(t *testing.T) {
 				return nil
 			},
 			wantCode:      303,
-			wantLocPrefix: "/book?id=",
+			wantLocPrefix: "/book?id=keep_me",
 		},
 		{
 			name: "clear image",
 			formOverrides: map[string]string{
 				"update-image": "clear",
 			},
-			updateBook: func(b book.Book, newID string, updateImage bool) error {
+			updateBook: func(b book.Book, updateImage bool) error {
 				switch {
 				case len(b.ImageBase64) != 0:
 					return fmt.Errorf("wanted image to be zeroed")
@@ -712,12 +713,13 @@ func TestPutBook(t *testing.T) {
 				return nil
 			},
 			wantCode:      303,
-			wantLocPrefix: "/book?id=",
+			wantLocPrefix: "/book?id=keep_me",
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			form := map[string]string{
+				"id":         "keep_me",
 				"title":      "t",
 				"author":     "a",
 				"subject":    "s",

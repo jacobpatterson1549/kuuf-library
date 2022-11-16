@@ -19,7 +19,7 @@ type mockDatabase struct {
 	mockCreateBooksFunc         func(books ...book.Book) ([]book.Book, error)
 	mockReadBookHeadersFunc     func(f book.Filter, limit, offset int) ([]book.Header, error)
 	mockReadBookFunc            func(id string) (*book.Book, error)
-	mockUpdateBookFunc          func(b book.Book, newID string, updateImage bool) error
+	mockUpdateBookFunc          func(b book.Book, updateImage bool) error
 	mockDeleteBookFunc          func(id string) error
 	mockReadAdminPasswordFunc   func() (hashedPassword []byte, err error)
 	mockUpdateAdminPasswordFunc func(hashedPassword string) error
@@ -37,8 +37,8 @@ func (m mockDatabase) ReadBook(id string) (*book.Book, error) {
 	return m.mockReadBookFunc(id)
 }
 
-func (m mockDatabase) UpdateBook(b book.Book, newID string, updateImage bool) error {
-	return m.mockUpdateBookFunc(b, newID, updateImage)
+func (m mockDatabase) UpdateBook(b book.Book, updateImage bool) error {
+	return m.mockUpdateBookFunc(b, updateImage)
 }
 
 func (m mockDatabase) DeleteBook(id string) error {

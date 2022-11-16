@@ -1,4 +1,10 @@
 <div class="admin">
+    <p>
+        <span>Adding/Updating/Deleting books does not update the cache.</span>
+        <span>The cache lasts one day.</span>
+        <span>To reload a page, ignoring the cache, press <code>Ctrl+Shift+R</code>.</span>
+        <span>This forces a new request to the server for updated information.</span>
+    </p>
     <h2>Admin</h2>
         <form method="post" action="/book/{{if .ID}}update{{else}}create{{end}}" enctype="multipart/form-data">
             <fieldset>
