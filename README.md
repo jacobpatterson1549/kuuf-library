@@ -55,6 +55,12 @@ Environment variables have the same name as application arguments, but are upper
 By default, the library runs on an internal, readonly, CSV database.
 This database can also be used initialize other databases with the `-csv-backfill` application argument.
 
+#### mongodb
+
+A MongoDB database can be used.
+Do this by setting the `-database-URL` application argument or the `DATABASE_URL` environment variable.
+The database url should begin with `mongodb+srv://` for the connection to work.
+
 #### Postgres
 
 A Postgres database can be used.

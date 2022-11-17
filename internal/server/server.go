@@ -16,6 +16,7 @@ import (
 
 	"github.com/jacobpatterson1549/kuuf-library/internal/book"
 	"github.com/jacobpatterson1549/kuuf-library/internal/db/csv"
+	"github.com/jacobpatterson1549/kuuf-library/internal/db/mongo"
 	"github.com/jacobpatterson1549/kuuf-library/internal/db/postgres"
 	"github.com/jacobpatterson1549/kuuf-library/internal/server/bcrypt"
 )
@@ -74,8 +75,10 @@ func (cfg Config) NewServer(out io.Writer) (*Server, error) {
 	switch s := url.Scheme; s {
 	case "csv":
 		db, err = csv.NewDatabase()
+	case "mongodb+srv":
+		db, err = mongo.NewDatabase(url.String(), cfg.queryTimeout())
 	case postgres.DriverName:
-		db, err = postgres.NewDatabase(url.String(), time.Second*time.Duration(cfg.DBTimeoutSec))
+		db, err = postgres.NewDatabase(url.String(), cfg.queryTimeout())
 	default:
 		err = fmt.Errorf("unknown database: %q", s)
 	}
@@ -101,6 +104,10 @@ func (s *Server) Run() error {
 	fmt.Fprintln(s.out, "Serving resume site at at http://localhost:"+s.Port)
 	fmt.Fprintln(s.out, "Press Ctrl-C to stop")
 	return http.ListenAndServe(":"+s.Port, s.mux())
+}
+
+func (cfg Config) queryTimeout() time.Duration {
+	return time.Second * time.Duration(cfg.DBTimeoutSec)
 }
 
 func (cfg Config) setup(db Database, ph PasswordHandler, out io.Writer) error {
