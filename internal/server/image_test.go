@@ -2,6 +2,7 @@ package server
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/hex"
 	"image"
 	"image/jpeg"
@@ -109,6 +110,31 @@ func TestReadImage(t *testing.T) {
 				}
 			case err != nil:
 				t.Errorf("unwanted error: %v", err)
+			}
+		})
+	}
+}
+
+func TestImageNeedsUpdating(t *testing.T) {
+	b, err := hex.DecodeString(webp1pxHex)
+	if err != nil {
+		t.Errorf("could not decode 1px webp image")
+	}
+	webp1pxBase64 := base64.StdEncoding.EncodeToString(b)
+	tests := []struct {
+		name        string
+		imageBase64 string
+		want        bool
+	}{
+		{"empty", "", false},
+		{"invalid base64", "INVALID", true},
+		{"invalid webp", "deadbeef", true},
+		{"small image", webp1pxBase64, true},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if test.want != imageNeedsUpdating(test.imageBase64) {
+				t.Error()
 			}
 		})
 	}

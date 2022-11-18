@@ -181,12 +181,11 @@ func (cfg Config) updateImage(h book.Header, db Database, d csv.Dump) error {
 	if err != nil {
 		return fmt.Errorf("reading book %q: %w", h.ID, err)
 	}
-	if cfg.UpdateImages && len(b.ImageBase64) != 0 {
+	if cfg.UpdateImages && imageNeedsUpdating(b.ImageBase64) {
 		imageBase64, err := updateImage(b.ImageBase64, b.ID)
 		if err != nil {
 			return fmt.Errorf("updating image for book %q: %w", b.ID, err)
 		}
-		// TODO: add shouldUpdate method
 		b.ImageBase64 = string(imageBase64)
 		if err := db.UpdateBook(*b, true); err != nil {
 			return fmt.Errorf("writing updated image to db for book %q: %w", b.ID, err)

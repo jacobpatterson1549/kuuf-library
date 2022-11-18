@@ -35,19 +35,35 @@ func parseImage(r *http.Request) (imageBase64 []byte, err error) {
 	return convertImage(f, title, contentType)
 }
 
-func updateImage(imageBase64 string, id string) ([]byte, error) {
+// imageNeedsUpdating checks to see if the image needs to be updated with the following criteria:
+// - it is not empty, AND:
+// - it is not a valid base64 string
+// - it does not have a valid webp header
+// - it does not have a max width/height or the other dimension is too large
+func imageNeedsUpdating(imageBase64 string) bool {
+	if len(imageBase64) == 0 {
+		return false
+	}
 	b, err := base64.StdEncoding.DecodeString(imageBase64)
 	if err != nil {
-		return nil, fmt.Errorf("decoding image from database: %w", err)
+		return true
 	}
 	cfg, err := webp.DecodeConfig(bytes.NewReader(b))
 	if err != nil {
-		return nil, fmt.Errorf("decoding webp header from image: %w", err)
+		return true
 	}
 	switch {
 	case cfg.Width == maxImageWidth && cfg.Height <= maxImageHeight,
 		cfg.Height == maxImageHeight && cfg.Width <= maxImageWidth:
-		return []byte(imageBase64), nil
+		return false
+	}
+	return true
+}
+
+func updateImage(imageBase64 string, id string) ([]byte, error) {
+	b, err := base64.StdEncoding.DecodeString(imageBase64)
+	if err != nil {
+		return nil, fmt.Errorf("decoding image from database: %w", err)
 	}
 	r := bytes.NewReader(b)
 	title, contentType := id+"_converted", "image/webp"
