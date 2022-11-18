@@ -5,7 +5,7 @@ A site to display books.
 ## about
 
 Books are loaded from a database and displayed on the list page.
-When a user clicks on a book title, more information is shown about it, including a picture.
+When a user clicks on a book title, more information is shown, including a picture.
 The library administrator can create and update book listings.
 
 ## running
@@ -17,8 +17,9 @@ This bundles the application into a small image (~20 MB).
 A Postgres Docker image is used to store the database.
 This image is a bit larger (~200 MB), but requires very little configuration.
 
-1. The only configuration required is to create a `.env` file with environment variables that are read by `docker-compose`.
-Provide values for `PORT`, `DOCKER_POSTGRES_PASSWORD`, and `ADMIN_PASSWORD`.
+1. The only configuration required is to create a `.env` file.
+It contains environment variable mappings that are read by `docker-compose`.
+Values are required for `PORT`, `DOCKER_POSTGRES_PASSWORD`, and `ADMIN_PASSWORD`.
 The port used by Docker is forwarded to through to the host.
     ```
     PORT=8007
@@ -26,12 +27,13 @@ The port used by Docker is forwarded to through to the host.
     ADMIN_PASSWORD=
     ```
 
-1. In a terminal, start the postgres instance with `docker-compose up postgres-db`.
+1. In a terminal, start the postgres-db instance with `docker-compose up postgres-db`.
 This creates a new postgres user with the password specified by `DOCKER_POSTGRES_PASSWORD`.
 
 1. In a *separate* terminal, build and start the application with `docker-compose up web`.
 This starts the server on the port specified by `PORT`.
-The initial admin password, specified by `ADMIN_PASSWORD`, is what the administrator of the library uses to create/update books on the site.
+The initial admin password is specified by `ADMIN_PASSWORD`.
+This is what the administrator of the library uses to create and update books.
 
 Stop the application by running `docker-compose down` in a separate terminal.
 This can also be accomplished by pressing `Ctrl-C` in both terminals.
@@ -40,13 +42,14 @@ The database can be initialized with the `CSV_BACKFILL=true` environment variabl
 Edit [internal/db/csv/library.csv](internal/db/csv/library.csv), with one row for each book.
 The application may need to be rebuilt by Docker: `docker-compose up web`.
 
-
 ### localhost
 
+Build the application using the `make` command.
 The server defaults to run on port 8000.
 This can be configured by setting the `PORT` environment variable or the `-port` application argument.
 All application arguments are attempted to be read as environment variables.
 Environment variables have the same name as application arguments, but are uppercase and have underscores instead of hyphens.
+Further information about the application can be accessed by running it with the `-h` argument.
 
 ### database
 
@@ -55,7 +58,7 @@ Environment variables have the same name as application arguments, but are upper
 By default, the library runs on an internal, readonly, CSV database.
 This database can also be used initialize other databases with the `-csv-backfill` application argument.
 
-#### mongodb
+#### MongoDB
 
 A MongoDB database can be used.
 Do this by setting the `-database-URL` application argument or the `DATABASE_URL` environment variable.
@@ -66,6 +69,8 @@ The database url should begin with `mongodb+srv://` for the connection to work.
 A Postgres database can be used.
 Do this by setting the `-database-URL` application argument or the `DATABASE_URL` environment variable.
 The script below initializes a Postgres user and database.
+It is a Bash script for Linux.
+If on Ubuntu/Debian, install a server for local use with `sudo apt install postgresql`.
 Remember to set the password.
 A random password can be generated with `openssl rand --hex 10`.
 
