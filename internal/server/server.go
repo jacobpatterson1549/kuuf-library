@@ -231,8 +231,12 @@ func (s *Server) mux() http.Handler {
 }
 
 func (s *Server) getBookHeaders(w http.ResponseWriter, r *http.Request) {
+	var a string
+	if !ParseFormValue(w, r, "page", &a, 32) {
+		return
+	}
 	var page int
-	if a := r.FormValue("page"); len(a) != 0 {
+	if len(a) != 0 {
 		i, err := strconv.Atoi(a)
 		if err != nil {
 			err = fmt.Errorf("invalid page: %w", err)
@@ -241,7 +245,10 @@ func (s *Server) getBookHeaders(w http.ResponseWriter, r *http.Request) {
 		}
 		page = i
 	}
-	q := r.FormValue("q")
+	var q string
+	if !ParseFormValue(w, r, "q", &q, 256) {
+		return
+	}
 	filter, err := book.NewFilter(q)
 	if err != nil {
 		httpBadRequest(w, err)
@@ -270,7 +277,10 @@ func (s *Server) getBookHeaders(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) getBook(w http.ResponseWriter, r *http.Request) {
-	id := bookIDFrom(r)
+	var id string
+	if !ParseFormValue(w, r, "id", &id, 64) {
+		return
+	}
 	b, err := s.db.ReadBook(id)
 	if err != nil {
 		httpInternalServerError(w, err)
@@ -295,7 +305,7 @@ func (s *Server) getAdmin(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) postBook(w http.ResponseWriter, r *http.Request) {
-	b, err := bookFrom(r)
+	b, err := bookFrom(w, r)
 	if err != nil {
 		httpBadRequest(w, err)
 		return
@@ -310,13 +320,17 @@ func (s *Server) postBook(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) putBook(w http.ResponseWriter, r *http.Request) {
-	b, err := bookFrom(r)
+	b, err := bookFrom(w, r)
 	if err != nil {
 		httpBadRequest(w, err)
 		return
 	}
 	var updateImage bool
-	switch r.FormValue("update-image") {
+	var updateImageVal string
+	if !ParseFormValue(w, r, "update-image", &updateImageVal, 10) {
+		return
+	}
+	switch updateImageVal {
 	case "true":
 		updateImage = true
 	case "clear":
@@ -332,7 +346,10 @@ func (s *Server) putBook(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) deleteBook(w http.ResponseWriter, r *http.Request) {
-	id := bookIDFrom(r)
+	var id string
+	if !ParseFormValue(w, r, "id", &id, 64) {
+		return
+	}
 	if err := s.db.DeleteBook(id); err != nil {
 		httpInternalServerError(w, err)
 		return
@@ -341,8 +358,10 @@ func (s *Server) deleteBook(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) putAdminPassword(w http.ResponseWriter, r *http.Request) {
-	p1 := r.FormValue("p1")
-	p2 := r.FormValue("p2")
+	var p1, p2 string
+	if !ParseFormValue(w, r, "p1", &p1, 128) || !ParseFormValue(w, r, "p2", &p2, 128) {
+		return
+	}
 	if p1 != p2 {
 		err := fmt.Errorf("passwords do not match")
 		httpBadRequest(w, err)
@@ -389,7 +408,10 @@ func (s *Server) withAdminPassword(h http.HandlerFunc) http.HandlerFunc {
 			httpInternalServerError(w, err)
 			return
 		}
-		password := r.FormValue("p")
+		var password string
+		if !ParseFormValue(w, r, "p", &password, 128) {
+			return
+		}
 		ok, err := s.ph.IsCorrectPassword(hashedPassword, []byte(password))
 		if err != nil {
 			httpInternalServerError(w, err)
@@ -476,24 +498,21 @@ func httpRedirect(w http.ResponseWriter, r *http.Request, url string) {
 	http.Redirect(w, r, url, http.StatusSeeOther)
 }
 
-func bookIDFrom(r *http.Request) string {
-	return r.FormValue("id")
-}
-
-func bookFrom(r *http.Request) (*book.Book, error) {
-	sb := book.StringBook{
-		ID:            r.FormValue("id"),
-		Title:         r.FormValue("title"),
-		Author:        r.FormValue("author"),
-		Description:   r.FormValue("description"),
-		Subject:       r.FormValue("subject"),
-		DeweyDecClass: r.FormValue("dewey-dec-class"),
-		Pages:         r.FormValue("pages"),
-		Publisher:     r.FormValue("publisher"),
-		PublishDate:   r.FormValue("publish-date"),
-		AddedDate:     r.FormValue("added-date"),
-		EAN_ISBN13:    r.FormValue("ean-isbn-13"),
-		UPC_ISBN10:    r.FormValue("upc-isbn-10"),
+func bookFrom(w http.ResponseWriter, r *http.Request) (*book.Book, error) {
+	var sb book.StringBook
+	if !ParseFormValue(w, r, "id", &sb.ID, 256) ||
+		!ParseFormValue(w, r, "title", &sb.Title, 256) ||
+		!ParseFormValue(w, r, "author", &sb.Author, 256) ||
+		!ParseFormValue(w, r, "description", &sb.Description, 10000) ||
+		!ParseFormValue(w, r, "subject", &sb.Subject, 256) ||
+		!ParseFormValue(w, r, "dewey-dec-class", &sb.DeweyDecClass, 256) ||
+		!ParseFormValue(w, r, "pages", &sb.Pages, 32) ||
+		!ParseFormValue(w, r, "publisher", &sb.Publisher, 256) ||
+		!ParseFormValue(w, r, "publish-date", &sb.PublishDate, 32) ||
+		!ParseFormValue(w, r, "added-date", &sb.AddedDate, 32) ||
+		!ParseFormValue(w, r, "ean-isbn-13", &sb.EAN_ISBN13, 32) ||
+		!ParseFormValue(w, r, "upc-isbn-10", &sb.UPC_ISBN10, 32) {
+		return nil, fmt.Errorf("parse error")
 	}
 	switch {
 	case len(sb.Title) == 0:
@@ -518,6 +537,19 @@ func bookFrom(r *http.Request) (*book.Book, error) {
 	}
 	b.ImageBase64 = string(imageBase64)
 	return b, nil
+}
+
+// ParseFormValue reads the value the form by key into dest.
+// If the length of the value is longer than maxLength, an error will be written tot he response writer and false is returned.
+func ParseFormValue(w http.ResponseWriter, r *http.Request, key string, dest *string, maxLength int) (ok bool) {
+	value := r.FormValue(key)
+	if len(value) > maxLength {
+		err := fmt.Errorf("form value %q too long", key)
+		httpError(w, http.StatusRequestEntityTooLarge, err)
+		return false
+	}
+	*dest = value
+	return true
 }
 
 const dateLayout = book.HyphenatedYYYYMMDD

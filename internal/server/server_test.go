@@ -246,6 +246,11 @@ func TestBookFrom(t *testing.T) {
 		{"bad parse", map[string]string{"title": "a", "author": "b", "subject": "c", "added-date": textAD, "pages": "eight"}, nil, false},
 		{"bad pages", map[string]string{"title": "a", "author": "b", "subject": "c", "added-date": textAD, "pages": "-1"}, nil, false},
 		{
+			name:   "long id (300 chars)",
+			form:   map[string]string{"id": "012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789"},
+			wantOk: false,
+		},
+		{
 			name:   "minimal",
 			form:   map[string]string{"title": "a", "author": "b", "subject": "c", "added-date": textAD, "pages": "8"},
 			want:   &book.Book{Header: book.Header{Title: "a", Author: "b", Subject: "c"}, AddedDate: dateA, Pages: 8},
@@ -288,8 +293,9 @@ func TestBookFrom(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
 			r := multipartFormHelper(t, test.form)
-			got, err := bookFrom(r)
+			got, err := bookFrom(w, r)
 			switch {
 			case !test.wantOk:
 				if err == nil {
@@ -1198,6 +1204,39 @@ bk3,,,bk3_description,,,0,,01/01/0001,01/01/0001,,,
 				t.Errorf("unwanted error: %v", err)
 			case test.wantOut != sb.String():
 				t.Errorf("dumped csv not equal: \n wanted: %v \n got:    %v", test.wantOut, sb.String())
+			}
+		})
+	}
+}
+
+func TestParseFormValue(t *testing.T) {
+	tests := []struct {
+		name      string
+		form      url.Values
+		key       string
+		wantValue string
+		maxLength int
+		want      bool
+		wantCode  int
+	}{
+		{"not set", url.Values{}, "k", "", 10, true, 200},
+		{"happy path", url.Values{"a": {"b"}}, "a", "b", 10, true, 200},
+		{"multiform", url.Values{"a": {"1"}, "b": {"2"}, "c": {"3"}}, "b", "2", 5, true, 200},
+		{"too long", url.Values{"a": {"bamboozling"}}, "a", "", 10, false, 413},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			r := httptest.NewRequest("GET", "/", nil)
+			r.Form = test.form
+			var dest string
+			switch {
+			case test.want != ParseFormValue(w, r, test.key, &dest, test.maxLength):
+				t.Errorf("unwanted return value")
+			case test.want && dest != test.wantValue:
+				t.Errorf("value not set to %q: got %q", test.wantValue, dest)
+			case test.wantCode != w.Code:
+				t.Errorf("codes not equal: wanted %v, got, %v", test.wantCode, w.Code)
 			}
 		})
 	}
