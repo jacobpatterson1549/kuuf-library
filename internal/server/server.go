@@ -19,6 +19,7 @@ import (
 	"github.com/jacobpatterson1549/kuuf-library/internal/db/mongo"
 	"github.com/jacobpatterson1549/kuuf-library/internal/db/postgres"
 	"github.com/jacobpatterson1549/kuuf-library/internal/server/bcrypt"
+	"golang.org/x/time/rate"
 )
 
 var (
@@ -44,6 +45,8 @@ type (
 		AdminPassword string
 		MaxRows       int
 		DBTimeoutSec  int
+		PostLimitSec  int
+		PostMaxBurst  int
 	}
 	Server struct {
 		Config
@@ -216,9 +219,11 @@ func (s *Server) mux() http.Handler {
 	authenticatedMethods := []string{
 		http.MethodPost,
 	}
+	r := 1 / rate.Limit(s.PostLimitSec)
+	lim := rate.NewLimiter(r, s.PostMaxBurst)
 	for _, n := range authenticatedMethods {
 		for p, h := range m[n] {
-			m[n][p] = s.withAdminPassword(h)
+			m[n][p] = withRateLimiter(s.withAdminPassword(h), lim)
 		}
 	}
 	day := time.Hour * 24
@@ -363,6 +368,17 @@ func (s *Server) serveTemplate(w http.ResponseWriter, name string, data interfac
 	p := Page{name, data}
 	if err := tmpl.Execute(w, p); err != nil {
 		fmt.Fprintln(s.out, err)
+	}
+}
+
+func withRateLimiter(h http.HandlerFunc, lim *rate.Limiter) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !lim.Allow() {
+			err := fmt.Errorf("too many POSTS to server")
+			httpError(w, http.StatusTooManyRequests, err)
+			return
+		}
+		h.ServeHTTP(w, r)
 	}
 }
 

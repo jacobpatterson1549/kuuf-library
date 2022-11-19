@@ -15,6 +15,7 @@ import (
 
 	"github.com/jacobpatterson1549/kuuf-library/internal/book"
 	"github.com/jacobpatterson1549/kuuf-library/internal/db/csv"
+	"golang.org/x/time/rate"
 )
 
 func TestNewServer(t *testing.T) {
@@ -155,6 +156,37 @@ func TestWithContentEncoding(t *testing.T) {
 		if want, got := msg, string(b); want != got {
 			t.Errorf("body not encoded as desired: wanted %q, got %q", want, got)
 		}
+	}
+}
+
+func TestWithRateLimiter(t *testing.T) {
+	tests := []struct {
+		name        string
+		wantCode    int
+		lim         *rate.Limiter
+		numRequests int
+	}{
+		{"zero burst", 429, rate.NewLimiter(1, 0), 1},
+		{"first allowed", 200, rate.NewLimiter(1, 1), 1},
+		{"fourth allowed", 429, rate.NewLimiter(1, 4), 5},
+		{"fifth not allowed", 429, rate.NewLimiter(1, 4), 5},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			h1 := func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(200)
+			}
+			var w *httptest.ResponseRecorder
+			h2 := withRateLimiter(h1, test.lim)
+			r := httptest.NewRequest("POST", "/admin", nil)
+			for i := 0; i < test.numRequests; i++ {
+				w = httptest.NewRecorder()
+				h2.ServeHTTP(w, r)
+			}
+			if want, got := test.wantCode, w.Code; want != got {
+				t.Errorf("status codes not equal: wanted %v, got %v", want, got)
+			}
+		})
 	}
 }
 

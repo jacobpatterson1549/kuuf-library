@@ -50,6 +50,8 @@ func newServerConfig(out io.Writer, programName string, programArgs ...string) (
 	fs.BoolVar(&cfg.UpdateImages, "update-images", false, "processes all images in the database to webp")
 	fs.IntVar(&cfg.MaxRows, "max-rows", 100, "the maximum number of books to display as rows on the filter page")
 	fs.IntVar(&cfg.DBTimeoutSec, "db-timeout-sec", 5, "the number of seconds each database operation can take")
+	fs.IntVar(&cfg.PostLimitSec, "post-rate-sec", 5, "the limit on number of seconds that must pas between posts")
+	fs.IntVar(&cfg.PostMaxBurst, "post-max-burst", 2, "the maximum number of posts that can take place in a post-rate-sec period")
 	if err := parseFlags(fs, programArgs); err != nil {
 		return nil, err
 	}

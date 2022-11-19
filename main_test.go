@@ -41,6 +41,8 @@ func TestServerConfig(t *testing.T) {
 				DatabaseURL:  "csv://",
 				MaxRows:      100,
 				DBTimeoutSec: 5,
+				PostLimitSec: 5,
+				PostMaxBurst: 2,
 			},
 		},
 		{
@@ -55,6 +57,8 @@ func TestServerConfig(t *testing.T) {
 				"-update-images=true",
 				"-max-rows=30",
 				"-db-timeout-sec=4",
+				"-post-rate-sec=6",
+				"-post-max-burst=3",
 			},
 			want: &server.Config{
 				Port:          "8001",
@@ -65,6 +69,8 @@ func TestServerConfig(t *testing.T) {
 				UpdateImages:  true,
 				MaxRows:       30,
 				DBTimeoutSec:  4,
+				PostLimitSec:  6,
+				PostMaxBurst:  3,
 			},
 		},
 		{
@@ -79,6 +85,8 @@ func TestServerConfig(t *testing.T) {
 				{"UPDATE_IMAGES", "true"},
 				{"MAX_ROWS", "55"},
 				{"DB_TIMEOUT_SEC", "3"},
+				{"POST_RATE_SEC", "7"},
+				{"POST_MAX_BURST", "4"},
 			},
 			want: &server.Config{
 				Port:          "8002",
@@ -89,6 +97,8 @@ func TestServerConfig(t *testing.T) {
 				UpdateImages:  true,
 				MaxRows:       55,
 				DBTimeoutSec:  3,
+				PostLimitSec:  7,
+				PostMaxBurst:  4,
 			},
 		},
 	}
