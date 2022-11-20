@@ -6,116 +6,116 @@
         <span>This forces a new request to the server for updated information.</span>
     </p>
     <h2>Admin</h2>
-        <form method="post" action="/book/{{if .ID}}update{{else}}create{{end}}" enctype="multipart/form-data">
-            <fieldset>
-                <legend>{{if .}}Update{{else}}Create{{end}} Book</legend>
-                <input id="b-id" type="text" name="id" value="{{pretty .ID}}" readonly hidden>
-                <div>
-                    <label for="b-title">Title</label>
-                    <input id="b-title" type="text" name="title" value="{{pretty .Title}}" required maxlength="256">
-                </div>
-                <div>
-                    <label for="b-author">Author</label>
-                    <input id="b-author" type="text" name="author" value="{{pretty .Author}}" required maxlength="256">
-                </div>
-                <div>
-                    <label for="b-subject">Subject</label>
-                    <input id="b-subject" type="text" name="subject" value="{{pretty .Subject}}" required maxlength="256">
-                </div>
-                <div>
-                    <label for="b-description">Description</label>
-                    <input id="b-description" type="text" name="description" value="{{pretty .Description}}" required maxlength="10000">
-                </div>
-                <div>
-                    <label for="b-dewey-dec-class"><abbr title="Dewey Decimal Classification">DDC</abbr></label>
-                    <input id="b-dewey-dec-class" type="text" name="dewey-dec-class" value="{{pretty .DeweyDecClass}}" maxlength="256">
-                </div>
-                <div>
-                    <label for="b-pages">Page Count</label>
-                    <input id="b-pages" type="number" name="pages" value="{{pretty .Pages}}" min="1" max="10000" required>
-                </div>
-                <div>
-                    <label for="b-publisher">Publisher</label>
-                    <input id="b-publisher" type="text" name="publisher" value="{{pretty .Publisher}}" maxlength="256">
-                </div>
-                <div>
-                    <label for="b-publish-date">Publish Date</label>
-                    <input id="b-publish-date" type="date" name="publish-date" value="{{pretty .PublishDate | dateInputValue}}">
-                </div>
-                <div>
-                    <label for="b-added-date">Added Date</label>
-                    <input id="b-added-date" type="date" name="added-date" value="{{if .}}{{pretty .AddedDate | dateInputValue}}{{else}}{{newDate | dateInputValue}}{{end}}" required>
-                </div>
-                <div>
-                    <label for="b-ean-isbn-13">EAN ISBN 13</label>
-                    <input id="b-ean-isbn-13" type="text" name="ean-isbn-13" value="{{pretty .EAN_ISBN13}}" maxlength="32">
-                </div>
-                <div>
-                    <label for="b-upc-isbn-10">UPC ISBN 10</label>
-                    <input id="b-upc-isbn-10" type="text" name="upc-isbn-10" value="{{pretty .UPC_ISBN10}}" maxlength="32">
-                </div>
-                {{- if .}}
-                {{- if .ImageBase64}}
-                <div>
-                    <input id="b-image-keep" type="radio" name="update-image" value="false" checked>
-                    <label for="b-image-keep">Keep image</label>
-                </div>
-                {{- end}}
-                <div>
-                    <input id="b-image-replace" type="radio" name="update-image" value="true" {{if not .ImageBase64}}checked{{end}}>
-                    <label for="b-image-replace">{{if .ImageBase64}}Replace{{else}}Set{{end}} image</label>
-                </div>
-                <div>
-                    <input id="b-image-clear" type="radio" name="update-image" value="clear">
-                    <label for="b-image-clear">Clear image</label>
-                </div>
-                {{- end}}
-                <div>
-                    <label for="b-image-file">Image File</label>
-                    <input id="b-image-file" type="file" name="image" accept="image/png,image/jpeg,image/webp">
-                </div>
-                <div>
-                    <label for="b-p">Admin Password</label>
-                    <input id="b-p" type="password" name="p" required>
-                </div>
-                <div>
-                    <input type="submit" value="{{if .}}Update{{else}}Create{{end}} book">
-                </div>
-            </fieldset>
-        </form>
-        {{- if .}}
-        <form method="post" action="/book/delete">
-            <fieldset>
-                <legend>Delete Book</legend>
-                <input id="db-id" type="text" name="id" value="{{.ID}}" readonly hidden>
-                <div>
-                    <label for="db-p">Admin Password</label>
-                    <input id="db-p" type="password" name="p" required>
-                </div>
-                <div>
-                    <input type="submit" value="Delete book">
-                </div>
-            </fieldset>
-        </form>
-        {{- end}}
-        <form method="post" action="/admin/update">
-            <fieldset>
-                <legend>Set Admin Password</legend>
-                <div>
-                    <label for="ap-p1">New password</label>
-                    <input id="ap-p1" type="password" name="p1" required>
-                </div>
-                <div>
-                    <label for="ap-p2">Retype password</label>
-                    <input id="ap-p2" type="password" name="p2" required>
-                </div>
-                <div>
-                    <label for="ap-p">Current password</label>
-                    <input id="ap-p" type="password" name="p" required>
-                </div>
-                <div>
-                    <input type="submit" value="Update password">
-                </div>
-            </fieldset>
-        </form>
+    <form method="post" action="/book/{{if .ID}}update{{else}}create{{end}}" enctype="multipart/form-data">
+        <fieldset>
+            <legend>{{if .}}Update{{else}}Create{{end}} Book</legend>
+            <input id="b-id" type="text" name="id" value="{{pretty .ID}}" readonly hidden>
+            <div>
+                <label for="b-title">Title</label>
+                <input id="b-title" type="text" name="title" value="{{pretty .Title}}" required maxlength="256">
+            </div>
+            <div>
+                <label for="b-author">Author</label>
+                <input id="b-author" type="text" name="author" value="{{pretty .Author}}" required maxlength="256">
+            </div>
+            <div>
+                <label for="b-subject">Subject</label>
+                <input id="b-subject" type="text" name="subject" value="{{pretty .Subject}}" required maxlength="256">
+            </div>
+            <div>
+                <label for="b-description">Description</label>
+                <input id="b-description" type="text" name="description" value="{{pretty .Description}}" required maxlength="10000">
+            </div>
+            <div>
+                <label for="b-dewey-dec-class"><abbr title="Dewey Decimal Classification">DDC</abbr></label>
+                <input id="b-dewey-dec-class" type="text" name="dewey-dec-class" value="{{pretty .DeweyDecClass}}" maxlength="256">
+            </div>
+            <div>
+                <label for="b-pages">Page Count</label>
+                <input id="b-pages" type="number" name="pages" value="{{pretty .Pages}}" min="1" max="10000" required>
+            </div>
+            <div>
+                <label for="b-publisher">Publisher</label>
+                <input id="b-publisher" type="text" name="publisher" value="{{pretty .Publisher}}" maxlength="256">
+            </div>
+            <div>
+                <label for="b-publish-date">Publish Date</label>
+                <input id="b-publish-date" type="date" name="publish-date" value="{{pretty .PublishDate | dateInputValue}}">
+            </div>
+            <div>
+                <label for="b-added-date">Added Date</label>
+                <input id="b-added-date" type="date" name="added-date" value="{{if .}}{{pretty .AddedDate | dateInputValue}}{{else}}{{newDate | dateInputValue}}{{end}}" required>
+            </div>
+            <div>
+                <label for="b-ean-isbn-13">EAN ISBN 13</label>
+                <input id="b-ean-isbn-13" type="text" name="ean-isbn-13" value="{{pretty .EAN_ISBN13}}" maxlength="32">
+            </div>
+            <div>
+                <label for="b-upc-isbn-10">UPC ISBN 10</label>
+                <input id="b-upc-isbn-10" type="text" name="upc-isbn-10" value="{{pretty .UPC_ISBN10}}" maxlength="32">
+            </div>
+            {{- if .}}
+            {{- if .ImageBase64}}
+            <div>
+                <input id="b-image-keep" type="radio" name="update-image" value="false" checked>
+                <label for="b-image-keep">Keep image</label>
+            </div>
+            {{- end}}
+            <div>
+                <input id="b-image-replace" type="radio" name="update-image" value="true" {{if not .ImageBase64}}checked{{end}}>
+                <label for="b-image-replace">{{if .ImageBase64}}Replace{{else}}Set{{end}} image</label>
+            </div>
+            <div>
+                <input id="b-image-clear" type="radio" name="update-image" value="clear">
+                <label for="b-image-clear">Clear image</label>
+            </div>
+            {{- end}}
+            <div>
+                <label for="b-image-file">Image File</label>
+                <input id="b-image-file" type="file" name="image" accept="image/png,image/jpeg,image/webp">
+            </div>
+            <div>
+                <label for="b-p">Admin Password</label>
+                <input id="b-p" type="password" name="p" required>
+            </div>
+            <div>
+                <input type="submit" value="{{if .}}Update{{else}}Create{{end}} book">
+            </div>
+        </fieldset>
+    </form>
+    {{- if .}}
+    <form method="post" action="/book/delete">
+        <fieldset>
+            <legend>Delete Book</legend>
+            <input id="db-id" type="text" name="id" value="{{.ID}}" readonly hidden>
+            <div>
+                <label for="db-p">Admin Password</label>
+                <input id="db-p" type="password" name="p" required>
+            </div>
+            <div>
+                <input type="submit" value="Delete book">
+            </div>
+        </fieldset>
+    </form>
+    {{- end}}
+    <form method="post" action="/admin/update">
+        <fieldset>
+            <legend>Set Admin Password</legend>
+            <div>
+                <label for="ap-p1">New password</label>
+                <input id="ap-p1" type="password" name="p1" required>
+            </div>
+            <div>
+                <label for="ap-p2">Retype password</label>
+                <input id="ap-p2" type="password" name="p2" required>
+            </div>
+            <div>
+                <label for="ap-p">Current password</label>
+                <input id="ap-p" type="password" name="p" required>
+            </div>
+            <div>
+                <input type="submit" value="Update password">
+            </div>
+        </fieldset>
+    </form>
 </div>

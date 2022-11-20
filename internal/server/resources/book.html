@@ -1,45 +1,47 @@
 <div class="book">
-        <h2>{{.Title}}</h2>
-        {{- if .ImageBase64}}<img alt="Picture of book" src="data:image/webp;base64,{{.ImageBase64}}">{{end}}
-        <div>
-            <span>Author</span>
-            <span>{{.Author}}</span>
-        </div>
-        <div>
-            <span>Subject</span>
-            <span>{{.Subject}}</span>
-        </div>
-        <div>
-            <span>Description</span>
-            <span>{{.Description}}</span>
-        </div>
-        <div>
-            <span><abbr title="Dewey Decimal Classification">DDC</abbr></span>
-            <span>{{.DeweyDecClass}}</span>
-        </div>
-        <div>
-            <span>Page Count</span>
-            <span>{{.Pages}}</span>
-        </div>
-        <div>
-            <span>Publisher</span>
-            <span>{{.Publisher}}</span>
-        </div>
-        <div>
-            <span>Publish Date</span>
-            <span>{{dateInputValue .PublishDate}}</span>
-        </div>
-        <div>
-            <span>Added Date</span>
-            <span>{{dateInputValue .AddedDate}}</span>
-        </div>
-        <div>
-            <span>EAN_ISBN13</span>
-            <span>{{.EAN_ISBN13}}</span>
-        </div>
-        <div>
-            <span>UPC_ISBN10</span>
-            <span>{{.UPC_ISBN10}}</span>
-        </div>
-        <a href="/admin?id={{.ID}}">Admin</a>
+    <h2>{{.Title}}</h2>
+    {{- if .ImageBase64}}
+    <img alt="Picture of book" src="data:image/webp;base64,{{.ImageBase64}}">
+    {{- end}}
+    <div>
+        <span>Author</span>
+        <span>{{.Author}}</span>
+    </div>
+    <div>
+        <span>Subject</span>
+        <span>{{.Subject}}</span>
+    </div>
+    <div>
+        <span>Description</span>
+        <span>{{.Description}}</span>
+    </div>
+    <div>
+        <span><abbr title="Dewey Decimal Classification">DDC</abbr></span>
+        <span>{{.DeweyDecClass}}</span>
+    </div>
+    <div>
+        <span>Page Count</span>
+        <span>{{.Pages}}</span>
+    </div>
+    <div>
+        <span>Publisher</span>
+        <span>{{.Publisher}}</span>
+    </div>
+    <div>
+        <span>Publish Date</span>
+        <span>{{dateInputValue .PublishDate}}</span>
+    </div>
+    <div>
+        <span>Added Date</span>
+        <span>{{dateInputValue .AddedDate}}</span>
+    </div>
+    <div>
+        <span>EAN_ISBN13</span>
+        <span>{{.EAN_ISBN13}}</span>
+    </div>
+    <div>
+        <span>UPC_ISBN10</span>
+        <span>{{.UPC_ISBN10}}</span>
+    </div>
+    <a href="/admin?id={{.ID}}">Admin</a>
 </div>
