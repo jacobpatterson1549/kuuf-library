@@ -2,8 +2,10 @@
 package server
 
 import (
+	"bufio"
 	"compress/gzip"
 	"embed"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"io/fs"
@@ -50,9 +52,10 @@ type (
 	}
 	Server struct {
 		Config
-		db  Database
-		ph  PasswordHandler
-		out io.Writer
+		favicon string
+		db      Database
+		ph      PasswordHandler
+		out     io.Writer
 	}
 	PasswordHandler interface {
 		Hash(password []byte) (hashedPassword []byte, err error)
@@ -89,12 +92,17 @@ func (cfg Config) NewServer(out io.Writer) (*Server, error) {
 	if err != nil {
 		return nil, fmt.Errorf("creating database: %W", err)
 	}
+	favicon, err := faviconBase64()
+	if err != nil {
+		return nil, fmt.Errorf("loading favicon: %w", err)
+	}
 	ph := bcrypt.NewPasswordHandler()
 	s := Server{
-		Config: cfg,
-		db:     db,
-		ph:     ph,
-		out:    out,
+		Config:  cfg,
+		favicon: string(favicon),
+		db:      db,
+		ph:      ph,
+		out:     out,
 	}
 	return &s, nil
 }
@@ -399,13 +407,29 @@ func (s *Server) putAdminPassword(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) serveTemplate(w http.ResponseWriter, name string, data interface{}) {
 	type Page struct {
-		Name string
-		Data interface{}
+		Favicon string
+		Name    string
+		Data    interface{}
 	}
-	p := Page{name, data}
+	p := Page{s.favicon, name, data}
 	if err := tmpl.Execute(w, p); err != nil {
 		fmt.Fprintln(s.out, err)
 	}
+}
+
+func faviconBase64() ([]byte, error) {
+	f, err := staticFS.Open("favicon.svg")
+	if err != nil {
+		return nil, err
+	}
+	br := bufio.NewReader(f)
+	var sb strings.Builder
+	enc := base64.NewEncoder(base64.StdEncoding, &sb)
+	if _, err := br.WriteTo(enc); err != nil {
+		return nil, err
+	}
+	enc.Close()
+	return []byte(sb.String()), nil
 }
 
 func withRateLimiter(h http.HandlerFunc, lim *rate.Limiter) http.HandlerFunc {
