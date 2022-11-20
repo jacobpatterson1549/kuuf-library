@@ -1,7 +1,6 @@
 package server
 
 import (
-	"bytes"
 	"encoding/base64"
 	"fmt"
 	"image"
@@ -12,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"strings"
 
 	x_draw "golang.org/x/image/draw"
 	"golang.org/x/image/webp"
@@ -44,11 +44,9 @@ func imageNeedsUpdating(imageBase64 string) bool {
 	if len(imageBase64) == 0 {
 		return false
 	}
-	b, err := base64.StdEncoding.DecodeString(imageBase64)
-	if err != nil {
-		return true
-	}
-	cfg, err := webp.DecodeConfig(bytes.NewReader(b))
+	sr := strings.NewReader(imageBase64)
+	dec := base64.NewDecoder(base64.StdEncoding, sr)
+	cfg, err := webp.DecodeConfig(dec)
 	if err != nil {
 		return true
 	}
@@ -61,11 +59,8 @@ func imageNeedsUpdating(imageBase64 string) bool {
 }
 
 func updateImage(imageBase64 string, id string) ([]byte, error) {
-	b, err := base64.StdEncoding.DecodeString(imageBase64)
-	if err != nil {
-		return nil, fmt.Errorf("decoding image from database: %w", err)
-	}
-	r := bytes.NewReader(b)
+	sr := strings.NewReader(imageBase64)
+	r := base64.NewDecoder(base64.StdEncoding, sr)
 	title, contentType := id+"_converted", "image/webp"
 	return convertImage(r, title, contentType)
 }
