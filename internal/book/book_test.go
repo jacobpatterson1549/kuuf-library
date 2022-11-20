@@ -13,7 +13,7 @@ func TestNewIDLength(t *testing.T) {
 	}
 }
 
-func TestSort(t *testing.T) {
+func TestBooksSort(t *testing.T) {
 	tests := []struct {
 		name string
 		s    Books
@@ -51,38 +51,87 @@ func TestSort(t *testing.T) {
 	}
 }
 
-func TestNewFilter(t *testing.T) {
+func TestSubjectsSort(t *testing.T) {
 	tests := []struct {
-		name   string
-		s      string
-		wantOk bool
-		want   Filter
+		name string
+		s    Subjects
+		want Subjects
 	}{
 		{
-			name:   "empty",
-			wantOk: true,
-			want:   Filter{},
+			name: "empty",
 		},
 		{
-			name: "alphaNumeric only",
-			s:    "not-allowed",
+			name: "max first",
+			s: Subjects{
+				{Name: "b", Count: 3},
+				{Name: "c", Count: 1},
+				{Name: "d", Count: 5},
+			},
+			want: Subjects{
+				{Name: "d", Count: 5},
+				{Name: "b", Count: 3},
+				{Name: "c", Count: 1},
+			},
 		},
 		{
-			name:   "happy path",
-			s:      "How 2  make a   FILTER",
-			wantOk: true,
-			want: Filter{
-				"How",
-				"2",
-				"make",
-				"a",
-				"FILTER",
+			name: "alphabetical second",
+			s: Subjects{
+				{Name: "d", Count: 1},
+				{Name: "b", Count: 1},
+			},
+			want: Subjects{
+				{Name: "b", Count: 1},
+				{Name: "d", Count: 1},
 			},
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got, err := NewFilter(test.s)
+			test.s.Sort()
+			if want, got := test.want, test.s; !reflect.DeepEqual(want, got) {
+				t.Errorf("not equal: \n wanted: %+v \n got:    %+v", want, got)
+			}
+		})
+	}
+}
+
+func TestNewFilter(t *testing.T) {
+	tests := []struct {
+		name        string
+		headerParts string
+		subject     string
+		wantOk      bool
+		want        Filter
+	}{
+		{
+			name:   "empty",
+			wantOk: true,
+			want:   Filter{HeaderParts: []string{}},
+		},
+		{
+			name:        "alphaNumeric only",
+			headerParts: "not-allowed",
+		},
+		{
+			name:        "happy path",
+			headerParts: "How 2  make a   FILTER",
+			subject:     "info",
+			wantOk:      true,
+			want: Filter{
+				Subject: "info",
+				HeaderParts: []string{
+					"How",
+					"2",
+					"make",
+					"a",
+					"FILTER",
+				},
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, err := NewFilter(test.headerParts, test.subject)
 			switch {
 			case !test.wantOk:
 				if err == nil {
@@ -109,16 +158,34 @@ func TestFilterMatches(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "case-insensitive",
-			book: Book{Header: Header{Title: "The big day"}},
-			filter: Filter{"the", "THE"},
-			want: true,
+			name:   "case-insensitive",
+			book:   Book{Header: Header{Title: "The big day"}},
+			filter: Filter{HeaderParts: []string{"the", "THE"}},
+			want:   true,
 		},
 		{
-			name: "middle of word",
-			book: Book{Header: Header{Title: "Fruits"}, Description: "Apples, pears, and watermelons are all fruits."},
-			filter: Filter{"the", "term", "ends"},
-			want: false,
+			name:   "middle of word",
+			book:   Book{Header: Header{Title: "Fruits"}, Description: "Apples, pears, and watermelons are all fruits."},
+			filter: Filter{HeaderParts: []string{"the", "term", "ends"}},
+			want:   false,
+		},
+		{
+			name:   "header match 1",
+			book:   Book{Header: Header{Title: "Fruit Trees", Subject: "Fruits"}},
+			filter: Filter{Subject: "fruits"},
+			want:   true,
+		},
+		{
+			name:   "header match 2",
+			book:   Book{Header: Header{Title: "Fruit Trees", Subject: "Fruits"}},
+			filter: Filter{Subject: "fruits", HeaderParts: []string{"trees"}},
+			want:   true,
+		},
+		{
+			name:   "header match 3, both must match",
+			book:   Book{Header: Header{Title: "Fruit Trees", Subject: "Fruits"}},
+			filter: Filter{Subject: "fruits", HeaderParts: []string{"pears"}},
+			want:   false,
 		},
 	}
 	for _, test := range tests {

@@ -121,9 +121,57 @@ func (d *Database) CreateBooks(books ...book.Book) ([]book.Book, error) {
 	return books, nil
 }
 
+func (d *Database) ReadBookSubjects(limit, offset int) ([]book.Subject, error) {
+	var subjects []book.Subject
+	const idField = "_id"
+	const countField = "count"
+	groupStage := d.d(d.e("$group", d.d(
+		d.e(idField, "$"+bookSubjectField),
+		d.e(countField, d.d(d.e("$sum", 1))),
+	)))
+	sortStage := d.d(d.e("$sort", d.d(
+		d.e(countField, -1),
+		d.e(bookIDField, 1),
+	)))
+	skipStage := d.d(d.e("$skip", offset))
+	limitStage := d.d(d.e("$limit", limit))
+	pipeline := mongo.Pipeline{groupStage, sortStage, skipStage, limitStage}
+	coll := d.booksCollection()
+	if err := d.withTimeoutContext(func(ctx context.Context) error {
+		cur, err := coll.Aggregate(ctx, pipeline)
+		if err != nil {
+			return err
+		}
+		var all []map[string]interface{}
+		if err := cur.All(ctx, &all); err != nil {
+			return err
+		}
+		subjects = make([]book.Subject, len(all))
+		for i, m := range all {
+			name, ok := m[idField].(string)
+			if !ok {
+				return fmt.Errorf("getting name for subject #%v, type is %T", i, name)
+			}
+			count, ok := m[countField].(int32)
+			if !ok {
+				return fmt.Errorf("getting count for subject #%v, type is %T", i, count)
+			}
+			s := book.Subject{
+				Name:  name,
+				Count: int(count),
+			}
+			subjects[i] = s
+		}
+		return nil
+	}); err != nil {
+		return nil, fmt.Errorf("reading book subjects: %w", err)
+	}
+	return subjects, nil
+}
+
 func (d *Database) ReadBookHeaders(f book.Filter, limit, offset int) ([]book.Header, error) {
 	var headers []book.Header
-	filter := d.d(d.filter(f))
+	filter := d.d(d.filter(f)...)
 	sort := d.d(
 		d.e(bookSubjectField, 1),
 		d.e(bookTitleField, 1),
@@ -308,7 +356,13 @@ func (Database) d(e ...bson.E) bson.D {
 }
 
 func (Database) e(key string, value interface{}) bson.E {
-	return bson.E{Key: key, Value: value}
+	return bson.E{
+		Key:   key,
+		Value: value,
+	}
+}
+func (Database) a(d ...interface{}) bson.A {
+	return bson.A(d)
 }
 
 func (d Database) objectID(id string) (bson.D, error) {
@@ -319,20 +373,29 @@ func (d Database) objectID(id string) (bson.D, error) {
 	return d.d(d.e(bookIDField, objID)), nil
 }
 
-func (d Database) filter(filter book.Filter) bson.E {
-	if len(filter) == 0 {
-		return d.e("", nil) // mongo does not like a nil slice
+func (d Database) filter(filter book.Filter) []bson.E {
+	var parts []bson.E
+	if len(filter.Subject) != 0 {
+		subjectPart := d.e(bookSubjectField, filter.Subject)
+		parts = append(parts, subjectPart)
 	}
-	joinedFilter := strings.Join(filter, "|")
-	regex := primitive.Regex{
-		Pattern: joinedFilter,
-		Options: "i",
+	if len(filter.HeaderParts) != 0 {
+		joinedFilter := strings.Join(filter.HeaderParts, "|")
+		regex := primitive.Regex{
+			Pattern: joinedFilter,
+			Options: "i",
+		}
+		headerParts := (d.e(
+			"$or",
+			d.a(
+				d.d(d.e(bookTitleField, regex)),
+				d.d(d.e(bookAuthorField, regex)),
+				d.d(d.e(bookSubjectField, regex)),
+			)))
+		parts = append(parts, headerParts)
 	}
-	return d.e(
-		"$or",
-		bson.A{
-			d.d(d.e(bookTitleField, regex)),
-			d.d(d.e(bookAuthorField, regex)),
-			d.d(d.e(bookSubjectField, regex)),
-		})
+	if len(parts) == 0 {
+		parts = append(parts, d.e("", nil)) // mongo does not like a nil slice
+	}
+	return parts
 }

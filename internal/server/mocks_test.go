@@ -17,6 +17,7 @@ func (m mockPasswordHandler) IsCorrectPassword(hashedPassword, password []byte) 
 
 type mockDatabase struct {
 	mockCreateBooksFunc         func(books ...book.Book) ([]book.Book, error)
+	mockReadBookSubjectsFunc    func(limit, offset int) ([]book.Subject, error)
 	mockReadBookHeadersFunc     func(f book.Filter, limit, offset int) ([]book.Header, error)
 	mockReadBookFunc            func(id string) (*book.Book, error)
 	mockUpdateBookFunc          func(b book.Book, updateImage bool) error
@@ -27,6 +28,10 @@ type mockDatabase struct {
 
 func (m mockDatabase) CreateBooks(books ...book.Book) ([]book.Book, error) {
 	return m.mockCreateBooksFunc(books...)
+}
+
+func (m mockDatabase) ReadBookSubjects(limit, offset int) ([]book.Subject, error) {
+	return m.mockReadBookSubjectsFunc(limit, offset)
 }
 
 func (m mockDatabase) ReadBookHeaders(f book.Filter, limit, offset int) ([]book.Header, error) {

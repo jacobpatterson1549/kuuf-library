@@ -1,0 +1,21 @@
+<div class="subjects">
+	<div>
+		<a href="/list">All books</a>
+	</div>
+	<h2>Book subjects</h2>
+	<div>
+	{{- range .Subjects}}
+	<div class="subject">
+		<div title="Subject"><a href="/list?s={{.Name}}">{{.Name}}</a></div>
+		<div title="Count">{{.Count}}</div>
+	</div>
+	{{- end}}
+	</div>
+	{{- if .NextPage}}
+	<form method="get">
+		<input type="hidden" name="page" value="{{.NextPage}}">
+		<input type="submit" value="Load More subjects">
+	</form>
+	{{- end}}
+	<a href="/admin">Admin/Help</a>
+</div>

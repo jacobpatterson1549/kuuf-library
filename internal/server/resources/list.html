@@ -5,6 +5,13 @@
 			<label for="b-filter">Filter</label>
 			<input id="b-filter" type="text" name="q" value="{{pretty .Filter}}" maxlength="256">
 		</div>
+		{{- if .Subject}}
+		<div>
+			<label for="b-subject">Subject</label>
+			<input id="b-subject" type="checkbox" name="s" value="{{pretty .Subject}}" checked>
+			<label for="b-subject">{{.Subject}}</label>
+		</div>
+		{{- end}}
 		<div>
 			<input type="submit" value="Submit">
 		</div>
@@ -22,7 +29,12 @@
 	{{- if .NextPage}}
 	<form method="get">
 		<input type="hidden" name="page" value="{{.NextPage}}">
+		{{- if .Filter}}
 		<input type="hidden" name="q" value="{{pretty .Filter}}">
+		{{- end}}
+		{{- if .Subject}}
+		<input type="checkbox" name="s" value="{{pretty .Subject}}" checked>
+		{{- end}}
 		<input type="submit" value="Load More books">
 	</form>
 	{{- end}}

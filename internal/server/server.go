@@ -60,6 +60,7 @@ type (
 	}
 	Database interface {
 		CreateBooks(books ...book.Book) ([]book.Book, error)
+		ReadBookSubjects(limit, offset int) ([]book.Subject, error)
 		ReadBookHeaders(f book.Filter, limit, offset int) ([]book.Header, error)
 		ReadBook(id string) (*book.Book, error)
 		UpdateBook(b book.Book, updateImage bool) error
@@ -159,7 +160,7 @@ func (cfg Config) updateImages(db Database, out io.Writer) error {
 	d := csv.NewDump(out)
 	offset := 0
 	for {
-		headers, err := db.ReadBookHeaders(nil, cfg.MaxRows+1, offset)
+		headers, err := db.ReadBookHeaders(book.Filter{}, cfg.MaxRows+1, offset)
 		if err != nil {
 			return fmt.Errorf("reading books at offset %v: %w", offset, err)
 		}
@@ -204,7 +205,8 @@ func (s *Server) mux() http.Handler {
 	static := http.FileServer(http.FS(staticFS))
 	m := mux{
 		http.MethodGet: map[string]http.HandlerFunc{
-			"/":           s.getBookHeaders,
+			"/":           s.getBookSubjects,
+			"/list":       s.getBookHeaders,
 			"/book":       s.getBook,
 			"/admin":      s.getAdmin,
 			"/robots.txt": static.ServeHTTP,
@@ -230,32 +232,47 @@ func (s *Server) mux() http.Handler {
 	return withCacheControl(withContentEncoding(m), day) // update message in admin.html when updating cache age
 }
 
+func (s *Server) getBookSubjects(w http.ResponseWriter, r *http.Request) {
+	limit, offset, ok := ParseLimitOffset(w, r, s.MaxRows)
+	if !ok {
+		return
+	}
+	subjects, err := s.db.ReadBookSubjects(limit, offset)
+	if err != nil {
+		httpInternalServerError(w, err)
+		return
+	}
+	data := struct {
+		Subjects []book.Subject
+		NextPage int
+	}{
+		Subjects: subjects,
+	}
+	if len(data.Subjects) > s.MaxRows {
+		data.Subjects = data.Subjects[:s.MaxRows]
+		data.NextPage = offset/s.MaxRows + 1
+	}
+	s.serveTemplate(w, "subjects", data)
+}
+
 func (s *Server) getBookHeaders(w http.ResponseWriter, r *http.Request) {
-	var a string
-	if !ParseFormValue(w, r, "page", &a, 32) {
+	limit, offset, ok := ParseLimitOffset(w, r, s.MaxRows)
+	if !ok {
 		return
 	}
-	var page int
-	if len(a) != 0 {
-		i, err := strconv.Atoi(a)
-		if err != nil {
-			err = fmt.Errorf("invalid page: %w", err)
-			httpBadRequest(w, err)
-			return
-		}
-		page = i
-	}
-	var q string
-	if !ParseFormValue(w, r, "q", &q, 256) {
+	var headerParts string
+	if !ParseFormValue(w, r, "q", &headerParts, 256) {
 		return
 	}
-	filter, err := book.NewFilter(q)
+	var subject string
+	if !ParseFormValue(w, r, "s", &subject, 256) {
+		return
+	}
+	filter, err := book.NewFilter(headerParts, subject)
 	if err != nil {
 		httpBadRequest(w, err)
 		return
 	}
-	offset := page * s.MaxRows
-	limit := s.MaxRows + 1
 	books, err := s.db.ReadBookHeaders(*filter, limit, offset)
 	if err != nil {
 		httpInternalServerError(w, err)
@@ -264,14 +281,16 @@ func (s *Server) getBookHeaders(w http.ResponseWriter, r *http.Request) {
 	data := struct {
 		Books    []book.Header
 		Filter   string
+		Subject  string
 		NextPage int
 	}{
-		Filter: q,
-		Books:  books,
+		Books:   books,
+		Filter:  headerParts,
+		Subject: subject,
 	}
 	if len(data.Books) > s.MaxRows {
 		data.Books = data.Books[:s.MaxRows]
-		data.NextPage = page + 1
+		data.NextPage = offset/s.MaxRows + 1
 	}
 	s.serveTemplate(w, "list", data)
 }
@@ -316,7 +335,6 @@ func (s *Server) postBook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpRedirect(w, r, "/book?id="+string(books[0].ID))
-
 }
 
 func (s *Server) putBook(w http.ResponseWriter, r *http.Request) {
@@ -550,6 +568,28 @@ func ParseFormValue(w http.ResponseWriter, r *http.Request, key string, dest *st
 	}
 	*dest = value
 	return true
+}
+
+func ParseLimitOffset(w http.ResponseWriter, r *http.Request, maxRows int) (limit, offset int, ok bool) {
+	var a string
+	if !ParseFormValue(w, r, "page", &a, 32) {
+		ok = false
+		return
+	}
+	var page int
+	if len(a) != 0 {
+		i, err := strconv.Atoi(a)
+		if err != nil {
+			err = fmt.Errorf("invalid page: %w", err)
+			httpBadRequest(w, err)
+			ok = false
+			return
+		}
+		page = i
+	}
+	offset = page * maxRows
+	limit = maxRows + 1
+	return limit, offset, true
 }
 
 const dateLayout = book.HyphenatedYYYYMMDD

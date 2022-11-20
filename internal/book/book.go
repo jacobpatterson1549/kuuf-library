@@ -50,6 +50,11 @@ type (
 		ImageBase64   string
 	}
 	DateLayout string
+
+	Subject struct {
+		Name  string
+		Count int
+	}
 )
 
 const (
@@ -81,23 +86,48 @@ func (h Header) less(other Header) bool {
 	return h.Title != other.Title
 }
 
-type Filter []string
+type Subjects []Subject
 
-func NewFilter(s string) (*Filter, error) {
-	if strings.IndexFunc(s, isSpecial) >= 0 {
+func (subjects Subjects) Sort() {
+	sort.Slice(subjects, func(i, j int) bool {
+		return subjects[i].less(subjects[j])
+	})
+}
+
+func (s Subject) less(other Subject) bool {
+	if s.Count != other.Count {
+		return s.Count > other.Count // max first
+	}
+	return s.Name < other.Name
+}
+
+// Filter is used to match books weth the exact subject (if set) or a whole word match to any of the header parts.
+type Filter struct {
+	Subject     string
+	HeaderParts []string
+}
+
+func NewFilter(headerParts, subject string) (*Filter, error) {
+	if strings.IndexFunc(headerParts, isSpecial) >= 0 {
 		return nil, fmt.Errorf("filter can only contain letters, numbers, and spaces")
 	}
-	f := Filter(strings.Fields(s))
+	f := Filter{
+		Subject:     subject,
+		HeaderParts: strings.Fields(headerParts),
+	}
 	return &f, nil
 }
 
 func (f Filter) Matches(b Book) bool {
-	if len(f) == 0 {
+	if len(f.Subject) != 0 && !strings.EqualFold(f.Subject, b.Subject) {
+		return false
+	}
+	if len(f.HeaderParts) == 0 {
 		return true
 	}
 	for _, part := range []string{b.Title, b.Author, b.Subject} {
 		for _, w := range strings.Fields(part) {
-			for _, v := range f {
+			for _, v := range f.HeaderParts {
 				if strings.EqualFold(w, v) {
 					return true
 				}

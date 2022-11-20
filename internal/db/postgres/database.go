@@ -135,21 +135,48 @@ func (d *Database) CreateBooks(books ...book.Book) ([]book.Book, error) {
 	return books, nil
 }
 
-func (d *Database) ReadBookHeaders(filter book.Filter, limit, offset int) ([]book.Header, error) {
-	hasFilter := len(filter) != 0
-	joinedFilter := strings.Join(filter, "|")
-	cmd := `SELECT id, title, author, subject
+func (d *Database) ReadBookSubjects(limit, offset int) ([]book.Subject, error) {
+	cmd := `SELECT subject, COUNT(*)
 	FROM books
-	WHERE $1
-		OR title   ~* $2
-		OR author  ~* $2
-		OR subject ~* $2
-	ORDER BY subject ASC, Title ASC
-	LIMIT $3
-	OFFSET $4`
+	GROUP BY subject
+	ORDER BY COUNT(*) DESC, subject ASC
+	LIMIT $1
+	OFFSET $2`
 	q := query{
 		cmd:  cmd,
-		args: []interface{}{!hasFilter, joinedFilter, limit, offset},
+		args: []interface{}{limit, offset},
+	}
+	subjects := make([]book.Subject, limit)
+	n := 0
+	dest := func() []interface{} {
+		s := &subjects[n]
+		n++
+		return []interface{}{&s.Name, &s.Count}
+	}
+	if err := d.query(q, dest); err != nil {
+		return nil, fmt.Errorf("reading book subjects: %w", err)
+	}
+	subjects = subjects[:n]
+	return subjects, nil
+}
+
+func (d *Database) ReadBookHeaders(filter book.Filter, limit, offset int) ([]book.Header, error) {
+	hasSubject := len(filter.Subject) != 0
+	hasFilter := len(filter.HeaderParts) != 0
+	joinedFilter := strings.Join(filter.HeaderParts, "|")
+	cmd := `SELECT id, title, author, subject
+	FROM books
+	WHERE ($1 OR subject = $2)
+		AND ($3
+			OR title   ~* $4
+			OR author  ~* $4
+			OR subject ~* $4)
+	ORDER BY subject ASC, Title ASC
+	LIMIT $5
+	OFFSET $6`
+	q := query{
+		cmd:  cmd,
+		args: []interface{}{!hasSubject, filter.Subject, !hasFilter, joinedFilter, limit, offset},
 	}
 	headers := make([]book.Header, limit)
 	n := 0
@@ -159,7 +186,7 @@ func (d *Database) ReadBookHeaders(filter book.Filter, limit, offset int) ([]boo
 		return []interface{}{&h.ID, &h.Title, &h.Author, &h.Subject}
 	}
 	if err := d.query(q, dest); err != nil {
-		return nil, fmt.Errorf("making query: %w", err)
+		return nil, fmt.Errorf("reading book headers: %w", err)
 	}
 	headers = headers[:n]
 	return headers, nil
@@ -178,7 +205,7 @@ func (d *Database) ReadBook(id string) (*book.Book, error) {
 		return []interface{}{&b.ID, &b.Title, &b.Author, &b.Subject, &b.Description, &b.DeweyDecClass, &b.Pages, &b.Publisher, &b.PublishDate, &b.AddedDate, &b.EAN_ISBN13, &b.UPC_ISBN10, &b.ImageBase64}
 	}
 	if err := d.query(q, dest); err != nil {
-		return nil, fmt.Errorf("making query: %w", err)
+		return nil, fmt.Errorf("reading book: %w", err)
 	}
 	return &b, nil
 }

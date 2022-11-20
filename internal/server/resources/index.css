@@ -12,12 +12,23 @@ h1, h2, h3 {
     color: rgba(13,94,21,.9);
 }
 
+.subjects .subject > * {
+    display: inline-block;
+}
+
+.subjects .subject > *[title="Count"]::before {
+    content: "(";
+}
+.subjects .subject > *[title="Count"]::after {
+    content: ")";
+}
+
 .book > * > *:nth-child(1) {
     font-weight: bold;
 }
 
 .book > * > *:nth-child(1)::after,
-label::after {
+label:has(+ input)::after {
     content: ':';
 }
 

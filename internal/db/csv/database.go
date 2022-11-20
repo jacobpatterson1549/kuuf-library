@@ -55,10 +55,40 @@ func (d *Database) CreateBooks(books ...book.Book) ([]book.Book, error) {
 	return nil, d.notAllowed()
 }
 
+func (d *Database) ReadBookSubjects(limit, offset int) ([]book.Subject, error) {
+	if limit < 0 {
+		return []book.Subject{}, nil
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	m := make(map[string]int)
+	for _, b := range d.Books {
+		m[b.Subject]++
+	}
+	if offset > len(m) {
+		return []book.Subject{}, nil
+	}
+	subjects := make(book.Subjects, 0, len(m))
+	for name, count := range m {
+		s := book.Subject{
+			Name:  name,
+			Count: count,
+		}
+		subjects = append(subjects, s)
+	}
+	subjects.Sort()
+	subjects = subjects[offset:]
+	if len(subjects) > limit {
+		subjects = subjects[:limit]
+	}
+	return subjects, nil
+}
+
 func (d *Database) ReadBookHeaders(filter book.Filter, limit, offset int) ([]book.Header, error) {
 	books := d.Books
-	if limit < 0 {
-		limit = 0
+	if limit < 0 || offset > len(books) {
+		return []book.Header{}, nil
 	}
 	if offset < 0 {
 		offset = 0

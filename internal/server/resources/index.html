@@ -7,7 +7,7 @@
 	<meta name="Description" content="Jacob Patterson">
 	<title>KUUF Library</title>
 	<link rel="shortcut icon" href="data:image/x-icon;base64," type="image/x-icon">
-    <style>
+	<style>
 {{template "index.css" .}}
 	</style>
 </head>
@@ -17,6 +17,8 @@
 
 {{- if eq .Name "list"}}
 {{template "list.html" .Data}}
+{{- else if eq .Name "subjects"}}
+{{template "subjects.html" .Data}}
 {{- else if eq .Name "book"}}
 {{template "book.html" .Data}}
 {{- else if eq .Name "admin"}}

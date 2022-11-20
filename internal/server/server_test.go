@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bytes"
 	"compress/gzip"
 	"fmt"
 	"io"
@@ -75,6 +76,9 @@ func TestNewServer(t *testing.T) {
 func TestMux(t *testing.T) {
 	s := Server{
 		db: mockDatabase{
+			mockReadBookSubjectsFunc: func(limit, offset int) ([]book.Subject, error) {
+				return nil, nil
+			},
 			mockReadBookHeadersFunc: func(f book.Filter, limit, offset int) ([]book.Header, error) {
 				return nil, nil
 			},
@@ -91,7 +95,8 @@ func TestMux(t *testing.T) {
 		wantCode int
 	}{
 		{"bad method", "patch", "/", 405},
-		{"list", "GET", "/", 200},
+		{"subjects", "GET", "/", 200},
+		{"list", "GET", "/list", 200},
 		{"book", "GET", "/book", 200},
 		{"admin", "GET", "/admin", 200},
 		{"robots.txt", "GET", "/robots.txt", 200},
@@ -99,11 +104,16 @@ func TestMux(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			var buf bytes.Buffer
+			s.out = &buf
 			r := httptest.NewRequest(test.method, test.url, nil)
 			w := httptest.NewRecorder()
 			h.ServeHTTP(w, r)
 			if want, got := test.wantCode, w.Code; want != got {
 				t.Errorf("wanted %v, got %v", want, got)
+			}
+			if buf.Len() != 0 {
+				t.Errorf("unwanted log: %q", buf.String())
 			}
 		})
 	}
@@ -382,6 +392,7 @@ func TestGetBookHeaders(t *testing.T) {
 			form: url.Values{
 				"page": {"3"},
 				"q":    {"many items"},
+				"s":    {"stuff"},
 			},
 			wantCode: 200,
 			s: Server{
@@ -390,7 +401,7 @@ func TestGetBookHeaders(t *testing.T) {
 				},
 				db: mockDatabase{
 					mockReadBookHeadersFunc: func(f book.Filter, limit, offset int) ([]book.Header, error) {
-						wantFilter := book.Filter{"many", "items"}
+						wantFilter := book.Filter{HeaderParts: []string{"many", "items"}, Subject: "stuff"}
 						switch {
 						case !reflect.DeepEqual(wantFilter, f):
 							return nil, fmt.Errorf("filters not equal: \n wanted: %v \n got:    %v", wantFilter, f)
@@ -1152,7 +1163,7 @@ func TestSetupDumpCSV(t *testing.T) {
 			readBookHeaders: func(f book.Filter, limit, offset int) ([]book.Header, error) {
 				var headers []book.Header
 				switch {
-				case len(f) != 0:
+				case len(f.HeaderParts) != 0, len(f.Subject) != 0:
 					return nil, fmt.Errorf("wanted no filter, got %v", f)
 				case limit == 3 && offset == 0:
 					headers = append(headers,
