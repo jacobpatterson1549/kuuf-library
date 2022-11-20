@@ -388,7 +388,7 @@ func TestGetBookHeaders(t *testing.T) {
 			unwantedData: []string{`value="Load More books"`},
 		},
 		{
-			name: "page 23",
+			name: "page 3",
 			form: url.Values{
 				"page": {"3"},
 				"q":    {"many items"},
@@ -407,7 +407,7 @@ func TestGetBookHeaders(t *testing.T) {
 							return nil, fmt.Errorf("filters not equal: \n wanted: %v \n got:    %v", wantFilter, f)
 						case limit < 2:
 							return nil, fmt.Errorf("limit should be at least maxRows: %v", limit)
-						case offset != 6:
+						case offset != 4:
 							return nil, fmt.Errorf("unwanted offset: %v", offset)
 						}
 						headers := []book.Header{

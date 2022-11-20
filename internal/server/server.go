@@ -241,33 +241,12 @@ func (s *Server) mux() http.Handler {
 }
 
 func (s *Server) getBookSubjects(w http.ResponseWriter, r *http.Request) {
-	limit, offset, ok := ParseLimitOffset(w, r, s.MaxRows)
-	if !ok {
-		return
+	if data, ok := loadPage(w, r, s.MaxRows, "Subjects", s.db.ReadBookSubjects); ok {
+		s.serveTemplate(w, "subjects", data)
 	}
-	subjects, err := s.db.ReadBookSubjects(limit, offset)
-	if err != nil {
-		httpInternalServerError(w, err)
-		return
-	}
-	data := struct {
-		Subjects []book.Subject
-		NextPage int
-	}{
-		Subjects: subjects,
-	}
-	if len(data.Subjects) > s.MaxRows {
-		data.Subjects = data.Subjects[:s.MaxRows]
-		data.NextPage = offset/s.MaxRows + 1
-	}
-	s.serveTemplate(w, "subjects", data)
 }
 
 func (s *Server) getBookHeaders(w http.ResponseWriter, r *http.Request) {
-	limit, offset, ok := ParseLimitOffset(w, r, s.MaxRows)
-	if !ok {
-		return
-	}
 	var headerParts string
 	if !ParseFormValue(w, r, "q", &headerParts, 256) {
 		return
@@ -281,26 +260,14 @@ func (s *Server) getBookHeaders(w http.ResponseWriter, r *http.Request) {
 		httpBadRequest(w, err)
 		return
 	}
-	books, err := s.db.ReadBookHeaders(*filter, limit, offset)
-	if err != nil {
-		httpInternalServerError(w, err)
-		return
+	pageLoader := func(limit, offset int) ([]book.Header, error) {
+		return s.db.ReadBookHeaders(*filter, limit, offset)
 	}
-	data := struct {
-		Books    []book.Header
-		Filter   string
-		Subject  string
-		NextPage int
-	}{
-		Books:   books,
-		Filter:  headerParts,
-		Subject: subject,
+	if data, ok := loadPage(w, r, s.MaxRows, "Books", pageLoader); ok {
+		data["Filter"] = headerParts
+		data["Subject"] = subject
+		s.serveTemplate(w, "list", data)
 	}
-	if len(data.Books) > s.MaxRows {
-		data.Books = data.Books[:s.MaxRows]
-		data.NextPage = offset/s.MaxRows + 1
-	}
-	s.serveTemplate(w, "list", data)
 }
 
 func (s *Server) getBook(w http.ResponseWriter, r *http.Request) {
@@ -594,26 +561,35 @@ func ParseFormValue(w http.ResponseWriter, r *http.Request, key string, dest *st
 	return true
 }
 
-func ParseLimitOffset(w http.ResponseWriter, r *http.Request, maxRows int) (limit, offset int, ok bool) {
+func loadPage[V interface{}](w http.ResponseWriter, r *http.Request, maxRows int, sliceName string, pageLoader func(limit, offset int) ([]V, error)) (data map[string]interface{}, ok bool) {
 	var a string
 	if !ParseFormValue(w, r, "page", &a, 32) {
-		ok = false
-		return
+		return nil, false
 	}
-	var page int
+	page := 1
 	if len(a) != 0 {
 		i, err := strconv.Atoi(a)
 		if err != nil {
 			err = fmt.Errorf("invalid page: %w", err)
 			httpBadRequest(w, err)
-			ok = false
-			return
+			return nil, false
 		}
 		page = i
 	}
-	offset = page * maxRows
-	limit = maxRows + 1
-	return limit, offset, true
+	offset := (page - 1) * maxRows
+	limit := maxRows + 1
+	slice, err := pageLoader(limit, offset)
+	if err != nil {
+		httpInternalServerError(w, err)
+		return nil, false
+	}
+	data = make(map[string]interface{})
+	if len(slice) > maxRows {
+		slice = slice[:maxRows]
+		data["NextPage"] = page + 1
+	}
+	data[sliceName] = slice
+	return data, true
 }
 
 const dateLayout = book.HyphenatedYYYYMMDD
