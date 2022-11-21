@@ -4,7 +4,6 @@ package mongo
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
 
@@ -20,8 +19,37 @@ type Database struct {
 	QueryTimeout time.Duration
 }
 
+type (
+	mBook struct {
+		Header        mHeader   `bson:",inline"`
+		Description   string    `bson:"description"`
+		DeweyDecClass string    `bson:"dewey_dec_class"`
+		Pages         int       `bson:"pages"`
+		Publisher     string    `bson:"publisher"`
+		PublishDate   time.Time `bson:"publish_date"`
+		AddedDate     time.Time `bson:"added_date"`
+		EAN_ISBN13    string    `bson:"ean_isbn13"`
+		UPC_ISBN10    string    `bson:"upc_isbn10"`
+		ImageBase64   string    `bson:"image_base64"`
+	}
+	mHeader struct {
+		ID      string `bson:"_id,omitempty"`
+		Title   string `bson:"title"`
+		Author  string `bson:"author"`
+		Subject string `bson:"subject"`
+	}
+	MSubject struct {
+		Name  string `bson:"_id"`
+		Count int    `bson:"count"`
+	}
+	mUser struct {
+		Username string `bson:"username"`
+		Password string `bson:"password"`
+	}
+)
+
 const (
-	libraryDatabase        = "kuuf-library-db"
+	libraryDatabase        = "kuuf_library_db"
 	booksCollection        = "books"
 	usersCollection        = "users"
 	adminUsername          = "admin"
@@ -30,14 +58,14 @@ const (
 	bookAuthorField        = "author"
 	bookSubjectField       = "subject"
 	bookDescriptionField   = "description"
-	bookDeweyDecClassField = "dewey-dec-class"
+	bookDeweyDecClassField = "dewey_dec_class"
 	bookPagesField         = "pages"
 	bookPublisherField     = "publisher"
-	bookPublishDateField   = "publish-date"
-	bookAddedDateField     = "added-date"
-	bookEAN_ISBN13Field    = "ean-isbn13"
-	bookUPC_ISBN10Field    = "upc-isbn10"
-	bookImageBase64Field   = "image-base64"
+	bookPublishDateField   = "publish_date"
+	bookAddedDateField     = "added_date"
+	bookEAN_ISBN13Field    = "ean_isbn13"
+	bookUPC_ISBN10Field    = "upc_isbn10"
+	bookImageBase64Field   = "image_base64"
 	usernameField          = "username"
 	passwordField          = "password"
 	dateLayout             = book.HyphenatedYYYYMMDD
@@ -87,22 +115,8 @@ func (d *Database) CreateBooks(books ...book.Book) ([]book.Book, error) {
 	}
 	docs := make([]interface{}, len(books))
 	for i, b := range books {
-		d := map[string]string{
-			// book id is created as 24 characters long hex string
-			bookTitleField:         b.Title,
-			bookAuthorField:        b.Author,
-			bookSubjectField:       b.Subject,
-			bookDescriptionField:   b.Description,
-			bookDeweyDecClassField: b.DeweyDecClass,
-			bookPagesField:         strconv.Itoa(b.Pages),
-			bookPublisherField:     b.Publisher,
-			bookPublishDateField:   b.PublishDate.Format(string(dateLayout)),
-			bookAddedDateField:     b.AddedDate.Format(string(dateLayout)),
-			bookEAN_ISBN13Field:    b.EAN_ISBN13,
-			bookUPC_ISBN10Field:    b.UPC_ISBN10,
-			bookImageBase64Field:   b.ImageBase64,
-		}
-		docs[i] = d
+		b.ID = "" // request a new id
+		docs[i] = mongoBook(b)
 	}
 	coll := d.booksCollection()
 	if err := d.withTimeoutContext(func(ctx context.Context) error {
@@ -111,7 +125,10 @@ func (d *Database) CreateBooks(books ...book.Book) ([]book.Book, error) {
 			return err
 		}
 		for i, id := range ids.InsertedIDs {
-			objID := id.(primitive.ObjectID)
+			objID, ok := id.(primitive.ObjectID)
+			if !ok {
+				return fmt.Errorf("ID of inserted book #%v is not a string: %T (%v)", i, id, id)
+			}
 			books[i].ID = objID.Hex()
 		}
 		return nil
@@ -142,21 +159,13 @@ func (d *Database) ReadBookSubjects(limit, offset int) ([]book.Subject, error) {
 		if err != nil {
 			return err
 		}
-		type mongoSubject struct {
-			Subject string `bson:"_id"`
-			Count   int    `bson:"count"`
-		}
-		var all []mongoSubject
+		var all []MSubject
 		if err := cur.All(ctx, &all); err != nil {
 			return err
 		}
 		subjects = make([]book.Subject, len(all))
 		for i, m := range all {
-			s := book.Subject{
-				Name:  m.Subject,
-				Count: m.Count,
-			}
-			subjects[i] = s
+			subjects[i] = m.Subject()
 		}
 		return nil
 	}); err != nil {
@@ -189,19 +198,13 @@ func (d *Database) ReadBookHeaders(f book.Filter, limit, offset int) ([]book.Hea
 		if err != nil {
 			return err
 		}
-		var all []map[string]string
+		var all []mHeader
 		if err := cur.All(ctx, &all); err != nil {
 			return err
 		}
 		headers = make([]book.Header, len(all))
 		for i, m := range all {
-			h := book.Header{
-				ID:      m[bookIDField],
-				Title:   m[bookTitleField],
-				Author:  m[bookAuthorField],
-				Subject: m[bookSubjectField],
-			}
-			headers[i] = h
+			headers[i] = m.Header()
 		}
 		return nil
 	}); err != nil {
@@ -219,30 +222,11 @@ func (d *Database) ReadBook(id string) (*book.Book, error) {
 	var b book.Book
 	if err := d.withTimeoutContext(func(ctx context.Context) error {
 		result := coll.FindOne(ctx, filter)
-		var m map[string]string
+		var m mBook
 		if err := result.Decode(&m); err != nil {
 			return err
 		}
-		sb := book.StringBook{
-			ID:            m[bookIDField],
-			Title:         m[bookTitleField],
-			Author:        m[bookAuthorField],
-			Subject:       m[bookSubjectField],
-			Description:   m[bookDescriptionField],
-			DeweyDecClass: m[bookDeweyDecClassField],
-			Pages:         m[bookPagesField],
-			Publisher:     m[bookPublisherField],
-			PublishDate:   m[bookPublishDateField],
-			AddedDate:     m[bookAddedDateField],
-			EAN_ISBN13:    m[bookEAN_ISBN13Field],
-			UPC_ISBN10:    m[bookUPC_ISBN10Field],
-			ImageBase64:   m[bookImageBase64Field],
-		}
-		b2, err := sb.Book(dateLayout)
-		if err != nil {
-			return err
-		}
-		b = *b2
+		b = m.Book()
 		return nil
 	}); err != nil {
 		return nil, fmt.Errorf("reading book: %w", err)
@@ -261,10 +245,10 @@ func (d *Database) UpdateBook(b book.Book, updateImage bool) error {
 		d.e(bookSubjectField, b.Subject),
 		d.e(bookDescriptionField, b.Description),
 		d.e(bookDeweyDecClassField, b.DeweyDecClass),
-		d.e(bookPagesField, strconv.Itoa(b.Pages)),
+		d.e(bookPagesField, b.Pages),
 		d.e(bookPublisherField, b.Publisher),
-		d.e(bookPublishDateField, b.PublishDate.Format(string(dateLayout))),
-		d.e(bookAddedDateField, b.AddedDate.Format(string(dateLayout))),
+		d.e(bookPublishDateField, b.PublishDate),
+		d.e(bookAddedDateField, b.AddedDate),
 		d.e(bookEAN_ISBN13Field, b.EAN_ISBN13),
 		d.e(bookUPC_ISBN10Field, b.UPC_ISBN10),
 	)
@@ -312,15 +296,11 @@ func (d *Database) ReadAdminPassword() (hashedPassword []byte, err error) {
 		if err != nil {
 			return err
 		}
-		var m map[string]string
-		if err := result.Decode(&m); err != nil {
+		var u mUser
+		if err := result.Decode(&u); err != nil {
 			return err
 		}
-		s, ok := m[passwordField]
-		if !ok {
-			return fmt.Errorf("user does not exist")
-		}
-		hashedPassword = []byte(s)
+		hashedPassword = []byte(u.Password)
 		return nil
 	}); err != nil {
 		return nil, fmt.Errorf("reading admin password: %w", err)
@@ -394,4 +374,59 @@ func (d Database) filter(filter book.Filter) []bson.E {
 		parts = append(parts, d.e("", nil)) // mongo does not like a nil slice
 	}
 	return parts
+}
+
+func mongoBook(b book.Book) mBook {
+	return mBook{
+		Header:        mongoHeader(b.Header),
+		Description:   b.Description,
+		DeweyDecClass: b.DeweyDecClass,
+		Pages:         b.Pages,
+		Publisher:     b.Publisher,
+		PublishDate:   b.PublishDate,
+		AddedDate:     b.AddedDate,
+		EAN_ISBN13:    b.EAN_ISBN13,
+		UPC_ISBN10:    b.UPC_ISBN10,
+		ImageBase64:   b.ImageBase64,
+	}
+}
+
+func mongoHeader(h book.Header) mHeader {
+	return mHeader{
+		ID:      h.ID,
+		Title:   h.Title,
+		Author:  h.Author,
+		Subject: h.Subject,
+	}
+}
+
+func (m mBook) Book() book.Book {
+	return book.Book{
+		Header:        m.Header.Header(),
+		Description:   m.Description,
+		DeweyDecClass: m.DeweyDecClass,
+		Pages:         m.Pages,
+		Publisher:     m.Publisher,
+		PublishDate:   m.PublishDate,
+		AddedDate:     m.AddedDate,
+		EAN_ISBN13:    m.EAN_ISBN13,
+		UPC_ISBN10:    m.UPC_ISBN10,
+		ImageBase64:   m.ImageBase64,
+	}
+}
+
+func (m mHeader) Header() book.Header {
+	return book.Header{
+		ID:      m.ID,
+		Title:   m.Title,
+		Author:  m.Author,
+		Subject: m.Subject,
+	}
+}
+
+func (m MSubject) Subject() book.Subject {
+	return book.Subject{
+		Name:  m.Name,
+		Count: m.Count,
+	}
 }
