@@ -142,23 +142,19 @@ func (d *Database) ReadBookSubjects(limit, offset int) ([]book.Subject, error) {
 		if err != nil {
 			return err
 		}
-		var all []map[string]interface{}
+		type mongoSubject struct {
+			Subject string `bson:"_id"`
+			Count   int    `bson:"count"`
+		}
+		var all []mongoSubject
 		if err := cur.All(ctx, &all); err != nil {
 			return err
 		}
 		subjects = make([]book.Subject, len(all))
 		for i, m := range all {
-			name, ok := m[idField].(string)
-			if !ok {
-				return fmt.Errorf("getting name for subject #%v, type is %T", i, name)
-			}
-			count, ok := m[countField].(int32)
-			if !ok {
-				return fmt.Errorf("getting count for subject #%v, type is %T", i, count)
-			}
 			s := book.Subject{
-				Name:  name,
-				Count: int(count),
+				Name:  m.Subject,
+				Count: m.Count,
 			}
 			subjects[i] = s
 		}
