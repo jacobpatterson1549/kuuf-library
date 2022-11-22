@@ -284,7 +284,12 @@ func (s *Server) getBook(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) getAdmin(w http.ResponseWriter, r *http.Request) {
-	var data interface{}
+	data := struct {
+		Book               book.Book
+		ValidPasswordRunes string
+	}{
+		ValidPasswordRunes: validPasswordRunes,
+	}
 	hasID := r.URL.Query().Has("book-id")
 	if hasID {
 		id := r.URL.Query().Get("book-id")
@@ -293,7 +298,7 @@ func (s *Server) getAdmin(w http.ResponseWriter, r *http.Request) {
 			httpInternalServerError(w, err)
 			return
 		}
-		data = b
+		data.Book = *b
 	}
 	s.serveTemplate(w, "admin", data)
 }
@@ -360,6 +365,11 @@ func (s *Server) putAdminPassword(w http.ResponseWriter, r *http.Request) {
 		httpBadRequest(w, err)
 		return
 	}
+	if err := validatePassword(p1); err != nil {
+		err := fmt.Errorf("password invalid")
+		httpBadRequest(w, err)
+		return
+	}
 	hashedPassword, err := s.ph.Hash([]byte(p1))
 	if err != nil {
 		httpInternalServerError(w, err)
@@ -370,6 +380,22 @@ func (s *Server) putAdminPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpRedirect(w, r, "/")
+}
+
+func validatePassword(p string) error {
+	if len(p) < 8 {
+		return fmt.Errorf("password too short")
+	}
+	m := make(map[rune]struct{}, len(validPasswordRunes))
+	for _, r := range validPasswordRunes {
+		m[r] = struct{}{}
+	}
+	for _, r := range p {
+		if _, ok := m[r]; !ok {
+			return fmt.Errorf("password contains characters that are not allowed")
+		}
+	}
+	return nil
 }
 
 func (s *Server) serveTemplate(w http.ResponseWriter, name string, data interface{}) {
@@ -596,6 +622,7 @@ func loadPage[V interface{}](w http.ResponseWriter, r *http.Request, maxRows int
 }
 
 const dateLayout = book.HyphenatedYYYYMMDD
+const validPasswordRunes = "`" + `!"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_abcdefghijklmnopqrstuvwxyz{|}~`
 
 func dateInputValue(i interface{}) string {
 	switch t := i.(type) {

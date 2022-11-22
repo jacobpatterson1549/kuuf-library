@@ -576,6 +576,7 @@ func TestGetAdmin(t *testing.T) {
 					return nil, fmt.Errorf("unwanted id: %v", id)
 				}
 				b := book.Book{
+					Header:      book.Header{ID: "5618941"},
 					Description: "info397",
 				}
 				return &b, nil
@@ -875,16 +876,16 @@ func TestPutAdminPassword(t *testing.T) {
 		{
 			name: "not equal",
 			form: url.Values{
-				"p1": {"bilbo"},
-				"p2": {"Bilbo"},
+				"p1": {"bilbo123"},
+				"p2": {"Bilbo123"},
 			},
 			wantCode: 400,
 		},
 		{
 			name: "hash error",
 			form: url.Values{
-				"p1": {"bilbo"},
-				"p2": {"bilbo"},
+				"p1": {"bilbo123"},
+				"p2": {"bilbo123"},
 			},
 			hash: func(password []byte) (hashedPassword []byte, err error) {
 				return nil, fmt.Errorf("hash error")
@@ -894,8 +895,8 @@ func TestPutAdminPassword(t *testing.T) {
 		{
 			name: "db error",
 			form: url.Values{
-				"p1": {"bilbo"},
-				"p2": {"bilbo"},
+				"p1": {"bilbo123"},
+				"p2": {"bilbo123"},
 			},
 			hash: func(password []byte) (hashedPassword []byte, err error) {
 				return []byte("X47"), nil
@@ -908,11 +909,11 @@ func TestPutAdminPassword(t *testing.T) {
 		{
 			name: "happy path",
 			form: url.Values{
-				"p1": {"bilbo"},
-				"p2": {"bilbo"},
+				"p1": {"bilbo123"},
+				"p2": {"bilbo123"},
 			},
 			hash: func(password []byte) (hashedPassword []byte, err error) {
-				if string(password) != "bilbo" {
+				if string(password) != "bilbo123" {
 					return nil, fmt.Errorf("unwanted password: %s", password)
 				}
 				return []byte("X47"), nil
@@ -1268,5 +1269,25 @@ func TestParseFormValue(t *testing.T) {
 				t.Errorf("codes not equal: wanted %v, got, %v", test.wantCode, w.Code)
 			}
 		})
+	}
+}
+
+func TestValidatePassword(t *testing.T) {
+	tests := []struct {
+		p      string
+		wantOk bool
+	}{
+		{"short", false},
+		{"s3cr3t!%", true},
+		{"Hello, 世界", false},
+		{"￿1234567", false},
+		{validPasswordRunes, true},
+	}
+	for i, test := range tests {
+		err := validatePassword(test.p)
+		gotOk := err == nil
+		if test.wantOk != gotOk {
+			t.Errorf("test %v: wanted valid: %v for %q", i, test.wantOk, test.p)
+		}
 	}
 }

@@ -6,9 +6,10 @@
 		<span>This forces a new request to the server for updated information.</span>
 	</p>
 	<h2>Admin</h2>
+	{{- with .Book}}
 	<form method="post" action="/book/{{if .ID}}update{{else}}create{{end}}" enctype="multipart/form-data">
 		<fieldset>
-			<legend>{{if .}}Update{{else}}Create{{end}} Book</legend>
+			<legend>{{if .ID}}Update{{else}}Create{{end}} Book</legend>
 			<input id="b-id" type="text" name="id" value="{{pretty .ID}}" readonly hidden>
 			<div>
 				<label for="b-title">Title</label>
@@ -76,21 +77,21 @@
 			</div>
 			<div>
 				<label for="b-p">Admin Password</label>
-				<input id="b-p" type="password" name="p" required>
+				<input id="b-p" type="password" name="p" required minlength="8" maxlength="128">
 			</div>
 			<div>
 				<input type="submit" value="{{if .}}Update{{else}}Create{{end}} book">
 			</div>
 		</fieldset>
 	</form>
-	{{- if .}}
+	{{- if .ID}}
 	<form method="post" action="/book/delete">
 		<fieldset>
 			<legend>Delete Book</legend>
 			<input id="db-id" type="text" name="id" value="{{.ID}}" readonly hidden>
 			<div>
 				<label for="db-p">Admin Password</label>
-				<input id="db-p" type="password" name="p" required>
+				<input id="db-p" type="password" name="p" required minlength="8" maxlength="128">
 			</div>
 			<div>
 				<input type="submit" value="Delete book">
@@ -98,20 +99,27 @@
 		</fieldset>
 	</form>
 	{{- end}}
+	{{- end}}
 	<form method="post" action="/admin/update">
+		<p>
+			<span>Passwords must be at least 8 characters.</span>
+			<span>They must me made of printable basic Latin characters.</span>
+			<span>No spaces or other whitespace is allowed.</span>
+			<span>Valid characters are: <code>{{.ValidPasswordRunes}}</code></span>
+		</p>
 		<fieldset>
 			<legend>Set Admin Password</legend>
 			<div>
 				<label for="ap-p1">New password</label>
-				<input id="ap-p1" type="password" name="p1" required>
+				<input id="ap-p1" type="password" name="p1" required minlength="8" maxlength="128">
 			</div>
 			<div>
 				<label for="ap-p2">Retype password</label>
-				<input id="ap-p2" type="password" name="p2" required>
+				<input id="ap-p2" type="password" name="p2" required minlength="8" maxlength="128">
 			</div>
 			<div>
 				<label for="ap-p">Current password</label>
-				<input id="ap-p" type="password" name="p" required>
+				<input id="ap-p" type="password" name="p" required minlength="8" maxlength="128">
 			</div>
 			<div>
 				<input type="submit" value="Update password">
