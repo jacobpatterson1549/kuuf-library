@@ -139,7 +139,7 @@ func (d *Database) ReadBookSubjects(limit, offset int) ([]book.Subject, error) {
 	cmd := `SELECT subject, COUNT(*)
 	FROM books
 	GROUP BY subject
-	ORDER BY COUNT(*) DESC, subject ASC
+	ORDER BY subject ASC	
 	LIMIT $1
 	OFFSET $2`
 	q := query{

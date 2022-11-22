@@ -96,9 +96,9 @@ func (subjects Subjects) Sort() {
 
 func (s Subject) less(other Subject) bool {
 	if s.Count != other.Count {
-		return s.Count > other.Count // max first
+		return s.Name < other.Name
 	}
-	return s.Name < other.Name
+	return s.Count > other.Count // max first
 }
 
 // Filter is used to match books weth the exact subject (if set) or a whole word match to any of the header parts.

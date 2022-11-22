@@ -148,7 +148,6 @@ func (d *Database) ReadBookSubjects(limit, offset int) ([]book.Subject, error) {
 			d.e(subjectCountField, d.d(d.e("$sum", 1))),
 		))),
 		d.d(d.e("$sort", d.d(
-			d.e(subjectCountField, -1),
 			d.e(subjectNameField, 1),
 		))),
 		d.d(d.e("$skip", offset)),

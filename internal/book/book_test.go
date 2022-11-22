@@ -61,27 +61,16 @@ func TestSubjectsSort(t *testing.T) {
 			name: "empty",
 		},
 		{
-			name: "max first",
+			name: "alphabetical",
 			s: Subjects{
 				{Name: "b", Count: 3},
 				{Name: "c", Count: 1},
 				{Name: "d", Count: 5},
 			},
 			want: Subjects{
-				{Name: "d", Count: 5},
 				{Name: "b", Count: 3},
 				{Name: "c", Count: 1},
-			},
-		},
-		{
-			name: "alphabetical second",
-			s: Subjects{
-				{Name: "d", Count: 1},
-				{Name: "b", Count: 1},
-			},
-			want: Subjects{
-				{Name: "b", Count: 1},
-				{Name: "d", Count: 1},
+				{Name: "d", Count: 5},
 			},
 		},
 	}

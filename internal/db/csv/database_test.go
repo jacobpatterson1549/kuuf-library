@@ -59,9 +59,9 @@ func TestReadBookSubjects(t *testing.T) {
 		offset int
 		want   []book.Subject
 	}{
-		{"zero offset", 2, 0, []book.Subject{{Name: "animals", Count: 3}, {Name: "plants", Count: 2}}},
-		{"middle", 1, 1, []book.Subject{{Name: "plants", Count: 2}}},
-		{"Last only", 3, 2, []book.Subject{{Name: "liquids", Count: 1}}},
+		{"zero offset", 2, 0, []book.Subject{{Name: "animals", Count: 3}, {Name: "liquids", Count: 1}}},
+		{"middle", 1, 1, []book.Subject{{Name: "liquids", Count: 1}}},
+		{"Last only", 3, 2, []book.Subject{{Name: "plants", Count: 2}}},
 		{"Past end", 2, 5, []book.Subject{}},
 		{"none", 0, 0, []book.Subject{}},
 		{"negative limit", -1, 0, []book.Subject{}},
