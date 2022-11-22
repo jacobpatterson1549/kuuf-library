@@ -38,7 +38,7 @@ type (
 		Author  string `bson:"author"`
 		Subject string `bson:"subject"`
 	}
-	MSubject struct {
+	mSubject struct {
 		Name  string `bson:"_id"`
 		Count int    `bson:"count"`
 	}
@@ -66,6 +66,8 @@ const (
 	bookEAN_ISBN13Field    = "ean_isbn13"
 	bookUPC_ISBN10Field    = "upc_isbn10"
 	bookImageBase64Field   = "image_base64"
+	subjectNameField       = "_id"
+	subjectCountField      = "count"
 	usernameField          = "username"
 	passwordField          = "password"
 	dateLayout             = book.HyphenatedYYYYMMDD
@@ -76,9 +78,9 @@ func NewDatabase(url string, queryTimeout time.Duration) (*Database, error) {
 		QueryTimeout: queryTimeout,
 	}
 	if err := d.withTimeoutContext(func(ctx context.Context) error {
-		clientOptions := options.Client()
-		clientOptions.ApplyURI(url)
-		client, err := mongo.Connect(ctx, clientOptions)
+		opts := options.Client().
+			ApplyURI(url)
+		client, err := mongo.Connect(ctx, opts)
 		if err != nil {
 			return err
 		}
@@ -118,9 +120,10 @@ func (d *Database) CreateBooks(books ...book.Book) ([]book.Book, error) {
 		b.ID = "" // request a new id
 		docs[i] = mongoBook(b)
 	}
+	opts := options.InsertMany()
 	coll := d.booksCollection()
 	if err := d.withTimeoutContext(func(ctx context.Context) error {
-		ids, err := coll.InsertMany(ctx, docs)
+		ids, err := coll.InsertMany(ctx, docs, opts)
 		if err != nil {
 			return err
 		}
@@ -139,76 +142,72 @@ func (d *Database) CreateBooks(books ...book.Book) ([]book.Book, error) {
 }
 
 func (d *Database) ReadBookSubjects(limit, offset int) ([]book.Subject, error) {
-	var subjects []book.Subject
-	const idField = "_id"
-	const countField = "count"
-	groupStage := d.d(d.e("$group", d.d(
-		d.e(idField, "$"+bookSubjectField),
-		d.e(countField, d.d(d.e("$sum", 1))),
-	)))
-	sortStage := d.d(d.e("$sort", d.d(
-		d.e(countField, -1),
-		d.e(bookIDField, 1),
-	)))
-	skipStage := d.d(d.e("$skip", offset))
-	limitStage := d.d(d.e("$limit", limit))
-	pipeline := mongo.Pipeline{groupStage, sortStage, skipStage, limitStage}
+	pipeline := mongo.Pipeline{
+		d.d(d.e("$group", d.d(
+			d.e(subjectNameField, "$"+bookSubjectField),
+			d.e(subjectCountField, d.d(d.e("$sum", 1))),
+		))),
+		d.d(d.e("$sort", d.d(
+			d.e(subjectCountField, -1),
+			d.e(subjectNameField, 1),
+		))),
+		d.d(d.e("$skip", offset)),
+		d.d(d.e("$limit", limit)),
+	}
+	opts := options.Aggregate()
 	coll := d.booksCollection()
+	var all []mSubject
 	if err := d.withTimeoutContext(func(ctx context.Context) error {
-		cur, err := coll.Aggregate(ctx, pipeline)
+		cur, err := coll.Aggregate(ctx, pipeline, opts)
 		if err != nil {
 			return err
 		}
-		var all []MSubject
 		if err := cur.All(ctx, &all); err != nil {
 			return err
-		}
-		subjects = make([]book.Subject, len(all))
-		for i, m := range all {
-			subjects[i] = m.Subject()
 		}
 		return nil
 	}); err != nil {
 		return nil, fmt.Errorf("reading book subjects: %w", err)
 	}
+	subjects := make([]book.Subject, len(all))
+	for i, m := range all {
+		subjects[i] = m.Subject()
+	}
 	return subjects, nil
 }
 
 func (d *Database) ReadBookHeaders(f book.Filter, limit, offset int) ([]book.Header, error) {
-	var headers []book.Header
 	filter := d.d(d.filter(f)...)
-	sort := d.d(
-		d.e(bookSubjectField, 1),
-		d.e(bookTitleField, 1),
-	)
-	projection := d.d(
-		d.e(bookIDField, 1),
-		d.e(bookTitleField, 1),
-		d.e(bookAuthorField, 1),
-		d.e(bookSubjectField, 1),
-	)
-	opts := options.Find()
-	opts.SetSort(sort)
-	opts.SetLimit(int64(limit))
-	opts.SetSkip(int64(offset))
-	opts.SetProjection(projection)
+	opts := options.Find().
+		SetSort(d.d(
+			d.e(bookSubjectField, 1),
+			d.e(bookTitleField, 1),
+		)).
+		SetLimit(int64(limit)).
+		SetSkip(int64(offset)).
+		SetProjection(d.d(
+			d.e(bookIDField, 1),
+			d.e(bookTitleField, 1),
+			d.e(bookAuthorField, 1),
+			d.e(bookSubjectField, 1),
+		))
 	coll := d.booksCollection()
+	var all []mHeader
 	if err := d.withTimeoutContext(func(ctx context.Context) error {
 		cur, err := coll.Find(ctx, filter, opts)
 		if err != nil {
 			return err
 		}
-		var all []mHeader
 		if err := cur.All(ctx, &all); err != nil {
 			return err
-		}
-		headers = make([]book.Header, len(all))
-		for i, m := range all {
-			headers[i] = m.Header()
 		}
 		return nil
 	}); err != nil {
 		return nil, fmt.Errorf("reading book headers: %w", err)
+	}
+	headers := make([]book.Header, len(all))
+	for i, m := range all {
+		headers[i] = m.Header()
 	}
 	return headers, nil
 }
@@ -219,18 +218,18 @@ func (d *Database) ReadBook(id string) (*book.Book, error) {
 		return nil, err
 	}
 	coll := d.booksCollection()
-	var b book.Book
+	opts := options.FindOne()
+	var m mBook
 	if err := d.withTimeoutContext(func(ctx context.Context) error {
-		result := coll.FindOne(ctx, filter)
-		var m mBook
+		result := coll.FindOne(ctx, filter, opts)
 		if err := result.Decode(&m); err != nil {
 			return err
 		}
-		b = m.Book()
 		return nil
 	}); err != nil {
 		return nil, fmt.Errorf("reading book: %w", err)
 	}
+	b := m.Book()
 	return &b, nil
 }
 
@@ -256,9 +255,10 @@ func (d *Database) UpdateBook(b book.Book, updateImage bool) error {
 		sets = append(sets, d.e(bookImageBase64Field, b.ImageBase64))
 	}
 	update := d.d(d.e("$set", sets))
+	opts := options.Update()
 	coll := d.booksCollection()
 	if err := d.withTimeoutContext(func(ctx context.Context) error {
-		_, err := coll.UpdateOne(ctx, filter, update)
+		_, err := coll.UpdateOne(ctx, filter, update, opts)
 		if err != nil {
 			return err
 		}
@@ -274,9 +274,10 @@ func (d *Database) DeleteBook(id string) error {
 	if err != nil {
 		return err
 	}
+	opts := options.Delete()
 	coll := d.booksCollection()
 	if err := d.withTimeoutContext(func(ctx context.Context) error {
-		_, err := coll.DeleteOne(ctx, filter)
+		_, err := coll.DeleteOne(ctx, filter, opts)
 		if err != nil {
 			return err
 		}
@@ -288,33 +289,30 @@ func (d *Database) DeleteBook(id string) error {
 }
 
 func (d *Database) ReadAdminPassword() (hashedPassword []byte, err error) {
-	u := d.d(d.e(usernameField, adminUsername))
-	filter := u
+	filter := d.d(d.e(usernameField, adminUsername))
 	coll := d.usersCollection()
+	var u mUser
 	if err := d.withTimeoutContext(func(ctx context.Context) error {
 		result := coll.FindOne(ctx, filter)
 		if err != nil {
 			return err
 		}
-		var u mUser
 		if err := result.Decode(&u); err != nil {
 			return err
 		}
-		hashedPassword = []byte(u.Password)
 		return nil
 	}); err != nil {
 		return nil, fmt.Errorf("reading admin password: %w", err)
 	}
+	hashedPassword = []byte(u.Password)
 	return hashedPassword, nil
 }
 
 func (d *Database) UpdateAdminPassword(hashedPassword string) error {
-	u := d.d(d.e(usernameField, adminUsername))
-	p := d.d(d.e(passwordField, hashedPassword))
-	filter := u
-	update := d.d(d.e("$set", p))
-	opts := options.Update()
-	opts.SetUpsert(true)
+	filter := d.d(d.e(usernameField, adminUsername))
+	update := d.d(d.e("$set", d.d(d.e(passwordField, hashedPassword))))
+	opts := options.Update().
+		SetUpsert(true)
 	coll := d.usersCollection()
 	if err := d.withTimeoutContext(func(ctx context.Context) error {
 		if _, err := coll.UpdateOne(ctx, filter, update, opts); err != nil {
@@ -424,7 +422,7 @@ func (m mHeader) Header() book.Header {
 	}
 }
 
-func (m MSubject) Subject() book.Subject {
+func (m mSubject) Subject() book.Subject {
 	return book.Subject{
 		Name:  m.Name,
 		Count: m.Count,

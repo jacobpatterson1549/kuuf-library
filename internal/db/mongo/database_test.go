@@ -72,7 +72,7 @@ func TestMBook(t *testing.T) {
 }
 
 func TestMSubject(t *testing.T) {
-	m := MSubject{
+	m := mSubject{
 		Name:  "poetry",
 		Count: 32,
 	}
