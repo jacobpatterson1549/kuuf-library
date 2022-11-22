@@ -3,57 +3,57 @@ package server
 import "github.com/jacobpatterson1549/kuuf-library/internal/book"
 
 type mockPasswordHandler struct {
-	mockHashFunc              func(password []byte) (hashedPassword []byte, err error)
-	mockIsCorrectPasswordFunc func(hashedPassword, password []byte) (ok bool, err error)
+	hashFunc              func(password []byte) (hashedPassword []byte, err error)
+	isCorrectPasswordFunc func(hashedPassword, password []byte) (ok bool, err error)
 }
 
 func (m mockPasswordHandler) Hash(password []byte) (hashedPassword []byte, err error) {
-	return m.mockHashFunc(password)
+	return m.hashFunc(password)
 }
 
 func (m mockPasswordHandler) IsCorrectPassword(hashedPassword, password []byte) (ok bool, err error) {
-	return m.mockIsCorrectPasswordFunc(hashedPassword, password)
+	return m.isCorrectPasswordFunc(hashedPassword, password)
 }
 
 type mockDatabase struct {
-	mockCreateBooksFunc         func(books ...book.Book) ([]book.Book, error)
-	mockReadBookSubjectsFunc    func(limit, offset int) ([]book.Subject, error)
-	mockReadBookHeadersFunc     func(f book.Filter, limit, offset int) ([]book.Header, error)
-	mockReadBookFunc            func(id string) (*book.Book, error)
-	mockUpdateBookFunc          func(b book.Book, updateImage bool) error
-	mockDeleteBookFunc          func(id string) error
-	mockReadAdminPasswordFunc   func() (hashedPassword []byte, err error)
-	mockUpdateAdminPasswordFunc func(hashedPassword string) error
+	createBooksFunc         func(books ...book.Book) ([]book.Book, error)
+	readBookSubjectsFunc    func(limit, offset int) ([]book.Subject, error)
+	readBookHeadersFunc     func(f book.Filter, limit, offset int) ([]book.Header, error)
+	readBookFunc            func(id string) (*book.Book, error)
+	updateBookFunc          func(b book.Book, updateImage bool) error
+	deleteBookFunc          func(id string) error
+	readAdminPasswordFunc   func() (hashedPassword []byte, err error)
+	updateAdminPasswordFunc func(hashedPassword string) error
 }
 
 func (m mockDatabase) CreateBooks(books ...book.Book) ([]book.Book, error) {
-	return m.mockCreateBooksFunc(books...)
+	return m.createBooksFunc(books...)
 }
 
 func (m mockDatabase) ReadBookSubjects(limit, offset int) ([]book.Subject, error) {
-	return m.mockReadBookSubjectsFunc(limit, offset)
+	return m.readBookSubjectsFunc(limit, offset)
 }
 
 func (m mockDatabase) ReadBookHeaders(f book.Filter, limit, offset int) ([]book.Header, error) {
-	return m.mockReadBookHeadersFunc(f, limit, offset)
+	return m.readBookHeadersFunc(f, limit, offset)
 }
 
 func (m mockDatabase) ReadBook(id string) (*book.Book, error) {
-	return m.mockReadBookFunc(id)
+	return m.readBookFunc(id)
 }
 
 func (m mockDatabase) UpdateBook(b book.Book, updateImage bool) error {
-	return m.mockUpdateBookFunc(b, updateImage)
+	return m.updateBookFunc(b, updateImage)
 }
 
 func (m mockDatabase) DeleteBook(id string) error {
-	return m.mockDeleteBookFunc(id)
+	return m.deleteBookFunc(id)
 }
 
 func (m mockDatabase) ReadAdminPassword() (hashedPassword []byte, err error) {
-	return m.mockReadAdminPasswordFunc()
+	return m.readAdminPasswordFunc()
 }
 
 func (m mockDatabase) UpdateAdminPassword(hashedPassword string) error {
-	return m.mockUpdateAdminPasswordFunc(hashedPassword)
+	return m.updateAdminPasswordFunc(hashedPassword)
 }

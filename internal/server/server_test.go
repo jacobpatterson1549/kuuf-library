@@ -76,13 +76,13 @@ func TestNewServer(t *testing.T) {
 func TestMux(t *testing.T) {
 	s := Server{
 		db: mockDatabase{
-			mockReadBookSubjectsFunc: func(limit, offset int) ([]book.Subject, error) {
+			readBookSubjectsFunc: func(limit, offset int) ([]book.Subject, error) {
 				return nil, nil
 			},
-			mockReadBookHeadersFunc: func(f book.Filter, limit, offset int) ([]book.Header, error) {
+			readBookHeadersFunc: func(f book.Filter, limit, offset int) ([]book.Header, error) {
 				return nil, nil
 			},
-			mockReadBookFunc: func(id string) (*book.Book, error) {
+			readBookFunc: func(id string) (*book.Book, error) {
 				return new(book.Book), nil
 			},
 		},
@@ -209,7 +209,7 @@ func TestResponseContains(t *testing.T) {
 	}{
 		{"MissingKeyZero", "/admin", `name="title" value="" required`, nil},
 		{"TitleContainsQuote", "/admin?id=wow", `name="title" value="&#34;Wow,&#34; A Memoir" required`, mockDatabase{
-			mockReadBookFunc: func(id string) (*book.Book, error) {
+			readBookFunc: func(id string) (*book.Book, error) {
 				b := book.Book{
 					Header: book.Header{
 						Title: `"Wow," A Memoir`,
@@ -362,7 +362,7 @@ func TestGetBookHeaders(t *testing.T) {
 			wantCode: 500,
 			s: Server{
 				db: mockDatabase{
-					mockReadBookHeadersFunc: func(f book.Filter, limit, offset int) ([]book.Header, error) {
+					readBookHeadersFunc: func(f book.Filter, limit, offset int) ([]book.Header, error) {
 						return nil, fmt.Errorf("db error")
 					},
 				},
@@ -376,7 +376,7 @@ func TestGetBookHeaders(t *testing.T) {
 					MaxRows: 5,
 				},
 				db: mockDatabase{
-					mockReadBookHeadersFunc: func(f book.Filter, limit, offset int) ([]book.Header, error) {
+					readBookHeadersFunc: func(f book.Filter, limit, offset int) ([]book.Header, error) {
 						headers := []book.Header{
 							{Title: "hello"},
 						}
@@ -400,7 +400,7 @@ func TestGetBookHeaders(t *testing.T) {
 					MaxRows: 2,
 				},
 				db: mockDatabase{
-					mockReadBookHeadersFunc: func(f book.Filter, limit, offset int) ([]book.Header, error) {
+					readBookHeadersFunc: func(f book.Filter, limit, offset int) ([]book.Header, error) {
 						wantFilter := book.Filter{HeaderParts: []string{"many", "items"}, Subject: "stuff"}
 						switch {
 						case !reflect.DeepEqual(wantFilter, f):
@@ -500,7 +500,7 @@ func TestGetBook(t *testing.T) {
 		}
 		s := Server{
 			db: mockDatabase{
-				mockReadBookFunc: test.readBook,
+				readBookFunc: test.readBook,
 			},
 		}
 		s.getBook(w, &r)
@@ -579,7 +579,7 @@ func TestGetAdmin(t *testing.T) {
 		r := httptest.NewRequest("get", test.url, nil)
 		s := Server{
 			db: mockDatabase{
-				mockReadBookFunc: test.readBook,
+				readBookFunc: test.readBook,
 			},
 		}
 		s.getAdmin(w, r)
@@ -668,7 +668,7 @@ func TestPostBook(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			s := Server{
 				db: mockDatabase{
-					mockCreateBooksFunc: test.createBooks,
+					createBooksFunc: test.createBooks,
 				},
 			}
 			w := httptest.NewRecorder()
@@ -780,7 +780,7 @@ func TestPutBook(t *testing.T) {
 			}
 			s := Server{
 				db: mockDatabase{
-					mockUpdateBookFunc: test.updateBook,
+					updateBookFunc: test.updateBook,
 				},
 			}
 			w := httptest.NewRecorder()
@@ -828,7 +828,7 @@ func TestDeleteBook(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			s := Server{
 				db: mockDatabase{
-					mockDeleteBookFunc: test.deleteBook,
+					deleteBookFunc: test.deleteBook,
 				},
 			}
 			w := httptest.NewRecorder()
@@ -912,10 +912,10 @@ func TestPutAdminPassword(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			s := Server{
 				ph: mockPasswordHandler{
-					mockHashFunc: test.hash,
+					hashFunc: test.hash,
 				},
 				db: mockDatabase{
-					mockUpdateAdminPasswordFunc: test.updateAdminPassword,
+					updateAdminPasswordFunc: test.updateAdminPassword,
 				},
 			}
 			w := httptest.NewRecorder()
@@ -1005,10 +1005,10 @@ func TestWithAdminPassword(t *testing.T) {
 			}
 			s := Server{
 				db: mockDatabase{
-					mockReadAdminPasswordFunc: test.readAdminPassword,
+					readAdminPasswordFunc: test.readAdminPassword,
 				},
 				ph: mockPasswordHandler{
-					mockIsCorrectPasswordFunc: test.isCorrectPassword,
+					isCorrectPasswordFunc: test.isCorrectPassword,
 				},
 			}
 			h2 := s.withAdminPassword(h1)
@@ -1065,10 +1065,10 @@ func TestSetupAdminPassword(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			ph := mockPasswordHandler{
-				mockHashFunc: test.hash,
+				hashFunc: test.hash,
 			}
 			db := mockDatabase{
-				mockUpdateAdminPasswordFunc: test.updateAdminPassword,
+				updateAdminPasswordFunc: test.updateAdminPassword,
 			}
 			cfg := Config{
 				AdminPassword: "leap17",
@@ -1095,7 +1095,7 @@ func TestSetupBackfillCSV(t *testing.T) {
 		{
 			name: "db error",
 			db: mockDatabase{
-				mockCreateBooksFunc: func(books ...book.Book) ([]book.Book, error) {
+				createBooksFunc: func(books ...book.Book) ([]book.Book, error) {
 					return nil, fmt.Errorf("db error")
 				},
 			},
@@ -1107,7 +1107,7 @@ func TestSetupBackfillCSV(t *testing.T) {
 		{
 			name: "happy path",
 			db: mockDatabase{
-				mockCreateBooksFunc: func(books ...book.Book) ([]book.Book, error) {
+				createBooksFunc: func(books ...book.Book) ([]book.Book, error) {
 					if len(books) != 0 {
 						return nil, fmt.Errorf("the embedded csv database should be empty when testing: got %v books", len(books))
 					}
@@ -1197,8 +1197,8 @@ bk3,,,bk3_description,,,0,,01/01/0001,01/01/0001,,,
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			db := mockDatabase{
-				mockReadBookHeadersFunc: test.readBookHeaders,
-				mockReadBookFunc:        test.readBook,
+				readBookHeadersFunc: test.readBookHeaders,
+				readBookFunc:        test.readBook,
 			}
 			cfg := Config{
 				DumpCSV: true,
