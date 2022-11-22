@@ -15,33 +15,49 @@
 		<span>Description</span>
 		<span>{{.Description}}</span>
 	</div>
+	{{- with .DeweyDecClass}}
 	<div>
 		<span>Shelf Location</span>
-		<span>{{.DeweyDecClass}}</span>
+		<span>{{.}}</span>
 	</div>
+	{{- end}}
+	{{- with .Pages}}
 	<div>
 		<span>Page Count</span>
-		<span>{{.Pages}}</span>
+		<span>{{.}}</span>
 	</div>
+	{{end}}
+	{{- with .Publisher}}
 	<div>
 		<span>Publisher</span>
-		<span>{{.Publisher}}</span>
+		<span>{{.}}</span>
 	</div>
+	{{- end}}
+	{{- with dateInputValue .PublishDate}}
+	{{- if gt . "0001-01-01" }}
 	<div>
 		<span>Publish Date</span>
-		<span>{{dateInputValue .PublishDate}}</span>
+		<span>{{.}}</span>
 	</div>
+	{{- end}}
+	{{- end}}
+	{{- with dateInputValue .AddedDate}}
 	<div>
 		<span>Added Date</span>
-		<span>{{dateInputValue .AddedDate}}</span>
+		<span>{{.}}</span>
 	</div>
+	{{- end}}
+	{{- with .EAN_ISBN13}}
 	<div>
 		<span>EAN_ISBN13</span>
-		<span>{{.EAN_ISBN13}}</span>
+		<span>{{.}}</span>
 	</div>
+	{{- end}}
+	{{- with .UPC_ISBN10}}
 	<div>
 		<span>UPC_ISBN10</span>
-		<span>{{.UPC_ISBN10}}</span>
+		<span>{{.}}</span>
 	</div>
+	{{- end}}
 	<a href="/admin?book-id={{.ID}}">Admin</a>
 </div>
