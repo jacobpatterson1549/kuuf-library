@@ -335,7 +335,7 @@ func (s *Server) putBook(w http.ResponseWriter, r *http.Request) {
 		httpInternalServerError(w, err)
 		return
 	}
-	httpRedirect(w, r, "/book?id="+b.ID+"&updated="+time.Now().String())
+	httpRedirect(w, r, "/book?id="+b.ID)
 }
 
 func (s *Server) deleteBook(w http.ResponseWriter, r *http.Request) {
@@ -434,10 +434,13 @@ func (s *Server) withAdminPassword(h http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+// withCacheControl adds a cache-control to GET requests that are not to edit a book
 func withCacheControl(h http.Handler, d time.Duration) http.HandlerFunc {
 	maxAge := "max-age=" + strconv.Itoa(int(d.Seconds()))
 	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Add("Cache-Control", maxAge)
+		if r.Method == http.MethodGet && (r.URL.Path != "/admin" || len(r.URL.Query()["id"]) == 0) {
+			w.Header().Add("Cache-Control", maxAge)
+		}
 		h.ServeHTTP(w, r)
 	}
 }

@@ -124,19 +124,37 @@ func TestWithCacheControl(t *testing.T) {
 	h1 := func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(msg))
 	}
-	h2 := withCacheControl(http.HandlerFunc(h1), time.Minute)
-	r := httptest.NewRequest("", "/", nil)
-	w := httptest.NewRecorder()
-	h2.ServeHTTP(w, r)
-	switch {
-	case w.Body.String() != msg:
-		t.Errorf("inner handler not run: wanted body to be %q, got %q", w.Body.String(), msg)
-	default:
-		want := "max-age=60"
-		got := w.Result().Header.Get("Cache-Control")
-		if want != got {
-			t.Errorf("missing max-age Cache-Control header: got: %q", got)
-		}
+	tests := []struct {
+		name             string
+		wantCacheControl bool
+		r                *http.Request
+	}{
+		{"subjects get", true, httptest.NewRequest("GET", "/", nil)},
+		{"book get", true, httptest.NewRequest("GET", "/book?id=existing", nil)},
+		{"add book get", true, httptest.NewRequest("GET", "/admin", nil)},
+		{"edit book get", false, httptest.NewRequest("GET", "/admin?id=existing", nil)},
+		{"add book post", false, httptest.NewRequest("POST", "/admin", nil)},
+		{"list", true, httptest.NewRequest("GET", "/list", nil)},
+		{"list  search", true, httptest.NewRequest("GET", "/list?q=search", nil)},
+		{"book update", false, httptest.NewRequest("POST", "/book?id=existing", nil)},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			h2 := withCacheControl(http.HandlerFunc(h1), time.Minute)
+			w := httptest.NewRecorder()
+			h2.ServeHTTP(w, test.r)
+			switch {
+			case w.Body.String() != msg:
+				t.Errorf("inner handler not run: wanted body to be %q, got %q", w.Body.String(), msg)
+			default:
+				want := "max-age=60"
+				got := w.Result().Header.Get("Cache-Control")
+				gotCacheControl := want == got
+				if test.wantCacheControl != gotCacheControl {
+					t.Errorf("wanted cache control: %v, got: %q", test.wantCacheControl, got)
+				}
+			}
+		})
 	}
 }
 
