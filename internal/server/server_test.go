@@ -132,7 +132,7 @@ func TestWithCacheControl(t *testing.T) {
 		{"subjects get", true, httptest.NewRequest("GET", "/", nil)},
 		{"book get", true, httptest.NewRequest("GET", "/book?id=existing", nil)},
 		{"add book get", true, httptest.NewRequest("GET", "/admin", nil)},
-		{"edit book get", false, httptest.NewRequest("GET", "/admin?id=existing", nil)},
+		{"edit book get", false, httptest.NewRequest("GET", "/admin?book-id=existing", nil)},
 		{"add book post", false, httptest.NewRequest("POST", "/admin", nil)},
 		{"list", true, httptest.NewRequest("GET", "/list", nil)},
 		{"list  search", true, httptest.NewRequest("GET", "/list?q=search", nil)},
@@ -226,7 +226,7 @@ func TestResponseContains(t *testing.T) {
 		db           Database
 	}{
 		{"MissingKeyZero", "/admin", `name="title" value="" required`, nil},
-		{"TitleContainsQuote", "/admin?id=wow", `name="title" value="&#34;Wow,&#34; A Memoir" required`, mockDatabase{
+		{"TitleContainsQuote", "/admin?book-id=wow", `name="title" value="&#34;Wow,&#34; A Memoir" required`, mockDatabase{
 			readBookFunc: func(id string) (*book.Book, error) {
 				b := book.Book{
 					Header: book.Header{
@@ -562,7 +562,7 @@ func TestGetAdmin(t *testing.T) {
 		},
 		{
 			name: "db error",
-			url:  "/admin?id=BAD",
+			url:  "/admin?book-id=BAD",
 			readBook: func(id string) (*book.Book, error) {
 				return nil, fmt.Errorf("db error")
 			},
@@ -570,7 +570,7 @@ func TestGetAdmin(t *testing.T) {
 		},
 		{
 			name: "update book",
-			url:  "/admin?id=5618941",
+			url:  "/admin?book-id=5618941",
 			readBook: func(id string) (*book.Book, error) {
 				if id != "5618941" {
 					return nil, fmt.Errorf("unwanted id: %v", id)

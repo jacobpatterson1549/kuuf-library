@@ -285,9 +285,9 @@ func (s *Server) getBook(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) getAdmin(w http.ResponseWriter, r *http.Request) {
 	var data interface{}
-	hasID := r.URL.Query().Has("id")
+	hasID := r.URL.Query().Has("book-id")
 	if hasID {
-		id := r.URL.Query().Get("id")
+		id := r.URL.Query().Get("book-id")
 		b, err := s.db.ReadBook(id)
 		if err != nil {
 			httpInternalServerError(w, err)
@@ -438,7 +438,7 @@ func (s *Server) withAdminPassword(h http.HandlerFunc) http.HandlerFunc {
 func withCacheControl(h http.Handler, d time.Duration) http.HandlerFunc {
 	maxAge := "max-age=" + strconv.Itoa(int(d.Seconds()))
 	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodGet && (r.URL.Path != "/admin" || len(r.URL.Query()["id"]) == 0) {
+		if r.Method == http.MethodGet && (r.URL.Path != "/admin" || len(r.URL.Query()["book-id"]) == 0) {
 			w.Header().Add("Cache-Control", maxAge)
 		}
 		h.ServeHTTP(w, r)
