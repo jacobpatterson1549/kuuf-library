@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"image"
-	"image/draw"
 	"image/jpeg"
 	"image/png"
 	"io"
@@ -13,7 +12,7 @@ import (
 	"os/exec"
 	"strings"
 
-	x_draw "golang.org/x/image/draw"
+	"golang.org/x/image/draw"
 	"golang.org/x/image/webp"
 )
 
@@ -106,7 +105,7 @@ func scaleImage(img image.Image) image.Image {
 	boundsR := image.Rect(0, 0, maxImageWidth, maxImageHeight)
 	destR := scaleRect(srcR, boundsR)
 	destImg := image.NewRGBA(destR)
-	var s = x_draw.BiLinear
+	var s = draw.BiLinear
 	s.Scale(destImg, destR, img, srcR, draw.Over, nil)
 	return destImg
 }
