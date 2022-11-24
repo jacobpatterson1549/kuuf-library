@@ -13,7 +13,7 @@ all: $(BUILD_DIR)/$(OBJ)
 test: $(BUILD_DIR)/$(COVERAGE_OBJ)
 
 coverage: $(BUILD_DIR)/$(COVERAGE_OBJ)
-	$(GO) go tool cover -html=$<
+	$(GO) tool cover -html=$<
 
 clean:
 	rm -rf $(BUILD_DIR)
