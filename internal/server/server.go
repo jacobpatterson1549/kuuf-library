@@ -142,6 +142,9 @@ func (cfg Config) setup(db Database, ph PasswordHandler, out io.Writer) error {
 }
 
 func (cfg Config) initAdminPassword(db Database, ph PasswordHandler) error {
+	if err := validatePassword(cfg.AdminPassword); err != nil {
+		return err
+	}
 	hashedPassword, err := ph.Hash([]byte(cfg.AdminPassword))
 	if err != nil {
 		return fmt.Errorf("hashing admin password: %w", err)

@@ -1045,18 +1045,25 @@ func TestWithAdminPassword(t *testing.T) {
 func TestSetupAdminPassword(t *testing.T) {
 	tests := []struct {
 		name                string
+		adminPassword       string
 		hash                func(password []byte) (hashedPassword []byte, err error)
 		updateAdminPassword func(hashedPassword string) error
 		wantOk              bool
 	}{
 		{
-			name: "hash error",
+			name:          "tiny",
+			adminPassword: "tiny",
+		},
+		{
+			name:          "hash error",
+			adminPassword: "bilbo+3Xr",
 			hash: func(password []byte) (hashedPassword []byte, err error) {
 				return nil, fmt.Errorf("hash error")
 			},
 		},
 		{
-			name: "db error",
+			name:          "db error",
+			adminPassword: "bilbo+3Xr",
 			hash: func(password []byte) (hashedPassword []byte, err error) {
 				return []byte("hash48"), nil
 			},
@@ -1065,9 +1072,10 @@ func TestSetupAdminPassword(t *testing.T) {
 			},
 		},
 		{
-			name: "happy path",
+			name:          "happy path",
+			adminPassword: "bilbo+3Xr",
 			hash: func(password []byte) (hashedPassword []byte, err error) {
-				if string(password) != "leap17" {
+				if string(password) != "bilbo+3Xr" {
 					return nil, fmt.Errorf("unwanted password: %q", password)
 				}
 				return []byte("hash48"), nil
@@ -1090,7 +1098,7 @@ func TestSetupAdminPassword(t *testing.T) {
 				updateAdminPasswordFunc: test.updateAdminPassword,
 			}
 			cfg := Config{
-				AdminPassword: "leap17",
+				AdminPassword: test.adminPassword,
 			}
 			err := cfg.setup(db, ph, nil)
 			switch {
