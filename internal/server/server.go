@@ -34,6 +34,7 @@ var (
 			"pretty":         prettyInputValue,
 			"newDate":        time.Now,
 			"dateInputValue": dateInputValue,
+			"IsZero":         func(t time.Time) bool { return t.IsZero() },
 		}).
 		ParseFS(staticFS, "*"))
 )
