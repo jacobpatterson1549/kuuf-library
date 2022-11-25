@@ -95,7 +95,7 @@ func (subjects Subjects) Sort() {
 }
 
 func (s Subject) less(other Subject) bool {
-	if s.Count != other.Count {
+	if s.Name != other.Name {
 		return s.Name < other.Name
 	}
 	return s.Count > other.Count // max first

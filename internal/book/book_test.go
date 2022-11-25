@@ -63,12 +63,14 @@ func TestSubjectsSort(t *testing.T) {
 		{
 			name: "alphabetical",
 			s: Subjects{
+				{Name: "b", Count: 2},
 				{Name: "b", Count: 3},
 				{Name: "c", Count: 1},
 				{Name: "d", Count: 5},
 			},
 			want: Subjects{
 				{Name: "b", Count: 3},
+				{Name: "b", Count: 2},
 				{Name: "c", Count: 1},
 				{Name: "d", Count: 5},
 			},
@@ -159,6 +161,12 @@ func TestFilterMatches(t *testing.T) {
 			want:   false,
 		},
 		{
+			name:   "subject no match",
+			book:   Book{Header: Header{Subject: "fruits"}},
+			filter: Filter{Subject: "dinosaurs"},
+			want:   false,
+		},
+		{
 			name:   "header match 1",
 			book:   Book{Header: Header{Title: "Fruit Trees", Subject: "Fruits"}},
 			filter: Filter{Subject: "fruits"},
@@ -197,7 +205,7 @@ func TestStringBookBook(t *testing.T) {
 		{"empty, no layout", "", StringBook{}, &Book{}, true},
 		{"bad pages", HyphenatedYYYYMMDD, StringBook{Pages: "a"}, nil, false},
 		{"bad publish date", HyphenatedYYYYMMDD, StringBook{PublishDate: "monday"}, nil, false},
-		{"bad added date", HyphenatedYYYYMMDD, StringBook{PublishDate: "12/31/2012"}, nil, false}, // date uses wrong layout
+		{"bad added date", HyphenatedYYYYMMDD, StringBook{PublishDate: "2012-12-31", AddedDate: "12/31/2012"}, nil, false},
 		{"minimal", HyphenatedYYYYMMDD, StringBook{
 			Title:     "a",
 			Author:    "b",
