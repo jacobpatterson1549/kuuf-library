@@ -554,7 +554,7 @@ func TestGetBook(t *testing.T) {
 }
 
 func TestGetAdmin(t *testing.T) {
-	tests := []struct {
+	tests := []struct {	
 		name         string
 		url          string
 		readBook     func(id string) (*book.Book, error)
@@ -602,9 +602,11 @@ func TestGetAdmin(t *testing.T) {
 				"Update Book",
 				"Set Admin Password",
 				"info397",
+				"&lt;=&gt;",
 			},
 			unwantedData: []string{
 				"Create Book",
+				"<=>",
 			},
 		},
 	}

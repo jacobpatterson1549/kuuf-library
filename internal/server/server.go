@@ -7,6 +7,7 @@ import (
 	"embed"
 	"encoding/base64"
 	"fmt"
+	"html"
 	"io"
 	"io/fs"
 	"net/http"
@@ -291,7 +292,7 @@ func (s *Server) getAdmin(w http.ResponseWriter, r *http.Request) {
 		Book               book.Book
 		ValidPasswordRunes string
 	}{
-		ValidPasswordRunes: validPasswordRunes,
+		ValidPasswordRunes: html.EscapeString(validPasswordRunes),
 	}
 	hasID := r.URL.Query().Has("book-id")
 	if hasID {
