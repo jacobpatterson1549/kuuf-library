@@ -218,55 +218,221 @@ func TestWithRateLimiter(t *testing.T) {
 	}
 }
 
-func TestResponseContains(t *testing.T) {
+func TestGet(t *testing.T) {
 	tests := []struct {
-		name         string
-		url          string
-		wantBodyPart string
-		server       Server
+		name             string
+		url              string
+		maxRows          int
+		readBook         func(id string) (*book.Book, error)
+		readBookSubjects func(limit, offset int) ([]book.Subject, error)
+		readBookHeaders  func(f book.Filter, limit, offset int) ([]book.Header, error)
+		wantCode         int
+		wantData         []string
+		unwantedData     []string
 	}{
-		{"MissingKeyZero", "/admin", `name="title" value="" required`, Server{}},
-		{"subject with space HREF", "/", `tall+buildings`, Server{
-			Config: Config{MaxRows: 5},
-			db: mockDatabase{
-				readBookSubjectsFunc: func(limit, offset int) ([]book.Subject, error) {
-					return []book.Subject{{Name: "tall buildings"}}, nil
-				},
+		{
+			name:     "admin: MissingKeyZero",
+			url:      "/admin",
+			wantData: []string{`name="title" value="" required`},
+			wantCode: 200,
+		},
+		{
+			name:    "subject: with space",
+			url:     "/",
+			maxRows: 1,
+			wantData: []string{
+				`tall buildings`, // display value
+				`tall+buildings`, // href
 			},
-		}},
-		{"subject with space VALUE", "/", `tall buildings`, Server{
-			Config: Config{MaxRows: 5},
-			db: mockDatabase{
-				readBookSubjectsFunc: func(limit, offset int) ([]book.Subject, error) {
-					return []book.Subject{{Name: "tall buildings"}}, nil
-				},
+			readBookSubjects: func(limit, offset int) ([]book.Subject, error) {
+				return []book.Subject{{Name: "tall buildings"}}, nil
 			},
-		}},
-		{"TitleContainsQuote", "/admin?book-id=wow", `name="title" value="&#34;Wow,&#34; A Memoir" required`, Server{
-			db: mockDatabase{
-				readBookFunc: func(id string) (*book.Book, error) {
-					b := book.Book{
-						Header: book.Header{
-							Title: `"Wow," A Memoir`,
-						},
-					}
-					return &b, nil
-				},
+			wantCode: 200,
+		},
+		{
+			name:     "admin: TitleContainsQuote",
+			url:      "/admin?book-id=wow",
+			wantData: []string{`name="title" value="&#34;Wow,&#34; A Memoir" required`},
+			readBook: func(id string) (*book.Book, error) {
+				b := book.Book{
+					Header: book.Header{
+						Title: `"Wow," A Memoir`,
+					},
+				}
+				return &b, nil
 			},
-		}},
+			wantCode: 200,
+		},
+		{
+			name:     "admin: no id",
+			url:      "/admin",
+			wantCode: 200,
+			wantData: []string{
+				"Create Book",
+				"Set Admin Password",
+			},
+			unwantedData: []string{
+				"Delete Book",
+				"Update Book",
+			},
+		},
+		{
+			name: "admin: db error",
+			url:  "/admin?book-id=BAD",
+			readBook: func(id string) (*book.Book, error) {
+				return nil, fmt.Errorf("db error")
+			},
+			wantCode: 500,
+		},
+		{
+			name: "admin: update book",
+			url:  "/admin?book-id=5618941",
+			readBook: func(id string) (*book.Book, error) {
+				if id != "5618941" {
+					return nil, fmt.Errorf("unwanted id: %v", id)
+				}
+				b := book.Book{
+					Header:      book.Header{ID: "5618941"},
+					Description: "info397",
+				}
+				return &b, nil
+			},
+			wantCode: 200,
+			wantData: []string{
+				"Delete Book",
+				"Update Book",
+				"Set Admin Password",
+				"info397",
+				"&lt;=&gt;",
+			},
+			unwantedData: []string{
+				"Create Book",
+				"<=>",
+			},
+		},
+		{
+			name: "book: db error",
+			url:  "/book",
+			readBook: func(id string) (*book.Book, error) {
+				return nil, fmt.Errorf("db error")
+			},
+			wantCode: 500,
+		},
+		{
+			name: "book: happy path",
+			url:  "/book?id=id7",
+			readBook: func(id string) (*book.Book, error) {
+				if id != "id7" {
+					t.Errorf("unwanted id: %q", id)
+				}
+				b := book.Book{
+					Header: book.Header{
+						ID:    "id7",
+						Title: "title8",
+					},
+					EAN_ISBN13: "weird_isbn",
+				}
+				return &b, nil
+			},
+			wantCode: 200,
+			wantData: []string{"id7", "title8", "weird_isbn"},
+		},
+		{
+			name:     "list: bad page",
+			url:      "/list?page=last",
+			wantCode: 400,
+		},
+		{
+			name:     "list: bad filter",
+			url:      "/list?q=(_invalid!!)",
+			wantCode: 400,
+		},
+		{
+			name:     "list: db error form",
+			url:      "/list",
+			wantCode: 500,
+			readBookHeaders: func(f book.Filter, limit, offset int) ([]book.Header, error) {
+				return nil, fmt.Errorf("db error")
+			},
+		},
+		{
+			name:     "list: empty form",
+			url:      "/list",
+			wantCode: 200,
+			maxRows:  5,
+			readBookHeaders: func(f book.Filter, limit, offset int) ([]book.Header, error) {
+				headers := []book.Header{
+					{Title: "hello"},
+				}
+				return headers, nil
+			},
+			wantData:     []string{"hello"},
+			unwantedData: []string{`value="Load More books"`},
+		},
+		{
+			name:     "list: page 3",
+			url:      "/list?page=3&q=many+items&s=stuff",
+			wantCode: 200,
+			maxRows:  2,
+			readBookHeaders: func(f book.Filter, limit, offset int) ([]book.Header, error) {
+				wantFilter := book.Filter{HeaderParts: []string{"many", "items"}, Subject: "stuff"}
+				switch {
+				case !reflect.DeepEqual(wantFilter, f):
+					return nil, fmt.Errorf("filters not equal: \n wanted: %v \n got:    %v", wantFilter, f)
+				case limit < 2:
+					return nil, fmt.Errorf("limit should be at least maxRows: %v", limit)
+				case offset != 4:
+					return nil, fmt.Errorf("unwanted offset: %v", offset)
+				}
+				headers := []book.Header{
+					{Title: "Memo"},
+					{Author: "Poe"},
+					{ID: "MASTER_ID"}, // should be excluded because MaxRows is 2
+				}
+				return headers, nil
+			},
+			wantData: []string{
+				"Memo",
+				"Poe",
+				`name="page" value="4"`,       // next page
+				`name="q" value="many items"`, // preserve query when loading next page
+				`value="Load More books"`,
+			},
+			unwantedData: []string{"MASTER_ID"},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			h := test.server.mux()
-			r := httptest.NewRequest("GET", test.url, nil)
 			w := httptest.NewRecorder()
+			r := httptest.NewRequest("GET", test.url, nil)
+			s := Server{
+				Config: Config{MaxRows: test.maxRows},
+				db: mockDatabase{
+					readBookFunc:         test.readBook,
+					readBookSubjectsFunc: test.readBookSubjects,
+					readBookHeadersFunc:  test.readBookHeaders,
+				},
+			}
+			h := s.mux()
 			h.ServeHTTP(w, r)
-			if want, got := 200, w.Code; want != got {
-				t.Fatalf("codes: wanted %v, got %v", want, got)
-			}
-			if want, got := test.wantBodyPart, w.Body.String(); !strings.Contains(got, want) {
-				t.Errorf("response body did not contain %q: \n %s", want, got)
-			}
+			t.Run(test.name, func(t *testing.T) {
+				switch {
+				case test.wantCode != w.Code:
+					t.Errorf("codes not equal: wanted %v, got %v", test.wantCode, w.Code)
+				case w.Code == 200:
+					got := w.Body.String()
+					for _, want := range test.wantData {
+						if !strings.Contains(got, want) {
+							t.Errorf("wanted %q in body, got: \n %v", want, got)
+						}
+					}
+					for _, exclude := range test.unwantedData {
+						if strings.Contains(got, exclude) {
+							t.Errorf("unwanted %q in body, got: \n %v", exclude, got)
+						}
+					}
+				}
+			})
 		})
 	}
 }
@@ -365,279 +531,6 @@ func multipartFormHelper(t *testing.T, form map[string]string) *http.Request {
 	}
 	r.Header.Set("Content-Type", mpw.FormDataContentType())
 	return r
-}
-
-func TestGetBookHeaders(t *testing.T) {
-	tests := []struct {
-		name         string
-		form         url.Values
-		s            Server
-		wantCode     int
-		wantData     []string
-		unwantedData []string
-	}{
-		{
-			name: "bad page",
-			form: url.Values{
-				"page": {"last"},
-			},
-			wantCode: 400,
-		},
-		{
-			name: "bad filter",
-			form: url.Values{
-				"q": {"~!@#$%^&*(){}"},
-			},
-			wantCode: 400,
-		},
-		{
-			name:     "db error form",
-			wantCode: 500,
-			s: Server{
-				db: mockDatabase{
-					readBookHeadersFunc: func(f book.Filter, limit, offset int) ([]book.Header, error) {
-						return nil, fmt.Errorf("db error")
-					},
-				},
-			},
-		},
-		{
-			name:     "empty form",
-			wantCode: 200,
-			s: Server{
-				Config: Config{
-					MaxRows: 5,
-				},
-				db: mockDatabase{
-					readBookHeadersFunc: func(f book.Filter, limit, offset int) ([]book.Header, error) {
-						headers := []book.Header{
-							{Title: "hello"},
-						}
-						return headers, nil
-					},
-				},
-			},
-			wantData:     []string{"hello"},
-			unwantedData: []string{`value="Load More books"`},
-		},
-		{
-			name: "page 3",
-			form: url.Values{
-				"page": {"3"},
-				"q":    {"many items"},
-				"s":    {"stuff"},
-			},
-			wantCode: 200,
-			s: Server{
-				Config: Config{
-					MaxRows: 2,
-				},
-				db: mockDatabase{
-					readBookHeadersFunc: func(f book.Filter, limit, offset int) ([]book.Header, error) {
-						wantFilter := book.Filter{HeaderParts: []string{"many", "items"}, Subject: "stuff"}
-						switch {
-						case !reflect.DeepEqual(wantFilter, f):
-							return nil, fmt.Errorf("filters not equal: \n wanted: %v \n got:    %v", wantFilter, f)
-						case limit < 2:
-							return nil, fmt.Errorf("limit should be at least maxRows: %v", limit)
-						case offset != 4:
-							return nil, fmt.Errorf("unwanted offset: %v", offset)
-						}
-						headers := []book.Header{
-							{Title: "Memo"},
-							{Author: "Poe"},
-							{ID: "MASTER_ID"}, // should be excluded because MaxRows is 2
-						}
-						return headers, nil
-					},
-				},
-			},
-			wantData: []string{
-				"Memo",
-				"Poe",
-				`name="page" value="4"`,       // next page
-				`name="q" value="many items"`, // preserve query when loading next page
-				`value="Load More books"`,
-			},
-			unwantedData: []string{"MASTER_ID"},
-		},
-	}
-	for _, test := range tests {
-		w := httptest.NewRecorder()
-		r := http.Request{
-			Form: test.form,
-		}
-		test.s.getBookHeaders(w, &r)
-		t.Run(test.name, func(t *testing.T) {
-			switch {
-			case test.wantCode != w.Code:
-				t.Errorf("codes not equal: wanted %v, got %v", test.wantCode, w.Code)
-			case w.Code == 200:
-				got := w.Body.String()
-				for _, want := range test.wantData {
-					if !strings.Contains(got, want) {
-						t.Errorf("wanted %q in body, got: \n %v", want, got)
-					}
-				}
-				for _, exclude := range test.unwantedData {
-					if strings.Contains(got, exclude) {
-						t.Errorf("unwanted %q in body, got: \n %v", exclude, got)
-					}
-				}
-			}
-		})
-	}
-}
-
-func TestGetBook(t *testing.T) {
-	tests := []struct {
-		name     string
-		form     url.Values
-		readBook func(id string) (*book.Book, error)
-		wantCode int
-		wantData []string
-	}{
-		{
-			name: "db error",
-			readBook: func(id string) (*book.Book, error) {
-				return nil, fmt.Errorf("db error")
-			},
-			wantCode: 500,
-		},
-		{
-			name: "happy path",
-			form: url.Values{
-				"id": {"id7"},
-			},
-			readBook: func(id string) (*book.Book, error) {
-				if id != "id7" {
-					t.Errorf("unwanted id: %q", id)
-				}
-				b := book.Book{
-					Header: book.Header{
-						ID:    "id7",
-						Title: "title8",
-					},
-					EAN_ISBN13: "weird_isbn",
-				}
-				return &b, nil
-			},
-			wantCode: 200,
-			wantData: []string{"id7", "title8", "weird_isbn"},
-		},
-	}
-	for _, test := range tests {
-		w := httptest.NewRecorder()
-		r := http.Request{
-			Form: test.form,
-		}
-		s := Server{
-			db: mockDatabase{
-				readBookFunc: test.readBook,
-			},
-		}
-		s.getBook(w, &r)
-		t.Run(test.name, func(t *testing.T) {
-			switch {
-			case test.wantCode != w.Code:
-				t.Errorf("codes not equal: wanted %v, got %v", test.wantCode, w.Code)
-			case w.Code == 200:
-				got := w.Body.String()
-				for _, want := range test.wantData {
-					if !strings.Contains(got, want) {
-						t.Errorf("wanted %q in body, got: \n %v", want, got)
-					}
-				}
-			}
-		})
-	}
-}
-
-func TestGetAdmin(t *testing.T) {
-	tests := []struct {	
-		name         string
-		url          string
-		readBook     func(id string) (*book.Book, error)
-		wantCode     int
-		wantData     []string
-		unwantedData []string
-	}{
-		{
-			name:     "no id",
-			url:      "/admin",
-			wantCode: 200,
-			wantData: []string{
-				"Create Book",
-				"Set Admin Password",
-			},
-			unwantedData: []string{
-				"Delete Book",
-				"Update Book",
-			},
-		},
-		{
-			name: "db error",
-			url:  "/admin?book-id=BAD",
-			readBook: func(id string) (*book.Book, error) {
-				return nil, fmt.Errorf("db error")
-			},
-			wantCode: 500,
-		},
-		{
-			name: "update book",
-			url:  "/admin?book-id=5618941",
-			readBook: func(id string) (*book.Book, error) {
-				if id != "5618941" {
-					return nil, fmt.Errorf("unwanted id: %v", id)
-				}
-				b := book.Book{
-					Header:      book.Header{ID: "5618941"},
-					Description: "info397",
-				}
-				return &b, nil
-			},
-			wantCode: 200,
-			wantData: []string{
-				"Delete Book",
-				"Update Book",
-				"Set Admin Password",
-				"info397",
-				"&lt;=&gt;",
-			},
-			unwantedData: []string{
-				"Create Book",
-				"<=>",
-			},
-		},
-	}
-	for _, test := range tests {
-		w := httptest.NewRecorder()
-		r := httptest.NewRequest("get", test.url, nil)
-		s := Server{
-			db: mockDatabase{
-				readBookFunc: test.readBook,
-			},
-		}
-		s.getAdmin(w, r)
-		t.Run(test.name, func(t *testing.T) {
-			switch {
-			case test.wantCode != w.Code:
-				t.Errorf("codes not equal: wanted %v, got %v", test.wantCode, w.Code)
-			case w.Code == 200:
-				got := w.Body.String()
-				for _, want := range test.wantData {
-					if !strings.Contains(got, want) {
-						t.Errorf("wanted %q in body, got: \n %v", want, got)
-					}
-				}
-				for _, exclude := range test.unwantedData {
-					if strings.Contains(got, exclude) {
-						t.Errorf("unwanted %q in body, got: \n %v", exclude, got)
-					}
-				}
-			}
-		})
-	}
 }
 
 func TestPostBook(t *testing.T) {
