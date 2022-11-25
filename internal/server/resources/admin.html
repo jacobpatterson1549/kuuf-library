@@ -88,6 +88,10 @@
 	<form method="post" action="/book/delete">
 		<fieldset>
 			<legend>Delete Book</legend>
+			<div>
+				<input id="db-start" type="checkbox">
+				<label for="db-start">Delete Book...</label>
+			</div>
 			<input id="db-id" type="text" name="id" value="{{.ID}}" readonly hidden>
 			<div>
 				<label for="db-p">Admin Password</label>

@@ -56,6 +56,8 @@ form[action^="/book"] div:has( input:not([type="hidden"]):not([type="password"])
     border-style: solid;
 }
 
+.admin div:has( #db-start:checked),
+.admin div:has( #db-start:not(:checked)) ~ *,
 div:has( input:checked:not([value="true"])) ~ div:has( input[type="file"]) {
     display: none;
 }
