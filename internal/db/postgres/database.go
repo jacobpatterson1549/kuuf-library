@@ -258,7 +258,7 @@ func (d *Database) ReadAdminPassword() (hashedPassword []byte, err error) {
 }
 
 func (d *Database) UpdateAdminPassword(hashedPassword string) error {
-	cmd := `UPDATE users SET password = $1 where username = $2`
+	cmd := `UPDATE users SET password = $1 WHERE username = $2`
 	q := query{
 		cmd:  cmd,
 		args: []interface{}{hashedPassword, "admin"},

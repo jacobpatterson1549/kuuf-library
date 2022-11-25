@@ -6,7 +6,7 @@
 	<div>
 	{{- range .Subjects}}
 	<div class="subject">
-		<div title="Subject"><a href="/list?s={{.Name}}">{{.Name}}</a></div>
+		<div title="Subject"><a href="/list?s={{urlquery .Name}}">{{.Name}}</a></div>
 		<div title="Count">{{.Count}}</div>
 	</div>
 	{{- end}}

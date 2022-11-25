@@ -223,26 +223,41 @@ func TestResponseContains(t *testing.T) {
 		name         string
 		url          string
 		wantBodyPart string
-		db           Database
+		server       Server
 	}{
-		{"MissingKeyZero", "/admin", `name="title" value="" required`, nil},
-		{"TitleContainsQuote", "/admin?book-id=wow", `name="title" value="&#34;Wow,&#34; A Memoir" required`, mockDatabase{
-			readBookFunc: func(id string) (*book.Book, error) {
-				b := book.Book{
-					Header: book.Header{
-						Title: `"Wow," A Memoir`,
-					},
-				}
-				return &b, nil
+		{"MissingKeyZero", "/admin", `name="title" value="" required`, Server{}},
+		{"subject with space HREF", "/", `tall+buildings`, Server{
+			Config: Config{MaxRows: 5},
+			db: mockDatabase{
+				readBookSubjectsFunc: func(limit, offset int) ([]book.Subject, error) {
+					return []book.Subject{{Name: "tall buildings"}}, nil
+				},
+			},
+		}},
+		{"subject with space VALUE", "/", `tall buildings`, Server{
+			Config: Config{MaxRows: 5},
+			db: mockDatabase{
+				readBookSubjectsFunc: func(limit, offset int) ([]book.Subject, error) {
+					return []book.Subject{{Name: "tall buildings"}}, nil
+				},
+			},
+		}},
+		{"TitleContainsQuote", "/admin?book-id=wow", `name="title" value="&#34;Wow,&#34; A Memoir" required`, Server{
+			db: mockDatabase{
+				readBookFunc: func(id string) (*book.Book, error) {
+					b := book.Book{
+						Header: book.Header{
+							Title: `"Wow," A Memoir`,
+						},
+					}
+					return &b, nil
+				},
 			},
 		}},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			s := Server{
-				db: test.db,
-			}
-			h := s.mux()
+			h := test.server.mux()
 			r := httptest.NewRequest("GET", test.url, nil)
 			w := httptest.NewRecorder()
 			h.ServeHTTP(w, r)

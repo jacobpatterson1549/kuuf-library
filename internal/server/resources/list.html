@@ -20,7 +20,7 @@
 		<h3>Books</h3>
 		{{- range .Books}}
 		<div class="header">
-			<div title="Title"><a href="/book?id={{.ID}}">{{.Title}}</a></div>
+			<div title="Title"><a href="/book?id={{urlquery .ID}}">{{.Title}}</a></div>
 			<div title="Author">{{.Author}}</div>
 			<div title="Subject">{{.Subject}}</div>
 		</div>
