@@ -1,30 +1,34 @@
 <!doctype html>
-<html lang="en">
-
-<head>
-	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<meta http-equiv="Content-Type" content="text/html;charset=utf-8">
-	<meta name="Description" content="Jacob Patterson">
-	<title>KUUF Library</title>
-	<link rel="shortcut icon" href="data:image/svg+xml;base64,{{.Favicon}}" type="image/x-icon">
-	<style>
+	<html lang="en">
+	<head>
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+		<meta name="Description" content="Jacob Patterson">
+		<title>KUUF Library</title>
+		<link rel="shortcut icon" href="data:image/svg+xml;base64,{{.Favicon}}" type="image/x-icon">
+		<style>
 {{template "index.css" .}}
-	</style>
-</head>
-
-<body>
-<h1><a href="/">KUUF Library</a></h1>
-
-{{- if eq .Name "list"}}
-{{template "list.html" .Data}}
+{{if eq .Name "list"}}
+{{- template "list.css"}}
 {{- else if eq .Name "subjects"}}
-{{template "subjects.html" .Data}}
+{{- template "subjects.css"}}
 {{- else if eq .Name "book"}}
-{{template "book.html" .Data}}
+{{- template "book.css"}}
 {{- else if eq .Name "admin"}}
-{{template "admin.html" .Data}}
+{{- template "admin.css"}}
 {{- end}}
-
-</body>
-
+		</style>
+	</head>
+	<body>
+		<h1><a href="/">KUUF Library</a></h1>
+{{if eq .Name "list"}}
+{{- template "list.html" .Data}}
+{{- else if eq .Name "subjects"}}
+{{- template "subjects.html" .Data}}
+{{- else if eq .Name "book"}}
+{{- template "book.html" .Data}}
+{{- else if eq .Name "admin"}}
+{{- template "admin.html" .Data}}
+{{- end}}
+	</body>
 </html>

@@ -1,0 +1,7 @@
+.book > * > *:nth-child(1) {
+    font-weight: bold;
+}
+
+.book > * > *:nth-child(1)::after {
+    content: ':';
+}

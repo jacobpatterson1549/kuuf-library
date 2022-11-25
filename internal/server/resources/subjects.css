@@ -1,0 +1,11 @@
+.subject > * {
+    display: inline-block;
+}
+
+.subject > *[title="Count"]::before {
+    content: "(";
+}
+
+.subject > *[title="Count"]::after {
+    content: ")";
+}

@@ -1,0 +1,7 @@
+*[title="Author"]::before {
+    content: 'by ';
+}
+
+label:has(+ input)::after {
+    content: ':';
+}
