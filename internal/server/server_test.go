@@ -218,7 +218,7 @@ func TestWithRateLimiter(t *testing.T) {
 	}
 }
 
-func TestGet(t *testing.T) {
+func TestRequest(t *testing.T) {
 	tests := []struct {
 		name             string
 		url              string
@@ -231,13 +231,13 @@ func TestGet(t *testing.T) {
 		unwantedData     []string
 	}{
 		{
-			name:     "admin: MissingKeyZero",
+			name:     "MissingKeyZero",
 			url:      "/admin",
 			wantData: []string{`name="title" value="" required`},
 			wantCode: 200,
 		},
 		{
-			name:    "subject: with space",
+			name:    "with space",
 			url:     "/",
 			maxRows: 1,
 			wantData: []string{
@@ -250,7 +250,7 @@ func TestGet(t *testing.T) {
 			wantCode: 200,
 		},
 		{
-			name:     "admin: TitleContainsQuote",
+			name:     "TitleContainsQuote",
 			url:      "/admin?book-id=wow",
 			wantData: []string{`name="title" value="&#34;Wow,&#34; A Memoir" required`},
 			readBook: func(id string) (*book.Book, error) {
@@ -264,7 +264,7 @@ func TestGet(t *testing.T) {
 			wantCode: 200,
 		},
 		{
-			name:     "admin: no id",
+			name:     "no id",
 			url:      "/admin",
 			wantCode: 200,
 			wantData: []string{
@@ -277,7 +277,7 @@ func TestGet(t *testing.T) {
 			},
 		},
 		{
-			name: "admin: db error",
+			name: "db error",
 			url:  "/admin?book-id=BAD",
 			readBook: func(id string) (*book.Book, error) {
 				return nil, fmt.Errorf("db error")
@@ -285,7 +285,7 @@ func TestGet(t *testing.T) {
 			wantCode: 500,
 		},
 		{
-			name: "admin: update book",
+			name: "update book",
 			url:  "/admin?book-id=5618941",
 			readBook: func(id string) (*book.Book, error) {
 				if id != "5618941" {
@@ -311,12 +311,12 @@ func TestGet(t *testing.T) {
 			},
 		},
 		{
-			name: "book: long id",
+			name: "long id",
 			url:  "/book?id=long+abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890",
 			wantCode: 413,
 		},
 		{
-			name: "book: db error",
+			name: "db error",
 			url:  "/book",
 			readBook: func(id string) (*book.Book, error) {
 				return nil, fmt.Errorf("db error")
@@ -324,7 +324,7 @@ func TestGet(t *testing.T) {
 			wantCode: 500,
 		},
 		{
-			name: "book: happy path",
+			name: "happy path",
 			url:  "/book?id=id7",
 			readBook: func(id string) (*book.Book, error) {
 				if id != "id7" {
@@ -352,32 +352,32 @@ func TestGet(t *testing.T) {
 			wantData: []string{"id7", "title8", "weird_isbn"},
 		},
 		{
-			name:     "list: long filter",
+			name:     "long filter",
 			url:      "/list?q=TOO_LONG_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890",
 			wantCode: 413,
 		},
 		{
-			name:     "list: long subject",
+			name:     "long subject",
 			url:      "/list?s=TOO_LONG_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890",
 			wantCode: 413,
 		},
 		{
-			name:     "list: bad page",
+			name:     "bad page",
 			url:      "/list?page=last",
 			wantCode: 400,
 		},
 		{
-			name:     "list: long page",
+			name:     "long page",
 			url:      "/list?page=1234567890123456789012345678901234567890",
 			wantCode: 413,
 		},
 		{
-			name:     "list: bad filter",
+			name:     "bad filter",
 			url:      "/list?q=(_invalid!!)",
 			wantCode: 400,
 		},
 		{
-			name:     "list: db error form",
+			name:     "db error form",
 			url:      "/list",
 			wantCode: 500,
 			readBookHeaders: func(f book.Filter, limit, offset int) ([]book.Header, error) {
@@ -385,7 +385,7 @@ func TestGet(t *testing.T) {
 			},
 		},
 		{
-			name:     "list: empty form",
+			name:     "empty form",
 			url:      "/list",
 			wantCode: 200,
 			maxRows:  5,
@@ -399,7 +399,7 @@ func TestGet(t *testing.T) {
 			unwantedData: []string{`value="Load More books"`},
 		},
 		{
-			name:     "list: page 3",
+			name:     "page 3",
 			url:      "/list?page=3&q=many+items&s=stuff",
 			wantCode: 200,
 			maxRows:  2,
@@ -446,7 +446,7 @@ func TestGet(t *testing.T) {
 			}
 			h := s.mux()
 			h.ServeHTTP(w, r)
-			t.Run(test.name, func(t *testing.T) {
+			t.Run(fmt.Sprintf("%v (%v)", test.url, test.name), func(t *testing.T) {
 				switch {
 				case sb.Len() != 0:
 					t.Errorf("unwanted log: %q", sb.String())
