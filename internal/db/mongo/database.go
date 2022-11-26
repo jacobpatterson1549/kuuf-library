@@ -210,11 +210,10 @@ func (d *Database) ReadBookHeaders(f book.Filter, limit, offset int) ([]book.Hea
 }
 
 func (d *Database) ReadBook(id string) (*book.Book, error) {
-	objID, err := primitive.ObjectIDFromString(id)
+	filter, err := d.idFilter(id)
 	if err != nil {
 		return nil, err
 	}
-	filter := d.d(d.e(bookIDField, objID))
 	coll := d.booksCollection()
 	opts := options.FindOne()
 	var m mBook
@@ -232,11 +231,10 @@ func (d *Database) ReadBook(id string) (*book.Book, error) {
 }
 
 func (d *Database) UpdateBook(b book.Book, updateImage bool) error {
-	objID, err := primitive.ObjectIDFromString(b.ID)
+	filter, err := d.idFilter(b.ID)
 	if err != nil {
 		return err
 	}
-	filter := d.d(d.e(bookIDField, objID))
 	if err != nil {
 		return err
 	}
@@ -272,11 +270,10 @@ func (d *Database) UpdateBook(b book.Book, updateImage bool) error {
 }
 
 func (d *Database) DeleteBook(id string) error {
-	objID, err := primitive.ObjectIDFromString(id)
+	filter, err := d.idFilter(id)
 	if err != nil {
 		return err
 	}
-	filter := d.d(d.e(bookIDField, objID))
 	opts := options.Delete()
 	coll := d.booksCollection()
 	if err := d.withTimeoutContext(func(ctx context.Context) error {
@@ -326,4 +323,12 @@ func (d *Database) UpdateAdminPassword(hashedPassword string) error {
 		return fmt.Errorf("updating admin password: %w", err)
 	}
 	return nil
+}
+
+func (d Database) idFilter(id string) (interface{}, error) {
+	objID, err := primitive.ObjectIDFromString(id)
+	if err != nil {
+		return nil, err
+	}
+	return d.d(d.e(bookIDField, objID)), nil
 }
