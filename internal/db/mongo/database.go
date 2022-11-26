@@ -8,7 +8,7 @@ import (
 
 	"github.com/jacobpatterson1549/kuuf-library/internal/book"
 	"github.com/jacobpatterson1549/kuuf-library/internal/db/mongo/bson"
-	"github.com/jacobpatterson1549/kuuf-library/internal/db/mongo/primitive"
+	"github.com/jacobpatterson1549/kuuf-library/internal/db/mongo/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
