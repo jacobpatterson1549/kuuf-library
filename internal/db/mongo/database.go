@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/jacobpatterson1549/kuuf-library/internal/book"
+	"github.com/jacobpatterson1549/kuuf-library/internal/db/mongo/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -125,7 +126,7 @@ func (d *Database) CreateBooks(books ...book.Book) ([]book.Book, error) {
 			return err
 		}
 		for i, id := range ids.InsertedIDs {
-			objID, err := d.objectIDCast(id)
+			objID, err := primitive.ToObjectID(id)
 			if err != nil {
 				return err
 			}
@@ -209,7 +210,7 @@ func (d *Database) ReadBookHeaders(f book.Filter, limit, offset int) ([]book.Hea
 }
 
 func (d *Database) ReadBook(id string) (*book.Book, error) {
-	objID, err := d.objectIDFromString(id)
+	objID, err := primitive.ObjectIDFromString(id)
 	if err != nil {
 		return nil, err
 	}
@@ -231,7 +232,7 @@ func (d *Database) ReadBook(id string) (*book.Book, error) {
 }
 
 func (d *Database) UpdateBook(b book.Book, updateImage bool) error {
-	objID, err := d.objectIDFromString(b.ID)
+	objID, err := primitive.ObjectIDFromString(b.ID)
 	if err != nil {
 		return err
 	}
@@ -271,7 +272,7 @@ func (d *Database) UpdateBook(b book.Book, updateImage bool) error {
 }
 
 func (d *Database) DeleteBook(id string) error {
-	objID, err := d.objectIDFromString(id)
+	objID, err := primitive.ObjectIDFromString(id)
 	if err != nil {
 		return err
 	}

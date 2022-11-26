@@ -1,7 +1,6 @@
 package mongo
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/jacobpatterson1549/kuuf-library/internal/book"
@@ -21,22 +20,6 @@ func (Database) e(key string, value interface{}) bson.E {
 }
 func (Database) a(d ...interface{}) bson.A {
 	return bson.A(d)
-}
-
-func (d Database) objectIDFromString(id string) (*primitive.ObjectID, error) {
-	objID, err := primitive.ObjectIDFromHex(id)
-	if err != nil {
-		return nil, fmt.Errorf("invalid object id: %w", err)
-	}
-	return &objID, nil
-}
-
-func (d Database) objectIDCast(id interface{}) (*primitive.ObjectID, error) {
-	objID, ok := id.(primitive.ObjectID)
-	if !ok {
-		return nil, fmt.Errorf("%v (%T) is not a valid ObjectID", id, id)
-	}
-	return &objID, nil
 }
 
 func (d Database) filter(filter book.Filter) []bson.E {
