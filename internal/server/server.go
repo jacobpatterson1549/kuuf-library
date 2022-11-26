@@ -34,7 +34,6 @@ var (
 			"pretty":         prettyInputValue,
 			"newDate":        time.Now,
 			"dateInputValue": dateInputValue,
-			"IsZero":         func(t time.Time) bool { return t.IsZero() },
 		}).
 		ParseFS(staticFS, "*"))
 )
@@ -629,18 +628,11 @@ func loadPage[V interface{}](w http.ResponseWriter, r *http.Request, maxRows int
 const dateLayout = book.HyphenatedYYYYMMDD
 const validPasswordRunes = "`" + `!"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_abcdefghijklmnopqrstuvwxyz{|}~`
 
-func dateInputValue(i interface{}) string {
-	switch t := i.(type) {
-	case time.Time:
-		return t.Format(string(dateLayout))
-	}
-	return ""
+func dateInputValue(t time.Time) string {
+	return t.Format(string(dateLayout))
 }
 
 func prettyInputValue(i interface{}) interface{} {
-	if i == nil {
-		return ""
-	}
 	if s, ok := i.(string); ok {
 		return template.HTMLEscapeString(s)
 	}

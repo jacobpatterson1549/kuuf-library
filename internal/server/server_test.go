@@ -104,16 +104,16 @@ func TestMux(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			var buf bytes.Buffer
-			s.out = &buf
+			var sb bytes.Buffer
+			s.out = &sb
 			r := httptest.NewRequest(test.method, test.url, nil)
 			w := httptest.NewRecorder()
 			h.ServeHTTP(w, r)
 			if want, got := test.wantCode, w.Code; want != got {
 				t.Errorf("wanted %v, got %v", want, got)
 			}
-			if buf.Len() != 0 {
-				t.Errorf("unwanted log: %q", buf.String())
+			if sb.Len() != 0 {
+				t.Errorf("unwanted log: %q", sb.String())
 			}
 		})
 	}
@@ -311,6 +311,11 @@ func TestGet(t *testing.T) {
 			},
 		},
 		{
+			name: "book: long id",
+			url:  "/book?id=long+abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890",
+			wantCode: 413,
+		},
+		{
 			name: "book: db error",
 			url:  "/book",
 			readBook: func(id string) (*book.Book, error) {
@@ -327,10 +332,19 @@ func TestGet(t *testing.T) {
 				}
 				b := book.Book{
 					Header: book.Header{
-						ID:    "id7",
-						Title: "title8",
+						ID:      "id7",
+						Title:   "title8",
+						Author:  "a",
+						Subject: "s",
 					},
-					EAN_ISBN13: "weird_isbn",
+					DeweyDecClass: "ddc",
+					Pages:         18,
+					Publisher:     "pub",
+					PublishDate:   time.Date(2022, 11, 25, 0, 0, 0, 0, time.UTC),
+					AddedDate:     time.Date(2022, 11, 25, 0, 0, 0, 0, time.UTC),
+					EAN_ISBN13:    "weird_isbn",
+					UPC_ISBN10:    "isbn10",
+					ImageBase64:   "invalid_file",
 				}
 				return &b, nil
 			},
@@ -338,9 +352,24 @@ func TestGet(t *testing.T) {
 			wantData: []string{"id7", "title8", "weird_isbn"},
 		},
 		{
+			name:     "list: long filter",
+			url:      "/list?q=TOO_LONG_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890",
+			wantCode: 413,
+		},
+		{
+			name:     "list: long subject",
+			url:      "/list?s=TOO_LONG_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890",
+			wantCode: 413,
+		},
+		{
 			name:     "list: bad page",
 			url:      "/list?page=last",
 			wantCode: 400,
+		},
+		{
+			name:     "list: long page",
+			url:      "/list?page=1234567890123456789012345678901234567890",
+			wantCode: 413,
 		},
 		{
 			name:     "list: bad filter",
@@ -405,6 +434,7 @@ func TestGet(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			w := httptest.NewRecorder()
 			r := httptest.NewRequest("GET", test.url, nil)
+			var sb strings.Builder
 			s := Server{
 				Config: Config{MaxRows: test.maxRows},
 				db: mockDatabase{
@@ -412,11 +442,14 @@ func TestGet(t *testing.T) {
 					readBookSubjectsFunc: test.readBookSubjects,
 					readBookHeadersFunc:  test.readBookHeaders,
 				},
+				out: &sb,
 			}
 			h := s.mux()
 			h.ServeHTTP(w, r)
 			t.Run(test.name, func(t *testing.T) {
 				switch {
+				case sb.Len() != 0:
+					t.Errorf("unwanted log: %q", sb.String())
 				case test.wantCode != w.Code:
 					t.Errorf("codes not equal: wanted %v, got %v", test.wantCode, w.Code)
 				case w.Code == 200:
@@ -662,6 +695,13 @@ func TestPutBook(t *testing.T) {
 			wantLocPrefix: "/book?id=keep_me",
 		},
 		{
+			name: "update image too long",
+			formOverrides: map[string]string{
+				"update-image": "123456789+long",
+			},
+			wantCode:      413,
+		},
+		{
 			name: "update image",
 			formOverrides: map[string]string{
 				"update-image": "true",
@@ -729,14 +769,22 @@ func TestPutBook(t *testing.T) {
 
 func TestDeleteBook(t *testing.T) {
 	tests := []struct {
-		name         string
-		deleteBook   func(id string) error
-		wantCode     int
-		wantData     []string
-		unwantedData []string
+		name       string
+		id string
+		deleteBook func(id string) error
+		wantCode   int
 	}{
 		{
+			name: "long id",
+			id: "long+abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890",
+			deleteBook: func(id string) error {
+				return fmt.Errorf("db error)")
+			},
+			wantCode: 413,
+		},
+		{
 			name: "db error",
+			id:"x123",
 			deleteBook: func(id string) error {
 				return fmt.Errorf("db error)")
 			},
@@ -744,6 +792,7 @@ func TestDeleteBook(t *testing.T) {
 		},
 		{
 			name: "happy path",
+			id:"x123",
 			deleteBook: func(id string) error {
 				if id != "x123" {
 					return fmt.Errorf("unwanted id: %q", id)
@@ -761,7 +810,7 @@ func TestDeleteBook(t *testing.T) {
 				},
 			}
 			w := httptest.NewRecorder()
-			r := httptest.NewRequest("post", "/book?id=x123", nil)
+			r := httptest.NewRequest("post", "/book?id="+test.id, nil)
 			s.deleteBook(w, r)
 			switch {
 			case test.wantCode != w.Code:
@@ -784,10 +833,25 @@ func TestPutAdminPassword(t *testing.T) {
 		wantCode            int
 	}{
 		{
+			name: "too long",
+			form: url.Values{
+				"p1": {"TOO_LONG_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"},
+			},
+			wantCode: 413,
+		},
+		{
 			name: "not equal",
 			form: url.Values{
 				"p1": {"bilbo123"},
 				"p2": {"Bilbo123"},
+			},
+			wantCode: 400,
+		},
+		{
+			name: "too short",
+			form: url.Values{
+				"p1": {"bilbo"},
+				"p2": {"bilbo"},
 			},
 			wantCode: 400,
 		},
@@ -879,6 +943,16 @@ func TestWithAdminPassword(t *testing.T) {
 			},
 			wantCode: 500,
 			wantData: "read error",
+		},
+		{
+			name: "password too long",
+			readAdminPassword: func() (hashedPassword []byte, err error) {
+				return nil, nil
+			},
+			form: url.Values{
+				"p": {"TOO_LONG_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"},
+			},
+			wantCode: 413,
 		},
 		{
 			name: "is correct error",
