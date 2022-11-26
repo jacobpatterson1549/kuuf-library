@@ -311,8 +311,8 @@ func TestRequest(t *testing.T) {
 			},
 		},
 		{
-			name: "long id",
-			url:  "/book?id=long+abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890",
+			name:     "long id",
+			url:      "/book?id=long+abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890",
 			wantCode: 413,
 		},
 		{
@@ -654,7 +654,7 @@ func TestPutBook(t *testing.T) {
 		formOverrides map[string]string
 		updateBook    func(b book.Book, updateImage bool) error
 		wantCode      int
-		wantLocPrefix string
+		wantLoc       string
 	}{
 		{
 			name: "bad book",
@@ -691,15 +691,15 @@ func TestPutBook(t *testing.T) {
 				}
 				return nil
 			},
-			wantCode:      303,
-			wantLocPrefix: "/book?id=keep_me",
+			wantCode: 303,
+			wantLoc:  "/book?id=keep_me",
 		},
 		{
 			name: "update image too long",
 			formOverrides: map[string]string{
 				"update-image": "123456789+long",
 			},
-			wantCode:      413,
+			wantCode: 413,
 		},
 		{
 			name: "update image",
@@ -713,8 +713,8 @@ func TestPutBook(t *testing.T) {
 				}
 				return nil
 			},
-			wantCode:      303,
-			wantLocPrefix: "/book?id=keep_me",
+			wantCode: 303,
+			wantLoc:  "/book?id=keep_me",
 		},
 		{
 			name: "clear image",
@@ -730,8 +730,8 @@ func TestPutBook(t *testing.T) {
 				}
 				return nil
 			},
-			wantCode:      303,
-			wantLocPrefix: "/book?id=keep_me",
+			wantCode: 303,
+			wantLoc:  "/book?id=keep_me",
 		},
 	}
 	for _, test := range tests {
@@ -759,7 +759,7 @@ func TestPutBook(t *testing.T) {
 			case test.wantCode != w.Code:
 				t.Errorf("codes not equal: wanted %v, got %v", test.wantCode, w.Code)
 			case test.wantCode == 303:
-				if want, got := test.wantLocPrefix, w.Header().Get("Location"); !strings.HasPrefix(got, want) {
+				if want, got := test.wantLoc, w.Header().Get("Location"); want != got {
 					t.Errorf("unwanted redirect location: \n wanted: %q \n got: %q", want, got)
 				}
 			}
@@ -770,13 +770,13 @@ func TestPutBook(t *testing.T) {
 func TestDeleteBook(t *testing.T) {
 	tests := []struct {
 		name       string
-		id string
+		id         string
 		deleteBook func(id string) error
 		wantCode   int
 	}{
 		{
 			name: "long id",
-			id: "long+abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890",
+			id:   "long+abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890",
 			deleteBook: func(id string) error {
 				return fmt.Errorf("db error)")
 			},
@@ -784,7 +784,7 @@ func TestDeleteBook(t *testing.T) {
 		},
 		{
 			name: "db error",
-			id:"x123",
+			id:   "x123",
 			deleteBook: func(id string) error {
 				return fmt.Errorf("db error)")
 			},
@@ -792,7 +792,7 @@ func TestDeleteBook(t *testing.T) {
 		},
 		{
 			name: "happy path",
-			id:"x123",
+			id:   "x123",
 			deleteBook: func(id string) error {
 				if id != "x123" {
 					return fmt.Errorf("unwanted id: %q", id)
