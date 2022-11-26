@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/jacobpatterson1549/kuuf-library/internal/book"
+	"github.com/jacobpatterson1549/kuuf-library/internal/db/mongo/bson/primitive"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func TestD(t *testing.T) {
@@ -100,8 +100,8 @@ func TestFilter(t *testing.T) {
 			want: []bson.E{{
 				Key: "$or",
 				Value: bson.A{
-					bson.D{bson.E{Key: "k2", Value: primitive.Regex{Pattern: "x|y|z", Options: "i"}}},
-					bson.D{bson.E{Key: "k3", Value: primitive.Regex{Pattern: "x|y|z", Options: "i"}}},
+					bson.D{bson.E{Key: "k2", Value: primitive.MatchAnyIgnoreCaseRegex("x", "y", "z")}},
+					bson.D{bson.E{Key: "k3", Value: primitive.MatchAnyIgnoreCaseRegex("x", "y", "z")}},
 				}}},
 		},
 		{
@@ -115,8 +115,8 @@ func TestFilter(t *testing.T) {
 				{
 					Key: "$or",
 					Value: bson.A{
-						bson.D{bson.E{Key: "k2", Value: primitive.Regex{Pattern: "good", Options: "i"}}},
-						bson.D{bson.E{Key: "k3", Value: primitive.Regex{Pattern: "good", Options: "i"}}},
+						bson.D{bson.E{Key: "k2", Value: primitive.MatchAnyIgnoreCaseRegex("good")}},
+						bson.D{bson.E{Key: "k3", Value: primitive.MatchAnyIgnoreCaseRegex("good")}},
 					},
 				},
 			},

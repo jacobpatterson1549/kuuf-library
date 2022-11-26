@@ -3,6 +3,7 @@ package primitive
 
 import (
 	"fmt"
+	"strings"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -21,4 +22,13 @@ func ToObjectID(id interface{}) (*primitive.ObjectID, error) {
 		return nil, fmt.Errorf("%v (%T) is not a valid ObjectID", id, id)
 	}
 	return &objID, nil
+}
+
+func MatchAnyIgnoreCaseRegex(words ...string) primitive.Regex {
+	joinedWords := strings.Join(words, "|")
+	r := primitive.Regex{
+		Pattern: joinedWords,
+		Options: "i",
+	}
+	return r
 }

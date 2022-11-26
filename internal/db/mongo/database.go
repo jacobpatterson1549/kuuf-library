@@ -244,9 +244,6 @@ func (d *Database) UpdateBook(b book.Book, updateImage bool) error {
 	if err != nil {
 		return err
 	}
-	if err != nil {
-		return err
-	}
 	sets := bson.D(
 		bson.E(bookTitleField, b.Title),
 		bson.E(bookAuthorField, b.Author),

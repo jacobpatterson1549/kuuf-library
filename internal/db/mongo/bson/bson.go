@@ -36,7 +36,7 @@ func (f Filter) From(filter book.Filter) []bson.E {
 	}
 	if len(filter.HeaderParts) != 0 {
 		joinedFilter := strings.Join(filter.HeaderParts, "|")
-		regex := primitive.Regex{ // TODO: move this to kuuf-library package
+		regex := primitive.Regex{
 			Pattern: joinedFilter,
 			Options: "i",
 		}
