@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/jacobpatterson1549/kuuf-library/internal/book"
+	"github.com/jacobpatterson1549/kuuf-library/internal/db/mongo/bson"
 	"github.com/jacobpatterson1549/kuuf-library/internal/db/mongo/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -141,15 +142,15 @@ func (d *Database) CreateBooks(books ...book.Book) ([]book.Book, error) {
 
 func (d *Database) ReadBookSubjects(limit, offset int) ([]book.Subject, error) {
 	pipeline := mongo.Pipeline{
-		d.d(d.e("$group", d.d(
-			d.e(subjectNameField, "$"+bookSubjectField),
-			d.e(subjectCountField, d.d(d.e("$sum", 1))),
+		bson.D(bson.E("$group", bson.D(
+			bson.E(subjectNameField, "$"+bookSubjectField),
+			bson.E(subjectCountField, bson.D(bson.E("$sum", 1))),
 		))),
-		d.d(d.e("$sort", d.d(
-			d.e(subjectNameField, 1),
+		bson.D(bson.E("$sort", bson.D(
+			bson.E(subjectNameField, 1),
 		))),
-		d.d(d.e("$skip", offset)),
-		d.d(d.e("$limit", limit)),
+		bson.D(bson.E("$skip", offset)),
+		bson.D(bson.E("$limit", limit)),
 	}
 	opts := options.Aggregate()
 	coll := d.booksCollection()
@@ -174,19 +175,27 @@ func (d *Database) ReadBookSubjects(limit, offset int) ([]book.Subject, error) {
 }
 
 func (d *Database) ReadBookHeaders(f book.Filter, limit, offset int) ([]book.Header, error) {
-	filter := d.d(d.filter(f)...)
+	bsonFilter := bson.Filter{
+		SubjectKey: bookSubjectField,
+		HeaderKeys: []string{
+			bookTitleField,
+			bookAuthorField,
+			bookSubjectField,
+		},
+	}
+	filter := bson.D(bsonFilter.From(f)...)
 	opts := options.Find().
-		SetSort(d.d(
-			d.e(bookSubjectField, 1),
-			d.e(bookTitleField, 1),
+		SetSort(bson.D(
+			bson.E(bookSubjectField, 1),
+			bson.E(bookTitleField, 1),
 		)).
 		SetLimit(int64(limit)).
 		SetSkip(int64(offset)).
-		SetProjection(d.d(
-			d.e(bookIDField, 1),
-			d.e(bookTitleField, 1),
-			d.e(bookAuthorField, 1),
-			d.e(bookSubjectField, 1),
+		SetProjection(bson.D(
+			bson.E(bookIDField, 1),
+			bson.E(bookTitleField, 1),
+			bson.E(bookAuthorField, 1),
+			bson.E(bookSubjectField, 1),
 		))
 	coll := d.booksCollection()
 	var all []mHeader
@@ -238,23 +247,23 @@ func (d *Database) UpdateBook(b book.Book, updateImage bool) error {
 	if err != nil {
 		return err
 	}
-	sets := d.d(
-		d.e(bookTitleField, b.Title),
-		d.e(bookAuthorField, b.Author),
-		d.e(bookSubjectField, b.Subject),
-		d.e(bookDescriptionField, b.Description),
-		d.e(bookDeweyDecClassField, b.DeweyDecClass),
-		d.e(bookPagesField, b.Pages),
-		d.e(bookPublisherField, b.Publisher),
-		d.e(bookPublishDateField, b.PublishDate),
-		d.e(bookAddedDateField, b.AddedDate),
-		d.e(bookEAN_ISBN13Field, b.EAN_ISBN13),
-		d.e(bookUPC_ISBN10Field, b.UPC_ISBN10),
+	sets := bson.D(
+		bson.E(bookTitleField, b.Title),
+		bson.E(bookAuthorField, b.Author),
+		bson.E(bookSubjectField, b.Subject),
+		bson.E(bookDescriptionField, b.Description),
+		bson.E(bookDeweyDecClassField, b.DeweyDecClass),
+		bson.E(bookPagesField, b.Pages),
+		bson.E(bookPublisherField, b.Publisher),
+		bson.E(bookPublishDateField, b.PublishDate),
+		bson.E(bookAddedDateField, b.AddedDate),
+		bson.E(bookEAN_ISBN13Field, b.EAN_ISBN13),
+		bson.E(bookUPC_ISBN10Field, b.UPC_ISBN10),
 	)
 	if updateImage {
-		sets = append(sets, d.e(bookImageBase64Field, b.ImageBase64))
+		sets = append(sets, bson.E(bookImageBase64Field, b.ImageBase64))
 	}
-	update := d.d(d.e("$set", sets))
+	update := bson.D(bson.E("$set", sets))
 	opts := options.Update()
 	coll := d.booksCollection()
 	if err := d.withTimeoutContext(func(ctx context.Context) error {
@@ -289,7 +298,7 @@ func (d *Database) DeleteBook(id string) error {
 }
 
 func (d *Database) ReadAdminPassword() (hashedPassword []byte, err error) {
-	filter := d.d(d.e(usernameField, adminUsername))
+	filter := bson.D(bson.E(usernameField, adminUsername))
 	coll := d.usersCollection()
 	var u mUser
 	if err := d.withTimeoutContext(func(ctx context.Context) error {
@@ -309,8 +318,8 @@ func (d *Database) ReadAdminPassword() (hashedPassword []byte, err error) {
 }
 
 func (d *Database) UpdateAdminPassword(hashedPassword string) error {
-	filter := d.d(d.e(usernameField, adminUsername))
-	update := d.d(d.e("$set", d.d(d.e(passwordField, hashedPassword))))
+	filter := bson.D(bson.E(usernameField, adminUsername))
+	update := bson.D(bson.E("$set", bson.D(bson.E(passwordField, hashedPassword))))
 	opts := options.Update().
 		SetUpsert(true)
 	coll := d.usersCollection()
@@ -330,5 +339,5 @@ func (d Database) idFilter(id string) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	return d.d(d.e(bookIDField, objID)), nil
+	return bson.D(bson.E(bookIDField, objID)), nil
 }
