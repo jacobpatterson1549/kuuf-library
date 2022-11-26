@@ -128,9 +128,9 @@ func (d *Database) CreateBooks(books ...book.Book) ([]book.Book, error) {
 			return err
 		}
 		for i, id := range ids.InsertedIDs {
-			objID, ok := id.(primitive.ObjectID)
-			if !ok {
-				return fmt.Errorf("ID of inserted book #%v is not a string: %T (%v)", i, id, id)
+			objID, err := d.objectIDFrom(id)
+			if err != nil {
+				return err
 			}
 			books[i].ID = objID.Hex()
 		}
@@ -344,6 +344,14 @@ func (d Database) objectID(id string) (bson.D, error) {
 		return nil, fmt.Errorf("invalid object id: %w", err)
 	}
 	return d.d(d.e(bookIDField, objID)), nil
+}
+
+func (d Database) objectIDFrom(id interface{}) (*primitive.ObjectID, error) {
+	objID, ok := id.(primitive.ObjectID)
+	if !ok {
+		return nil, fmt.Errorf("%v (%T) is not a valid ObjectID", id, id)
+	}
+	return &objID, nil
 }
 
 func (d Database) filter(filter book.Filter) []bson.E {
