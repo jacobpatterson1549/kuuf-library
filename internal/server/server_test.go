@@ -218,7 +218,7 @@ func TestWithRateLimiter(t *testing.T) {
 	}
 }
 
-func TestRequest(t *testing.T) {
+func TestGetRequest(t *testing.T) {
 	tests := []struct {
 		name             string
 		url              string
@@ -431,7 +431,7 @@ func TestRequest(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
+		t.Run(test.name+" "+test.url, func(t *testing.T) {
 			w := httptest.NewRecorder()
 			r := httptest.NewRequest("GET", test.url, nil)
 			var sb strings.Builder
@@ -466,6 +466,347 @@ func TestRequest(t *testing.T) {
 					}
 				}
 			})
+		})
+	}
+}
+
+func TestPostRequest(t *testing.T) {
+	tests := []struct {
+		name                string
+		url                 string
+		form                map[string]string
+		createBooks         func(books ...book.Book) ([]book.Book, error)
+		updateBook          func(b book.Book, updateImage bool) error
+		hash                func(password []byte) (hashedPassword []byte, err error)
+		updateAdminPassword func(hashedPassword string) error
+		deleteBook          func(id string) error
+		wantCode            int
+		wantLocation        string
+	}{
+		{
+			name: "bad book",
+			url:  "/book/create",
+			form: map[string]string{
+				"pages": "NaN",
+			},
+			wantCode: 400,
+		},
+		{
+			name: "db error",
+			url:  "/book/create",
+			form: map[string]string{
+				"title":      "t",
+				"author":     "a",
+				"subject":    "s",
+				"pages":      "1",
+				"added-date": "2022-11-13",
+			},
+			createBooks: func(books ...book.Book) ([]book.Book, error) {
+				return nil, fmt.Errorf("db error")
+			},
+			wantCode: 500,
+		},
+		{
+			name: "minimal happy path",
+			url:  "/book/create",
+			form: map[string]string{
+				"title":      "t",
+				"author":     "a",
+				"subject":    "s",
+				"pages":      "1",
+				"added-date": "2022-11-13",
+			},
+			createBooks: func(books ...book.Book) ([]book.Book, error) {
+				want := book.Book{
+					Header: book.Header{
+						Title:   "t",
+						Author:  "a",
+						Subject: "s",
+					},
+					Pages:     1,
+					AddedDate: time.Date(2022, 11, 13, 0, 0, 0, 0, time.UTC),
+				}
+				switch {
+				case len(books) != 1:
+					return nil, fmt.Errorf("wanted 1 book, got %v", len(books))
+				case want != books[0]:
+					return nil, fmt.Errorf("books not equal: \n wanted: %v \n got:    %v", want, books[0])
+				}
+				return []book.Book{{Header: book.Header{ID: "fg34"}}}, nil
+			},
+			wantCode:     303,
+			wantLocation: "/book?id=fg34",
+		},
+		{
+			name: "bad book",
+			url:  "/book/update",
+			form: map[string]string{
+				"id":         "keep_me",
+				"title":      "t",
+				"author":     "a",
+				"subject":    "s",
+				"pages":      "NaN",
+				"added-date": "2022-11-13",
+			},
+			wantCode: 400,
+		},
+		{
+			name: "db error",
+			url:  "/book/update",
+			form: map[string]string{
+				"id":         "keep_me",
+				"title":      "t",
+				"author":     "a",
+				"subject":    "s",
+				"pages":      "1",
+				"added-date": "2022-11-13",
+			},
+			updateBook: func(b book.Book, updateImage bool) error {
+				return fmt.Errorf("db error")
+			},
+			wantCode: 500,
+		},
+		{
+			name: "minimal happy path",
+			url:  "/book/update",
+			form: map[string]string{
+				"id":         "keep_me",
+				"title":      "t",
+				"author":     "a",
+				"subject":    "s",
+				"pages":      "1",
+				"added-date": "2022-11-13",
+			},
+			updateBook: func(b book.Book, updateImage bool) error {
+				want := book.Book{
+					Header: book.Header{
+						ID:      "keep_me",
+						Title:   "t",
+						Author:  "a",
+						Subject: "s",
+					},
+					Pages:     1,
+					AddedDate: time.Date(2022, 11, 13, 0, 0, 0, 0, time.UTC),
+				}
+				switch {
+				case want != b:
+					return fmt.Errorf("books not equal: \n wanted: %v \n got:    %v", want, b)
+				case updateImage:
+					return fmt.Errorf("did not want to update image")
+				}
+				return nil
+			},
+			wantCode:     303,
+			wantLocation: "/book?id=keep_me",
+		},
+		{
+			name: "update image too long",
+			url:  "/book/update",
+			form: map[string]string{
+				"id":           "keep_me",
+				"title":        "t",
+				"author":       "a",
+				"subject":      "s",
+				"pages":        "1",
+				"added-date":   "2022-11-13",
+				"update-image": "123456789+long",
+			},
+			wantCode: 413,
+		},
+		{
+			name: "update image",
+			url:  "/book/update",
+			form: map[string]string{
+				"id":           "keep_me",
+				"title":        "t",
+				"author":       "a",
+				"subject":      "s",
+				"pages":        "1",
+				"added-date":   "2022-11-13",
+				"update-image": "true",
+			},
+			updateBook: func(b book.Book, updateImage bool) error {
+				switch {
+				case !updateImage:
+					return fmt.Errorf("did not want to update image")
+				}
+				return nil
+			},
+			wantCode:     303,
+			wantLocation: "/book?id=keep_me",
+		},
+		{
+			name: "clear image",
+			url:  "/book/update",
+			form: map[string]string{
+				"id":           "keep_me",
+				"title":        "t",
+				"author":       "a",
+				"subject":      "s",
+				"pages":        "1",
+				"added-date":   "2022-11-13",
+				"update-image": "clear",
+			},
+			updateBook: func(b book.Book, updateImage bool) error {
+				switch {
+				case len(b.ImageBase64) != 0:
+					return fmt.Errorf("wanted image to be zeroed")
+				case !updateImage:
+					return fmt.Errorf("did not want to update image")
+				}
+				return nil
+			},
+			wantCode:     303,
+			wantLocation: "/book?id=keep_me",
+		},
+		{
+			name: "long id",
+			url:  "/book/delete",
+			form: map[string]string{
+				"id": "long+abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890",
+			},
+			deleteBook: func(id string) error {
+				return fmt.Errorf("db error)")
+			},
+			wantCode: 413,
+		},
+		{
+			name: "db error",
+			url:  "/book/delete",
+			form: map[string]string{
+				"id": "x123",
+			},
+			deleteBook: func(id string) error {
+				return fmt.Errorf("db error)")
+			},
+			wantCode: 500,
+		},
+		{
+			name: "happy path",
+			url:  "/book/delete",
+			form: map[string]string{
+				"id": "x123",
+			},
+			deleteBook: func(id string) error {
+				if id != "x123" {
+					return fmt.Errorf("unwanted id: %q", id)
+				}
+				return nil
+			},
+			wantCode:     303,
+			wantLocation: "/",
+		},
+		{
+			name: "too long",
+			url:  "/admin/update",
+			form: map[string]string{
+				"p1": "TOO_LONG_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890",
+			},
+			wantCode: 413,
+		},
+		{
+			name: "not equal",
+			url:  "/admin/update",
+			form: map[string]string{
+				"p1": "bilbo123",
+				"p2": "Bilbo123",
+			},
+			wantCode: 400,
+		},
+		{
+			name: "too short",
+			url:  "/admin/update",
+			form: map[string]string{
+				"p1": "bilbo",
+				"p2": "bilbo",
+			},
+			wantCode: 400,
+		},
+		{
+			name: "hash error",
+			url:  "/admin/update",
+			form: map[string]string{
+				"p1": "bilbo123",
+				"p2": "bilbo123",
+			},
+			hash: func(password []byte) (hashedPassword []byte, err error) {
+				return nil, fmt.Errorf("hash error")
+			},
+			wantCode: 500,
+		},
+		{
+			name: "db error",
+			url:  "/admin/update",
+			form: map[string]string{
+				"p1": "bilbo123",
+				"p2": "bilbo123",
+			},
+			hash: func(password []byte) (hashedPassword []byte, err error) {
+				return []byte("X47"), nil
+			},
+			updateAdminPassword: func(hashedPassword string) error {
+				return fmt.Errorf("db error")
+			},
+			wantCode: 500,
+		},
+		{
+			name: "happy path",
+			url:  "/admin/update",
+			form: map[string]string{
+				"p1": "bilbo123",
+				"p2": "bilbo123",
+			},
+			hash: func(password []byte) (hashedPassword []byte, err error) {
+				if string(password) != "bilbo123" {
+					return nil, fmt.Errorf("unwanted password: %s", password)
+				}
+				return []byte("X47"), nil
+			},
+			updateAdminPassword: func(hashedPassword string) error {
+				if hashedPassword != "X47" {
+					return fmt.Errorf("unwanted hashedPassword: %v", hashedPassword)
+				}
+				return nil
+			},
+			wantCode:     303,
+			wantLocation: "/",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name+" "+test.url, func(t *testing.T) {
+			test.form["p"] = "v4lid_P"
+			s := Server{
+				Config: Config{
+					PostMaxBurst: 1,
+				},
+				db: mockDatabase{
+					createBooksFunc:         test.createBooks,
+					updateBookFunc:          test.updateBook,
+					deleteBookFunc:          test.deleteBook,
+					updateAdminPasswordFunc: test.updateAdminPassword,
+					readAdminPasswordFunc: func() (hashedPassword []byte, err error) {
+						return []byte("H#shed+P"), nil
+					},
+				},
+				ph: mockPasswordHandler{
+					hashFunc: test.hash,
+					isCorrectPasswordFunc: func(hashedPassword, password []byte) (ok bool, err error) {
+						return string(hashedPassword) == "H#shed+P" && string(password) == "v4lid_P", nil
+					},
+				},
+			}
+			w := httptest.NewRecorder()
+			r := multipartFormHelper(t, test.url, test.form)
+			h := s.mux()
+			h.ServeHTTP(w, r)
+			switch {
+			case test.wantCode != w.Code:
+				t.Errorf("codes not equal: wanted %v, got %v", test.wantCode, w.Code)
+			case test.wantCode == 303:
+				if want, got := test.wantLocation, w.Header().Get("Location"); want != got {
+					t.Errorf("unwanted redirect location: \n wanted: %q \n got: %q", want, got)
+				}
+			}
 		})
 	}
 }
@@ -536,7 +877,7 @@ func TestBookFrom(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			w := httptest.NewRecorder()
-			r := multipartFormHelper(t, test.form)
+			r := multipartFormHelper(t, "/", test.form)
 			got, err := bookFrom(w, r)
 			switch {
 			case !test.wantOk:
@@ -552,379 +893,18 @@ func TestBookFrom(t *testing.T) {
 	}
 }
 
-func multipartFormHelper(t *testing.T, form map[string]string) *http.Request {
+func multipartFormHelper(t *testing.T, target string, form map[string]string) *http.Request {
 	t.Helper()
 	var sb strings.Builder
 	mpw := multipart.NewWriter(&sb)
 	mpw.Close()
-	r := httptest.NewRequest("POST", "/", strings.NewReader(sb.String()))
+	r := httptest.NewRequest("POST", target, strings.NewReader(sb.String()))
 	r.Form = make(url.Values, len(form))
 	for k, v := range form {
 		r.Form.Set(k, v)
 	}
 	r.Header.Set("Content-Type", mpw.FormDataContentType())
 	return r
-}
-
-func TestPostBook(t *testing.T) {
-	tests := []struct {
-		name         string
-		form         map[string]string
-		createBooks  func(books ...book.Book) ([]book.Book, error)
-		wantCode     int
-		wantLocation string
-	}{
-		{
-			name: "bad book",
-			form: map[string]string{
-				"pages": "NaN",
-			},
-			wantCode: 400,
-		},
-		{
-			name: "db error",
-			form: map[string]string{
-				"title":      "t",
-				"author":     "a",
-				"subject":    "s",
-				"pages":      "1",
-				"added-date": "2022-11-13",
-			},
-			createBooks: func(books ...book.Book) ([]book.Book, error) {
-				return nil, fmt.Errorf("db error")
-			},
-			wantCode: 500,
-		},
-		{
-			name: "minimal happy path",
-			form: map[string]string{
-				"title":      "t",
-				"author":     "a",
-				"subject":    "s",
-				"pages":      "1",
-				"added-date": "2022-11-13",
-			},
-			createBooks: func(books ...book.Book) ([]book.Book, error) {
-				want := book.Book{
-					Header: book.Header{
-						Title:   "t",
-						Author:  "a",
-						Subject: "s",
-					},
-					Pages:     1,
-					AddedDate: time.Date(2022, 11, 13, 0, 0, 0, 0, time.UTC),
-				}
-				switch {
-				case len(books) != 1:
-					return nil, fmt.Errorf("wanted 1 book, got %v", len(books))
-				case want != books[0]:
-					return nil, fmt.Errorf("books not equal: \n wanted: %v \n got:    %v", want, books[0])
-				}
-				return []book.Book{{Header: book.Header{ID: "fg34"}}}, nil
-			},
-			wantCode:     303,
-			wantLocation: "/book?id=fg34",
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			s := Server{
-				db: mockDatabase{
-					createBooksFunc: test.createBooks,
-				},
-			}
-			w := httptest.NewRecorder()
-			r := multipartFormHelper(t, test.form)
-			s.postBook(w, r)
-			switch {
-			case test.wantCode != w.Code:
-				t.Errorf("codes not equal: wanted %v, got %v", test.wantCode, w.Code)
-			case test.wantCode == 303:
-				if want, got := test.wantLocation, w.Header().Get("Location"); want != got {
-					t.Errorf("unwanted redirect location: \n wanted: %q \n got: %q", want, got)
-				}
-			}
-		})
-	}
-}
-
-func TestPutBook(t *testing.T) {
-	tests := []struct {
-		name          string
-		formOverrides map[string]string
-		updateBook    func(b book.Book, updateImage bool) error
-		wantCode      int
-		wantLoc       string
-	}{
-		{
-			name: "bad book",
-			formOverrides: map[string]string{
-				"pages": "NaN",
-			},
-			wantCode: 400,
-		},
-		{
-			name: "db error",
-			updateBook: func(b book.Book, updateImage bool) error {
-				return fmt.Errorf("db error")
-			},
-			wantCode: 500,
-		},
-		{
-			name: "minimal happy path",
-			updateBook: func(b book.Book, updateImage bool) error {
-				want := book.Book{
-					Header: book.Header{
-						ID:      "keep_me",
-						Title:   "t",
-						Author:  "a",
-						Subject: "s",
-					},
-					Pages:     1,
-					AddedDate: time.Date(2022, 11, 13, 0, 0, 0, 0, time.UTC),
-				}
-				switch {
-				case want != b:
-					return fmt.Errorf("books not equal: \n wanted: %v \n got:    %v", want, b)
-				case updateImage:
-					return fmt.Errorf("did not want to update image")
-				}
-				return nil
-			},
-			wantCode: 303,
-			wantLoc:  "/book?id=keep_me",
-		},
-		{
-			name: "update image too long",
-			formOverrides: map[string]string{
-				"update-image": "123456789+long",
-			},
-			wantCode: 413,
-		},
-		{
-			name: "update image",
-			formOverrides: map[string]string{
-				"update-image": "true",
-			},
-			updateBook: func(b book.Book, updateImage bool) error {
-				switch {
-				case !updateImage:
-					return fmt.Errorf("did not want to update image")
-				}
-				return nil
-			},
-			wantCode: 303,
-			wantLoc:  "/book?id=keep_me",
-		},
-		{
-			name: "clear image",
-			formOverrides: map[string]string{
-				"update-image": "clear",
-			},
-			updateBook: func(b book.Book, updateImage bool) error {
-				switch {
-				case len(b.ImageBase64) != 0:
-					return fmt.Errorf("wanted image to be zeroed")
-				case !updateImage:
-					return fmt.Errorf("did not want to update image")
-				}
-				return nil
-			},
-			wantCode: 303,
-			wantLoc:  "/book?id=keep_me",
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			form := map[string]string{
-				"id":         "keep_me",
-				"title":      "t",
-				"author":     "a",
-				"subject":    "s",
-				"pages":      "1",
-				"added-date": "2022-11-13",
-			}
-			for k, v := range test.formOverrides {
-				form[k] = v
-			}
-			s := Server{
-				db: mockDatabase{
-					updateBookFunc: test.updateBook,
-				},
-			}
-			w := httptest.NewRecorder()
-			r := multipartFormHelper(t, form)
-			s.putBook(w, r)
-			switch {
-			case test.wantCode != w.Code:
-				t.Errorf("codes not equal: wanted %v, got %v", test.wantCode, w.Code)
-			case test.wantCode == 303:
-				if want, got := test.wantLoc, w.Header().Get("Location"); want != got {
-					t.Errorf("unwanted redirect location: \n wanted: %q \n got: %q", want, got)
-				}
-			}
-		})
-	}
-}
-
-func TestDeleteBook(t *testing.T) {
-	tests := []struct {
-		name       string
-		id         string
-		deleteBook func(id string) error
-		wantCode   int
-	}{
-		{
-			name: "long id",
-			id:   "long+abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890",
-			deleteBook: func(id string) error {
-				return fmt.Errorf("db error)")
-			},
-			wantCode: 413,
-		},
-		{
-			name: "db error",
-			id:   "x123",
-			deleteBook: func(id string) error {
-				return fmt.Errorf("db error)")
-			},
-			wantCode: 500,
-		},
-		{
-			name: "happy path",
-			id:   "x123",
-			deleteBook: func(id string) error {
-				if id != "x123" {
-					return fmt.Errorf("unwanted id: %q", id)
-				}
-				return nil
-			},
-			wantCode: 303,
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			s := Server{
-				db: mockDatabase{
-					deleteBookFunc: test.deleteBook,
-				},
-			}
-			w := httptest.NewRecorder()
-			r := httptest.NewRequest("post", "/book?id="+test.id, nil)
-			s.deleteBook(w, r)
-			switch {
-			case test.wantCode != w.Code:
-				t.Errorf("codes not equal: wanted %v, got %v", test.wantCode, w.Code)
-			case test.wantCode == 303:
-				if w.Header().Get("Location") != "/" {
-					t.Errorf("wanted redirection to root")
-				}
-			}
-		})
-	}
-}
-
-func TestPutAdminPassword(t *testing.T) {
-	tests := []struct {
-		name                string
-		form                url.Values
-		hash                func(password []byte) (hashedPassword []byte, err error)
-		updateAdminPassword func(hashedPassword string) error
-		wantCode            int
-	}{
-		{
-			name: "too long",
-			form: url.Values{
-				"p1": {"TOO_LONG_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"},
-			},
-			wantCode: 413,
-		},
-		{
-			name: "not equal",
-			form: url.Values{
-				"p1": {"bilbo123"},
-				"p2": {"Bilbo123"},
-			},
-			wantCode: 400,
-		},
-		{
-			name: "too short",
-			form: url.Values{
-				"p1": {"bilbo"},
-				"p2": {"bilbo"},
-			},
-			wantCode: 400,
-		},
-		{
-			name: "hash error",
-			form: url.Values{
-				"p1": {"bilbo123"},
-				"p2": {"bilbo123"},
-			},
-			hash: func(password []byte) (hashedPassword []byte, err error) {
-				return nil, fmt.Errorf("hash error")
-			},
-			wantCode: 500,
-		},
-		{
-			name: "db error",
-			form: url.Values{
-				"p1": {"bilbo123"},
-				"p2": {"bilbo123"},
-			},
-			hash: func(password []byte) (hashedPassword []byte, err error) {
-				return []byte("X47"), nil
-			},
-			updateAdminPassword: func(hashedPassword string) error {
-				return fmt.Errorf("db error")
-			},
-			wantCode: 500,
-		},
-		{
-			name: "happy path",
-			form: url.Values{
-				"p1": {"bilbo123"},
-				"p2": {"bilbo123"},
-			},
-			hash: func(password []byte) (hashedPassword []byte, err error) {
-				if string(password) != "bilbo123" {
-					return nil, fmt.Errorf("unwanted password: %s", password)
-				}
-				return []byte("X47"), nil
-			},
-			updateAdminPassword: func(hashedPassword string) error {
-				if hashedPassword != "X47" {
-					return fmt.Errorf("unwanted hashedPassword: %v", hashedPassword)
-				}
-				return nil
-			},
-			wantCode: 303,
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			s := Server{
-				ph: mockPasswordHandler{
-					hashFunc: test.hash,
-				},
-				db: mockDatabase{
-					updateAdminPasswordFunc: test.updateAdminPassword,
-				},
-			}
-			w := httptest.NewRecorder()
-			r := httptest.NewRequest("post", "/book?id=x123", nil)
-			r.Form = test.form
-			s.putAdminPassword(w, r)
-			switch {
-			case test.wantCode != w.Code:
-				t.Errorf("codes not equal: wanted %v, got %v", test.wantCode, w.Code)
-			case test.wantCode == 303:
-				if w.Header().Get("Location") != "/" {
-					t.Errorf("wanted redirection to root")
-				}
-			}
-		})
-	}
 }
 
 func TestWithAdminPassword(t *testing.T) {
