@@ -125,7 +125,7 @@ func (d *Database) CreateBooks(books ...book.Book) ([]book.Book, error) {
 			return err
 		}
 		for i, id := range ids.InsertedIDs {
-			objID, err := d.objectIDFrom(id)
+			objID, err := d.objectIDCast(id)
 			if err != nil {
 				return err
 			}
@@ -209,10 +209,11 @@ func (d *Database) ReadBookHeaders(f book.Filter, limit, offset int) ([]book.Hea
 }
 
 func (d *Database) ReadBook(id string) (*book.Book, error) {
-	filter, err := d.objectID(id)
+	objID, err := d.objectIDFromString(id)
 	if err != nil {
 		return nil, err
 	}
+	filter := d.d(d.e(bookIDField, objID))
 	coll := d.booksCollection()
 	opts := options.FindOne()
 	var m mBook
@@ -230,7 +231,11 @@ func (d *Database) ReadBook(id string) (*book.Book, error) {
 }
 
 func (d *Database) UpdateBook(b book.Book, updateImage bool) error {
-	filter, err := d.objectID(b.ID)
+	objID, err := d.objectIDFromString(b.ID)
+	if err != nil {
+		return err
+	}
+	filter := d.d(d.e(bookIDField, objID))
 	if err != nil {
 		return err
 	}
@@ -266,10 +271,11 @@ func (d *Database) UpdateBook(b book.Book, updateImage bool) error {
 }
 
 func (d *Database) DeleteBook(id string) error {
-	filter, err := d.objectID(id)
+	objID, err := d.objectIDFromString(id)
 	if err != nil {
 		return err
 	}
+	filter := d.d(d.e(bookIDField, objID))
 	opts := options.Delete()
 	coll := d.booksCollection()
 	if err := d.withTimeoutContext(func(ctx context.Context) error {

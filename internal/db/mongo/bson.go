@@ -23,15 +23,15 @@ func (Database) a(d ...interface{}) bson.A {
 	return bson.A(d)
 }
 
-func (d Database) objectID(id string) (bson.D, error) {
+func (d Database) objectIDFromString(id string) (*primitive.ObjectID, error) {
 	objID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
 		return nil, fmt.Errorf("invalid object id: %w", err)
 	}
-	return d.d(d.e(bookIDField, objID)), nil
+	return &objID, nil
 }
 
-func (d Database) objectIDFrom(id interface{}) (*primitive.ObjectID, error) {
+func (d Database) objectIDCast(id interface{}) (*primitive.ObjectID, error) {
 	objID, ok := id.(primitive.ObjectID)
 	if !ok {
 		return nil, fmt.Errorf("%v (%T) is not a valid ObjectID", id, id)
