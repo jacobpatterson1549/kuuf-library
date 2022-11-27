@@ -2,7 +2,6 @@
 package server
 
 import (
-	"bufio"
 	"compress/gzip"
 	"embed"
 	"encoding/base64"
@@ -26,6 +25,8 @@ import (
 )
 
 var (
+	//go:embed resources/favicon.svg
+	faviconSVG string
 	//go:embed resources/*
 	embedFS     embed.FS
 	staticFS, _ = fs.Sub(embedFS, "resources")
@@ -79,14 +80,11 @@ func (cfg Config) NewServer(out io.Writer) (*Server, error) {
 	if err != nil {
 		return nil, fmt.Errorf("creating database: %W", err)
 	}
-	favicon, err := faviconBase64()
-	if err != nil {
-		return nil, fmt.Errorf("loading favicon: %w", err)
-	}
+	favicon := faviconBase64()
 	ph := bcrypt.NewPasswordHandler()
 	s := Server{
 		Config:  cfg,
-		favicon: string(favicon),
+		favicon: favicon,
 		db:      db,
 		ph:      ph,
 		out:     out,
@@ -418,19 +416,13 @@ func (s *Server) serveTemplate(w http.ResponseWriter, name string, data interfac
 	}
 }
 
-func faviconBase64() ([]byte, error) {
-	f, err := staticFS.Open("favicon.svg")
-	if err != nil {
-		return nil, err
-	}
-	br := bufio.NewReader(f)
+func faviconBase64() string {
+	r := strings.NewReader(faviconSVG)
 	var sb strings.Builder
 	enc := base64.NewEncoder(base64.StdEncoding, &sb)
-	if _, err := br.WriteTo(enc); err != nil {
-		return nil, err
-	}
+	r.WriteTo(enc)
 	enc.Close()
-	return []byte(sb.String()), nil
+	return sb.String()
 }
 
 func withRateLimiter(h http.HandlerFunc, lim *rate.Limiter) http.HandlerFunc {
