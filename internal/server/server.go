@@ -75,21 +75,7 @@ type (
 )
 
 func (cfg Config) NewServer(out io.Writer) (*Server, error) {
-	url, err := url.Parse(cfg.DatabaseURL)
-	if err != nil {
-		return nil, fmt.Errorf("parsing database url: %w", err)
-	}
-	var db Database
-	switch s := url.Scheme; s {
-	case "csv":
-		db, err = csv.NewDatabase()
-	case "mongodb+srv":
-		db, err = mongo.NewDatabase(url.String(), cfg.queryTimeout())
-	case postgres.DriverName:
-		db, err = postgres.NewDatabase(url.String(), cfg.queryTimeout())
-	default:
-		err = fmt.Errorf("unknown database: %q", s)
-	}
+	db, err := cfg.createDatabase()
 	if err != nil {
 		return nil, fmt.Errorf("creating database: %W", err)
 	}
@@ -117,6 +103,23 @@ func (s *Server) Run() error {
 	fmt.Fprintln(s.out, "Serving resume site at at http://localhost:"+s.Port)
 	fmt.Fprintln(s.out, "Press Ctrl-C to stop")
 	return http.ListenAndServe(":"+s.Port, s.mux())
+}
+
+func (cfg Config) createDatabase() (Database, error) {
+	url, err := url.Parse(cfg.DatabaseURL)
+	if err != nil {
+		return nil, fmt.Errorf("parsing database url: %w", err)
+	}
+	switch s := url.Scheme; s {
+	case "csv":
+		return csv.NewDatabase()
+	case "mongodb+srv":
+		return mongo.NewDatabase(url.String(), cfg.queryTimeout())
+	case postgres.DriverName:
+		return postgres.NewDatabase(url.String(), cfg.queryTimeout())
+	default:
+		return nil, fmt.Errorf("unknown database: %q", s)
+	}
 }
 
 func (cfg Config) queryTimeout() time.Duration {
