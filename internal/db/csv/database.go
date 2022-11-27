@@ -2,7 +2,6 @@
 package csv
 
 import (
-	"bytes"
 	_ "embed"
 	"encoding/csv"
 	"fmt"
@@ -14,7 +13,7 @@ import (
 )
 
 //go:embed library.csv
-var libraryCSV []byte
+var libraryCSV string
 
 type Database struct {
 	Books []book.Book
@@ -26,7 +25,7 @@ const dateLayout = book.SlashMMDDYYYY
 var headerRecord = strings.Split(header, ",")
 
 func NewDatabase() (*Database, error) {
-	r := csv.NewReader(bytes.NewReader(libraryCSV))
+	r := csv.NewReader(strings.NewReader(libraryCSV))
 	records, err := r.ReadAll()
 	if err != nil {
 		return nil, fmt.Errorf("reading library csv: %v", err)

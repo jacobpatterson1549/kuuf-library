@@ -1,13 +1,12 @@
 package server
 
 import (
-	"bytes"
 	"encoding/base64"
 	"encoding/hex"
 	"image"
 	"image/jpeg"
 	"image/png"
-	"io"
+	"strings"
 	"testing"
 )
 
@@ -46,62 +45,62 @@ func TestReadImage(t *testing.T) {
 	tests := []struct {
 		name        string
 		contentType string
-		genImage    func() io.Reader
+		genImage    func() string
 		wantOk      bool
 	}{
 		{
 			name:        "jpg",
 			contentType: "image/jpeg",
-			genImage: func() io.Reader {
-				var buf bytes.Buffer
+			genImage: func() string {
+				var sb strings.Builder
 				img := image.NewGray(onePxRect)
-				jpeg.Encode(&buf, img, nil)
-				return &buf
+				jpeg.Encode(&sb, img, nil)
+				return sb.String()
 			},
 			wantOk: true,
 		},
 		{
 			name:        "png",
 			contentType: "image/png",
-			genImage: func() io.Reader {
-				var buf bytes.Buffer
+			genImage: func() string {
+				var sb strings.Builder
 				img := image.NewGray(onePxRect)
-				png.Encode(&buf, img)
-				return &buf
+				png.Encode(&sb, img)
+				return sb.String()
 			},
 			wantOk: true,
 		},
 		{
 			name:        "jpg passed as png",
 			contentType: "image/png",
-			genImage: func() io.Reader {
-				var buf bytes.Buffer
+			genImage: func() string {
+				var sb strings.Builder
 				img := image.NewGray(onePxRect)
-				jpeg.Encode(&buf, img, nil)
-				return &buf
+				jpeg.Encode(&sb, img, nil)
+				return sb.String()
 			},
 		},
 		{
 			name:        "webp",
 			contentType: "image/webp",
-			genImage: func() io.Reader {
+			genImage: func() string {
 				b, _ := hex.DecodeString(webp1pxHex)
-				return bytes.NewReader(b)
+				return string(b)
 			},
 			wantOk: true,
 		},
 		{
 			name:        "pbm",
 			contentType: "image/pbm",
-			genImage: func() io.Reader {
-				b := []byte("P1 \n 1 1 \n 0")
-				return bytes.NewReader(b)
+			genImage: func() string {
+				return "P1 \n 1 1 \n 0"
 			},
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			r := test.genImage()
+			s := test.genImage()
+			r := strings.NewReader(s)
 			_, err := readImage(r, test.contentType)
 			switch {
 			case !test.wantOk:

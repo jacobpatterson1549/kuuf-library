@@ -1,7 +1,6 @@
 package server
 
 import (
-	"bytes"
 	"compress/gzip"
 	"fmt"
 	"io"
@@ -103,7 +102,7 @@ func TestMux(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			var sb bytes.Buffer
+			var sb strings.Builder
 			s.out = &sb
 			r := httptest.NewRequest(test.method, test.url, nil)
 			w := httptest.NewRecorder()
