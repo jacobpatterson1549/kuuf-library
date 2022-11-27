@@ -100,8 +100,9 @@ func (s *Server) Run() error {
 	if err := s.Config.setup(s.db, s.ph, s.out); err != nil {
 		return fmt.Errorf("setting up server: %w", err)
 	}
-	fmt.Fprintln(s.out, "Serving resume site at at http://localhost:"+s.Port)
-	fmt.Fprintln(s.out, "Press Ctrl-C to stop")
+	fmt.Fprintf(s.out, "Using database: %T.\n", s.db)
+	fmt.Fprintf(s.out, "Serving library at at http://localhost:%v\n", s.Port)
+	fmt.Fprintf(s.out, "Press Ctrl-C to stop.\n")
 	return http.ListenAndServe(":"+s.Port, s.mux())
 }
 
