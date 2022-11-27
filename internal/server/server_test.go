@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/jacobpatterson1549/kuuf-library/internal/book"
-	"github.com/jacobpatterson1549/kuuf-library/internal/db/csv"
 	"golang.org/x/time/rate"
 )
 
@@ -1093,7 +1092,16 @@ func TestSetupBackfillCSV(t *testing.T) {
 		},
 		{
 			name: "csv db", // should not support createBooks
-			db:   &csv.Database{},
+			db: func() Database {
+				cfg := Config{
+					DatabaseURL: "csv://",
+				}
+				s, err := cfg.NewServer(nil)
+				if err != nil {
+					t.Errorf("creating server with csv database: %v", err)
+				}
+				return s.db
+			}(),
 		},
 		{
 			name: "happy path",
