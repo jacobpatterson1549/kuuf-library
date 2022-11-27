@@ -1,5 +1,10 @@
 # kuuf-library
 
+
+[![Docker Image CI](https://github.com/jacobpatterson1549/kuuf-library/actions/workflows/docker-image.yml/badge.svg)](https://github.com/jacobpatterson1549/kuuf-library/actions/workflows/docker-image.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/jacobpatterson1549/kuuf-library)](https://goreportcard.com/report/github.com/jacobpatterson1549/kuuf-library)
+[![GoDoc](https://godoc.org/github.com/jacobpatterson1549/kuuf-library?status.svg)](https://godoc.org/github.com/jacobpatterson1549/kuuf-library)
+
 A site to display books.
 
 ## about
