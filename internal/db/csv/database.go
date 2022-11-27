@@ -2,7 +2,6 @@
 package csv
 
 import (
-	_ "embed"
 	"encoding/csv"
 	"fmt"
 	"io"
@@ -11,9 +10,6 @@ import (
 
 	"github.com/jacobpatterson1549/kuuf-library/internal/book"
 )
-
-//go:embed library.csv
-var libraryCSV string
 
 type Database struct {
 	Books []book.Book
@@ -24,17 +20,25 @@ const dateLayout = book.SlashMMDDYYYY
 
 var headerRecord = strings.Split(header, ",")
 
-func NewDatabase() (*Database, error) {
-	r := csv.NewReader(strings.NewReader(libraryCSV))
-	records, err := r.ReadAll()
+func NewDatabase(r io.Reader) (*Database, error) {
+	csvR := csv.NewReader(r)
+	records, err := csvR.ReadAll()
 	if err != nil {
 		return nil, fmt.Errorf("reading library csv: %v", err)
 	}
-	wantHeader := header + "\n"
-	if len(records) == 0 || len(libraryCSV) < len(wantHeader) || string(libraryCSV[:len(wantHeader)]) != wantHeader {
-		return nil, fmt.Errorf("invalid header row")
+	if len(records) != 0 {
+		wantHeader := headerRecord
+		gotHeader := records[0]
+		if len(wantHeader) != len(gotHeader) {
+			return nil, fmt.Errorf("header too short/long: wanted %q", header)
+		}
+		for i := range wantHeader {
+			if want, got := wantHeader[i], gotHeader[i]; want != got {
+				return nil, fmt.Errorf("header column %v: wanted %q, got %q", i, want, got)
+			}
+		}
+		records = records[1:] // skip header row
 	}
-	records = records[1:] // skip header row
 	d := Database{
 		Books: make([]book.Book, len(records)),
 	}

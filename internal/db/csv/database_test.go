@@ -20,8 +20,13 @@ func TestNewDatabase(t *testing.T) {
 		want   *Database
 	}{
 		{
+			name:   "empty csv",
+			wantOk: true,
+			want:   &Database{Books: []book.Book{}},
+		},
+		{
 			name:   "default library.csv (no books)",
-			csv:    libraryCSV,
+			csv:    header,
 			wantOk: true,
 			want:   &Database{Books: []book.Book{}},
 		},
@@ -32,6 +37,18 @@ func TestNewDatabase(t *testing.T) {
 		{
 			name: "bad header row (too few columns)",
 			csv:  "bad header row",
+		},
+		{
+			name: "bad header (invalid column name)",
+			csv: func() string {
+				b := []byte(header)
+				i := 10
+				for b[i] == ',' || b[i] == 'X' {
+					i++
+				}
+				b[i] = 'X'
+				return string(b)
+			}(),
 		},
 		{
 			name: "bad book (header is invalid book)",
@@ -46,8 +63,8 @@ func TestNewDatabase(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			libraryCSV = test.csv
-			got, err := NewDatabase()
+			r := strings.NewReader(test.csv)
+			got, err := NewDatabase(r)
 			switch {
 			case !test.wantOk:
 				if err == nil {

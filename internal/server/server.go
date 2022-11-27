@@ -26,6 +26,8 @@ import (
 var (
 	//go:embed resources/favicon.svg
 	faviconSVG string
+	//go:embed resources/library.csv
+	libraryCSV string
 	//go:embed resources/*
 	embedFS     embed.FS
 	staticFS, _ = fs.Sub(embedFS, "resources")
@@ -110,7 +112,7 @@ func (cfg Config) createDatabase() (Database, error) {
 	}
 	switch s := url.Scheme; s {
 	case "csv":
-		return csv.NewDatabase()
+		return embeddedCSVDatabase()
 	case "mongodb+srv":
 		return mongo.NewDatabase(url.String(), cfg.queryTimeout())
 	case postgres.DriverName:
@@ -118,6 +120,11 @@ func (cfg Config) createDatabase() (Database, error) {
 	default:
 		return nil, fmt.Errorf("unknown database: %q", s)
 	}
+}
+
+func embeddedCSVDatabase() (*csv.Database, error) {
+	r := strings.NewReader(libraryCSV)
+	return csv.NewDatabase(r)
 }
 
 func (cfg Config) queryTimeout() time.Duration {
@@ -158,7 +165,7 @@ func (cfg Config) initAdminPassword(db Database, ph PasswordHandler) error {
 }
 
 func (cfg Config) backfillCSV(db Database) error {
-	src, err := csv.NewDatabase()
+	src, err := embeddedCSVDatabase()
 	if err != nil {
 		return fmt.Errorf("loading csv database: %w", err)
 	}

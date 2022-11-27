@@ -71,6 +71,16 @@ func TestNewServer(t *testing.T) {
 	}
 }
 
+func TestEmbeddedCSVDatabase(t *testing.T) {
+	db, err := embeddedCSVDatabase()
+	switch {
+	case err != nil:
+		t.Errorf("unwanted error: %v", err)
+	case len(db.Books) != 0:
+		t.Errorf("wanted no books in saved library, got %v [Disable this test when backfilling books]", len(db.Books))
+	}
+}
+
 func TestQueryTimeout(t *testing.T) {
 	cfg := Config{
 		DBTimeoutSec: 105,
@@ -1088,9 +1098,10 @@ func TestSetupAdminPassword(t *testing.T) {
 
 func TestSetupBackfillCSV(t *testing.T) {
 	tests := []struct {
-		name   string
-		db     Database
-		wantOk bool
+		name       string
+		libraryCSV string
+		db         Database
+		wantOk     bool
 	}{
 		{
 			name: "db error",
@@ -1101,17 +1112,8 @@ func TestSetupBackfillCSV(t *testing.T) {
 			},
 		},
 		{
-			name: "csv db", // should not support createBooks
-			db: func() Database {
-				cfg := Config{
-					DatabaseURL: "csv://",
-				}
-				s, err := cfg.NewServer(nil)
-				if err != nil {
-					t.Errorf("creating server with csv database: %v", err)
-				}
-				return s.db
-			}(),
+			name:       "invalid csv db",
+			libraryCSV: "INVALID,CSV",
 		},
 		{
 			name: "happy path",
@@ -1128,6 +1130,7 @@ func TestSetupBackfillCSV(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			libraryCSV = test.libraryCSV
 			cfg := Config{
 				BackfillCSV: true,
 			}

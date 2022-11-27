@@ -44,7 +44,7 @@ Stop the application by running `docker-compose down` in a separate terminal.
 This can also be accomplished by pressing `Ctrl-C` in both terminals.
 
 The database can be initialized with the `CSV_BACKFILL=true` environment variable.
-Edit [internal/db/csv/library.csv](internal/db/csv/library.csv), with one row for each book.
+Edit [internal/server/resources/library.csv](internal/server/resources/library.csv), with one row for each book.
 The application may need to be rebuilt by Docker: `docker-compose up web`.
 
 ### localhost
