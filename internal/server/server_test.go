@@ -71,6 +71,17 @@ func TestNewServer(t *testing.T) {
 	}
 }
 
+func TestQueryTimeout(t *testing.T) {
+	cfg := Config{
+		DBTimeoutSec: 105,
+	}
+	want := 105 * time.Second
+	got := cfg.queryTimeout()
+	if want != got {
+		t.Errorf("not equal: \n wanted: %v \n got:    %v", want, got)
+	}
+}
+
 func TestMux(t *testing.T) {
 	s := Server{
 		db: mockDatabase{
