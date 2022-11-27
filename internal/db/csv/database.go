@@ -7,7 +7,6 @@ import (
 	"encoding/csv"
 	"fmt"
 	"io"
-	"log"
 	"strconv"
 	"strings"
 
@@ -30,7 +29,7 @@ func NewDatabase() (*Database, error) {
 	r := csv.NewReader(bytes.NewReader(libraryCSV))
 	records, err := r.ReadAll()
 	if err != nil {
-		log.Fatalf("reading library csv: %v", err)
+		return nil, fmt.Errorf("reading library csv: %v", err)
 	}
 	wantHeader := header + "\n"
 	if len(records) == 0 || len(libraryCSV) < len(wantHeader) || string(libraryCSV[:len(wantHeader)]) != wantHeader {
