@@ -59,13 +59,13 @@ func TestNewServer(t *testing.T) {
 			case err != nil:
 				t.Errorf("unwanted error: %v", err)
 			case got.Config != test.cfg:
-				t.Errorf("configs not equal: \n wanted: %v \n got:     %v", got.Config, test.cfg)
+				t.Errorf("configs not equal: \n wanted: %v \n got:    %v", got.Config, test.cfg)
 			case got.db == nil:
 				t.Errorf("database not set")
 			case got.ph == nil:
 				t.Errorf("password handler not set")
 			case got.out != &sb:
-				t.Errorf("output writers not equal: \n wanted: %v \n got:     %v", got.out, &sb)
+				t.Errorf("output writers not equal: \n wanted: %v \n got:    %v", got.out, &sb)
 			}
 		})
 	}
