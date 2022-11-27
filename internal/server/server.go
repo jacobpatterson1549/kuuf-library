@@ -4,7 +4,6 @@ package server
 import (
 	"compress/gzip"
 	"embed"
-	"encoding/base64"
 	"fmt"
 	"html"
 	"io"
@@ -414,15 +413,6 @@ func (s *Server) serveTemplate(w http.ResponseWriter, name string, data interfac
 	if err := tmpl.Execute(w, p); err != nil {
 		fmt.Fprintln(s.out, err)
 	}
-}
-
-func faviconBase64() string {
-	r := strings.NewReader(faviconSVG)
-	var sb strings.Builder
-	enc := base64.NewEncoder(base64.StdEncoding, &sb)
-	r.WriteTo(enc)
-	enc.Close()
-	return sb.String()
 }
 
 func withRateLimiter(h http.HandlerFunc, lim *rate.Limiter) http.HandlerFunc {

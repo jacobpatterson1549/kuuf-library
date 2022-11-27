@@ -16,6 +16,15 @@ import (
 	"golang.org/x/image/webp"
 )
 
+func faviconBase64() string {
+	r := strings.NewReader(faviconSVG)
+	var sb strings.Builder
+	enc := base64.NewEncoder(base64.StdEncoding, &sb)
+	r.WriteTo(enc)
+	enc.Close()
+	return sb.String()
+}
+
 const maxImageWidth, maxImageHeight = 256, 256
 
 func parseImage(r *http.Request) (imageBase64 []byte, err error) {
