@@ -27,6 +27,7 @@ func TestMBook(t *testing.T) {
 		AddedDate:     dateAD,
 		EAN_ISBN13:    "11",
 		UPC_ISBN10:    "12",
+		ImageBase64:   "13",
 	}
 	b := book.Book{
 		Header: book.Header{
@@ -43,6 +44,7 @@ func TestMBook(t *testing.T) {
 		AddedDate:     dateAD,
 		EAN_ISBN13:    "11",
 		UPC_ISBN10:    "12",
+		ImageBase64:   "13",
 	}
 	t.Run("mBook.Book()", func(t *testing.T) {
 		if want, got := b, m.Book(); want != got {
