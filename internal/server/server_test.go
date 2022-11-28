@@ -11,6 +11,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"text/template"
 	"time"
 
 	"github.com/jacobpatterson1549/kuuf-library/internal/book"
@@ -1283,4 +1284,19 @@ func TestValidatePassword(t *testing.T) {
 			t.Errorf("test %v: wanted valid: %v for %q", i, test.wantOk, test.p)
 		}
 	}
+}
+
+func TestServeTemplate(t *testing.T) {
+	t.Run("template error", func(t *testing.T) {
+		tmpl = new(template.Template)
+		var sb strings.Builder
+		s := Server{
+			out: &sb,
+		}
+		w := httptest.NewRecorder()
+		s.serveTemplate(w, "other", nil)
+		if sb.Len() == 0 {
+			t.Errorf("wanted error logged when template is empty")
+		}
+	})
 }
