@@ -50,8 +50,8 @@ func TestNewServer(t *testing.T) {
 				}
 			case err != nil:
 				t.Errorf("unwanted error: %v", err)
-			case got.Config != test.cfg:
-				t.Errorf("configs not equal: \n wanted: %v \n got:    %v", got.Config, test.cfg)
+			case got.cfg != test.cfg:
+				t.Errorf("configs not equal: \n wanted: %v \n got:    %v", test.cfg, got.cfg)
 			case got.db == nil:
 				t.Errorf("database not set")
 			case got.ph == nil:

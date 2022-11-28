@@ -232,7 +232,9 @@ func TestGetRequest(t *testing.T) {
 			r := httptest.NewRequest("GET", test.url, nil)
 			var sb strings.Builder
 			s := Server{
-				Config: Config{MaxRows: test.maxRows},
+				cfg: Config{
+					MaxRows: test.maxRows,
+				},
 				db: mockDatabase{
 					readBookFunc:         test.readBook,
 					readBookSubjectsFunc: test.readBookSubjects,

@@ -10,7 +10,7 @@ import (
 )
 
 func (s *Server) getBookSubjects(w http.ResponseWriter, r *http.Request) {
-	if data, ok := loadPage(w, r, s.MaxRows, "Subjects", s.db.ReadBookSubjects); ok {
+	if data, ok := loadPage(w, r, s.cfg.MaxRows, "Subjects", s.db.ReadBookSubjects); ok {
 		s.serveTemplate(w, "subjects", data)
 	}
 }
@@ -32,7 +32,7 @@ func (s *Server) getBookHeaders(w http.ResponseWriter, r *http.Request) {
 	pageLoader := func(limit, offset int) ([]book.Header, error) {
 		return s.db.ReadBookHeaders(*filter, limit, offset)
 	}
-	if data, ok := loadPage(w, r, s.MaxRows, "Books", pageLoader); ok {
+	if data, ok := loadPage(w, r, s.cfg.MaxRows, "Books", pageLoader); ok {
 		data["Filter"] = headerParts
 		data["Subject"] = subject
 		s.serveTemplate(w, "list", data)

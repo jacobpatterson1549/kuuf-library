@@ -48,7 +48,7 @@ type (
 		PostMaxBurst  int
 	}
 	Server struct {
-		Config
+		cfg     Config
 		favicon string
 		tmpl    *template.Template
 		db      Database
@@ -80,7 +80,7 @@ func (cfg Config) NewServer(out io.Writer) (*Server, error) {
 	ph := bcrypt.NewPasswordHandler()
 	tmpl := parseTemplate()
 	s := Server{
-		Config:  cfg,
+		cfg:     cfg,
 		favicon: favicon,
 		tmpl:    tmpl,
 		db:      db,
@@ -93,14 +93,16 @@ func (cfg Config) NewServer(out io.Writer) (*Server, error) {
 // Run initializes the server and then serves it.
 // Initialization reads the config to set the admin password and backfill books from the csv database if desired.
 func (s *Server) Run() error {
-	if err := s.Config.setup(s.db, s.ph, s.out); err != nil {
+	if err := s.cfg.setup(s.db, s.ph, s.out); err != nil {
 		return fmt.Errorf("setting up server: %w", err)
 	}
 	fmt.Fprintf(s.out, "Using database: %T.\n", s.db)
-	fmt.Fprintf(s.out, "Serving library at at http://localhost:%v\n", s.Port)
+	fmt.Fprintf(s.out, "Serving library at at http://localhost:%v\n", s.cfg.Port)
 	fmt.Fprintf(s.out, "Press Ctrl-C to stop.\n")
-	lim := s.postRateLimiter()
-	return http.ListenAndServe(":"+s.Port, s.mux(lim))
+	lim := s.cfg.postRateLimiter()
+	addr := ":" + s.cfg.Port
+	handler := s.mux(lim)
+	return http.ListenAndServe(addr, handler)
 }
 
 func (cfg Config) createDatabase() (Database, error) {
