@@ -17,7 +17,6 @@ import (
 	"github.com/jacobpatterson1549/kuuf-library/internal/db/mongo"
 	"github.com/jacobpatterson1549/kuuf-library/internal/db/postgres"
 	"github.com/jacobpatterson1549/kuuf-library/internal/server/bcrypt"
-	"golang.org/x/time/rate"
 )
 
 var (
@@ -104,7 +103,8 @@ func (s *Server) Run() error {
 	fmt.Fprintf(s.out, "Using database: %T.\n", s.db)
 	fmt.Fprintf(s.out, "Serving library at at http://localhost:%v\n", s.Port)
 	fmt.Fprintf(s.out, "Press Ctrl-C to stop.\n")
-	return http.ListenAndServe(":"+s.Port, s.mux())
+	lim := s.postRateLimiter()
+	return http.ListenAndServe(":"+s.Port, s.mux(lim))
 }
 
 func (cfg Config) createDatabase() (Database, error) {
@@ -129,7 +129,7 @@ func embeddedCSVDatabase() (*csv.Database, error) {
 	return csv.NewDatabase(r)
 }
 
-func (s *Server) mux() http.Handler {
+func (s *Server) mux(postRateLimiter rateLimiter) http.Handler {
 	static := http.FileServer(http.FS(staticFS))
 	m := mux{
 		http.MethodGet: map[string]http.HandlerFunc{
@@ -149,15 +149,17 @@ func (s *Server) mux() http.Handler {
 	authenticatedMethods := []string{
 		http.MethodPost,
 	}
-	r := 1 / rate.Limit(s.PostLimitSec)
-	lim := rate.NewLimiter(r, s.PostMaxBurst)
 	for _, n := range authenticatedMethods {
 		for p, h := range m[n] {
-			m[n][p] = withRateLimiter(withAdminPassword(h, s.db, s.ph), lim)
+			h1 := withAdminPassword(h, s.db, s.ph)
+			h2 := withRateLimiter(h1, postRateLimiter)
+			m[n][p] = h2
 		}
 	}
-	day := time.Hour * 24
-	return withCacheControl(withContentEncoding(m), day) // update message in admin.html when updating cache age
+	duration := time.Hour * 24 // update message in admin.html when updating cache age
+	h1 := withContentEncoding(m)
+	h := withCacheControl(h1, duration)
+	return h
 }
 
 func (s *Server) serveTemplate(w http.ResponseWriter, name string, data interface{}) {

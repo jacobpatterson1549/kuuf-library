@@ -87,7 +87,8 @@ func TestMux(t *testing.T) {
 			},
 		},
 	}
-	h := s.mux()
+	lim := &countRateLimiter{max: 1}
+	h := s.mux(lim)
 	tests := []struct {
 		name     string
 		method   string

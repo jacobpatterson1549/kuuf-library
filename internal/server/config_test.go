@@ -2,11 +2,13 @@ package server
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/jacobpatterson1549/kuuf-library/internal/book"
+	"golang.org/x/time/rate"
 )
 
 func TestQueryTimeout(t *testing.T) {
@@ -17,6 +19,42 @@ func TestQueryTimeout(t *testing.T) {
 	got := cfg.queryTimeout()
 	if want != got {
 		t.Errorf("not equal: \n wanted: %v \n got:    %v", want, got)
+	}
+}
+
+func TestPostRateLimiter(t *testing.T) {
+	tests := []struct {
+		name string
+		cfg  Config
+		want *rate.Limiter
+	}{
+		{
+			name: "empty",
+			want: rate.NewLimiter(rate.Inf, 0),
+		},
+		{
+			name: "ones",
+			cfg: Config{
+				PostLimitSec: 1,
+				PostMaxBurst: 1,
+			},
+			want: rate.NewLimiter(1, 1),
+		},
+		{
+			name: "3 requests allowed every 2 seconds",
+			cfg: Config{
+				PostLimitSec: 2,
+				PostMaxBurst: 3,
+			},
+			want: rate.NewLimiter(0.5, 3),
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if want, got := test.want, test.cfg.postRateLimiter(); !reflect.DeepEqual(want, got) {
+				t.Errorf("not equal: \n wanted: %v \n got:    %v", want, got)
+			}
+		})
 	}
 }
 

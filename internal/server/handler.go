@@ -8,8 +8,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"golang.org/x/time/rate"
 )
 
 // withCacheControl adds a cache-control to GET requests that are not to edit a book
@@ -50,7 +48,7 @@ func (wrw wrappedResponseWriter) Write(p []byte) (n int, err error) {
 	return wrw.Writer.Write(p)
 }
 
-func withRateLimiter(h http.HandlerFunc, lim *rate.Limiter) http.HandlerFunc {
+func withRateLimiter(h http.HandlerFunc, lim rateLimiter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if !lim.Allow() {
 			err := fmt.Errorf("too many POSTS to server")
@@ -59,6 +57,10 @@ func withRateLimiter(h http.HandlerFunc, lim *rate.Limiter) http.HandlerFunc {
 		}
 		h.ServeHTTP(w, r)
 	}
+}
+
+type rateLimiter interface {
+	Allow() bool
 }
 
 // mux is http Handler that maps methods to paths to handlers.

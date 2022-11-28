@@ -1,6 +1,17 @@
 package server
 
-import "github.com/jacobpatterson1549/kuuf-library/internal/book"
+import (
+	"github.com/jacobpatterson1549/kuuf-library/internal/book"
+)
+
+type countRateLimiter struct {
+	count, max int
+}
+
+func (m *countRateLimiter) Allow() bool {
+	m.count++
+	return m.count <= m.max
+}
 
 type mockPasswordHandler struct {
 	hashFunc              func(password []byte) (hashedPassword []byte, err error)

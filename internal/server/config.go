@@ -7,10 +7,20 @@ import (
 
 	"github.com/jacobpatterson1549/kuuf-library/internal/book"
 	"github.com/jacobpatterson1549/kuuf-library/internal/db/csv"
+	"golang.org/x/time/rate"
 )
 
 func (cfg Config) queryTimeout() time.Duration {
 	return time.Second * time.Duration(cfg.DBTimeoutSec)
+}
+
+func (cfg Config) postRateLimiter() *rate.Limiter {
+	r := rate.Inf
+	if cfg.PostLimitSec != 0 {
+		r = 1 / rate.Limit(cfg.PostLimitSec)
+	}
+	lim := rate.NewLimiter(r, cfg.PostMaxBurst)
+	return lim
 }
 
 func (cfg Config) setup(db Database, ph PasswordHandler, out io.Writer) error {

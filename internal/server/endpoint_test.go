@@ -240,7 +240,8 @@ func TestGetRequest(t *testing.T) {
 				},
 				out: &sb,
 			}
-			h := s.mux()
+			var lim countRateLimiter
+			h := s.mux(&lim)
 			h.ServeHTTP(w, r)
 			t.Run(fmt.Sprintf("%v (%v)", test.url, test.name), func(t *testing.T) {
 				switch {
@@ -572,9 +573,6 @@ func TestPostRequest(t *testing.T) {
 		t.Run(test.name+" "+test.url, func(t *testing.T) {
 			test.form["p"] = "v4lid_P"
 			s := Server{
-				Config: Config{
-					PostMaxBurst: 1,
-				},
 				db: mockDatabase{
 					createBooksFunc:         test.createBooks,
 					updateBookFunc:          test.updateBook,
@@ -593,7 +591,8 @@ func TestPostRequest(t *testing.T) {
 			}
 			w := httptest.NewRecorder()
 			r := multipartFormHelper(t, test.url, test.form)
-			h := s.mux()
+			lim := countRateLimiter{max: 1}
+			h := s.mux(&lim)
 			h.ServeHTTP(w, r)
 			switch {
 			case test.wantCode != w.Code:

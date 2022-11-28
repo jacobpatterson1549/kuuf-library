@@ -7,8 +7,6 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
-
-	"golang.org/x/time/rate"
 )
 
 func TestWithCacheControl(t *testing.T) {
@@ -83,13 +81,13 @@ func TestWithRateLimiter(t *testing.T) {
 	tests := []struct {
 		name        string
 		wantCode    int
-		lim         *rate.Limiter
+		lim         rateLimiter
 		numRequests int
 	}{
-		{"zero burst", 429, rate.NewLimiter(1, 0), 1},
-		{"first allowed", 200, rate.NewLimiter(1, 1), 1},
-		{"fourth allowed", 429, rate.NewLimiter(1, 4), 5},
-		{"fifth not allowed", 429, rate.NewLimiter(1, 4), 5},
+		{"zero burst", 429, &countRateLimiter{}, 1},
+		{"first allowed", 200, &countRateLimiter{max: 1}, 1},
+		{"third allowed", 200, &countRateLimiter{max: 4}, 3},
+		{"fifth not allowed", 429, &countRateLimiter{max: 4}, 5},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
