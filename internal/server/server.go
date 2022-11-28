@@ -37,6 +37,11 @@ var (
 		ParseFS(staticFS, "*"))
 )
 
+const (
+	dateLayout         = book.HyphenatedYYYYMMDD
+	validPasswordRunes = "`" + `!"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_abcdefghijklmnopqrstuvwxyz{|}~`
+)
+
 type (
 	Config struct {
 		Port          string
@@ -186,9 +191,6 @@ func httpError(w http.ResponseWriter, statusCode int, err error) {
 func httpRedirect(w http.ResponseWriter, r *http.Request, url string) {
 	http.Redirect(w, r, url, http.StatusSeeOther)
 }
-
-const dateLayout = book.HyphenatedYYYYMMDD
-const validPasswordRunes = "`" + `!"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_abcdefghijklmnopqrstuvwxyz{|}~`
 
 func dateInputValue(t time.Time) string {
 	return t.Format(string(dateLayout))
