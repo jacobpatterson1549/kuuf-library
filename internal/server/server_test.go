@@ -86,6 +86,7 @@ func TestMux(t *testing.T) {
 				return new(book.Book), nil
 			},
 		},
+		tmpl: parseTemplate(),
 	}
 	lim := &countRateLimiter{max: 1}
 	h := s.mux(lim)
@@ -122,10 +123,11 @@ func TestMux(t *testing.T) {
 
 func TestServeTemplate(t *testing.T) {
 	t.Run("template error", func(t *testing.T) {
-		tmpl = new(template.Template)
+		tmpl := new(template.Template)
 		var sb strings.Builder
 		s := Server{
-			out: &sb,
+			tmpl: tmpl,
+			out:  &sb,
 		}
 		w := httptest.NewRecorder()
 		s.serveTemplate(w, "other", nil)

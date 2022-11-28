@@ -27,13 +27,6 @@ var (
 	//go:embed resources/*
 	embedFS     embed.FS
 	staticFS, _ = fs.Sub(embedFS, "resources")
-	tmpl        = template.Must(template.New("index.html").
-			Funcs(template.FuncMap{
-			"pretty":         prettyInputValue,
-			"newDate":        time.Now,
-			"dateInputValue": dateInputValue,
-		}).
-		ParseFS(staticFS, "*"))
 )
 
 const (
@@ -57,6 +50,7 @@ type (
 	Server struct {
 		Config
 		favicon string
+		tmpl    *template.Template
 		db      Database
 		ph      PasswordHandler
 		out     io.Writer
@@ -84,9 +78,11 @@ func (cfg Config) NewServer(out io.Writer) (*Server, error) {
 	}
 	favicon := faviconBase64()
 	ph := bcrypt.NewPasswordHandler()
+	tmpl := parseTemplate()
 	s := Server{
 		Config:  cfg,
 		favicon: favicon,
+		tmpl:    tmpl,
 		db:      db,
 		ph:      ph,
 		out:     out,
@@ -129,6 +125,17 @@ func embeddedCSVDatabase() (*csv.Database, error) {
 	return csv.NewDatabase(r)
 }
 
+func parseTemplate() *template.Template {
+	funcs := template.FuncMap{
+		"pretty":         prettyInputValue,
+		"newDate":        time.Now,
+		"dateInputValue": dateInputValue,
+	}
+	return template.Must(template.New("index.html").
+		Funcs(funcs).
+		ParseFS(staticFS, "*"))
+}
+
 func (s *Server) mux(postRateLimiter rateLimiter) http.Handler {
 	static := http.FileServer(http.FS(staticFS))
 	m := mux{
@@ -169,7 +176,7 @@ func (s *Server) serveTemplate(w http.ResponseWriter, name string, data interfac
 		Data    interface{}
 	}
 	p := Page{s.favicon, name, data}
-	if err := tmpl.Execute(w, p); err != nil {
+	if err := s.tmpl.Execute(w, p); err != nil {
 		fmt.Fprintln(s.out, err)
 	}
 }

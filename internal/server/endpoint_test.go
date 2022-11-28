@@ -238,7 +238,8 @@ func TestGetRequest(t *testing.T) {
 					readBookSubjectsFunc: test.readBookSubjects,
 					readBookHeadersFunc:  test.readBookHeaders,
 				},
-				out: &sb,
+				tmpl: parseTemplate(),
+				out:  &sb,
 			}
 			var lim countRateLimiter
 			h := s.mux(&lim)
@@ -588,6 +589,7 @@ func TestPostRequest(t *testing.T) {
 						return string(hashedPassword) == "H#shed+P" && string(password) == "v4lid_P", nil
 					},
 				},
+				tmpl: parseTemplate(),
 			}
 			w := httptest.NewRecorder()
 			r := multipartFormHelper(t, test.url, test.form)
