@@ -1006,15 +1006,13 @@ func TestWithAdminPassword(t *testing.T) {
 			r := http.Request{
 				Form: test.form,
 			}
-			s := Server{
-				db: mockDatabase{
-					readAdminPasswordFunc: test.readAdminPassword,
-				},
-				ph: mockPasswordHandler{
-					isCorrectPasswordFunc: test.isCorrectPassword,
-				},
+			db := mockDatabase{
+				readAdminPasswordFunc: test.readAdminPassword,
 			}
-			h2 := s.withAdminPassword(h1)
+			ph := mockPasswordHandler{
+				isCorrectPasswordFunc: test.isCorrectPassword,
+			}
+			h2 := withAdminPassword(h1, db, ph)
 			h2.ServeHTTP(w, &r)
 			if test.wantCode != w.Code {
 				t.Errorf("codes not equal: wanted %v, got %v", test.wantCode, w.Code)

@@ -245,7 +245,7 @@ func (s *Server) mux() http.Handler {
 	lim := rate.NewLimiter(r, s.PostMaxBurst)
 	for _, n := range authenticatedMethods {
 		for p, h := range m[n] {
-			m[n][p] = withRateLimiter(s.withAdminPassword(h), lim)
+			m[n][p] = withRateLimiter(withAdminPassword(h, s.db, s.ph), lim)
 		}
 	}
 	day := time.Hour * 24
@@ -433,9 +433,9 @@ func withRateLimiter(h http.HandlerFunc, lim *rate.Limiter) http.HandlerFunc {
 	}
 }
 
-func (s *Server) withAdminPassword(h http.HandlerFunc) http.HandlerFunc {
+func withAdminPassword(h http.HandlerFunc, db Database, ph PasswordHandler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		hashedPassword, err := s.db.ReadAdminPassword()
+		hashedPassword, err := db.ReadAdminPassword()
 		if err != nil {
 			httpInternalServerError(w, err)
 			return
@@ -444,7 +444,7 @@ func (s *Server) withAdminPassword(h http.HandlerFunc) http.HandlerFunc {
 		if !ParseFormValue(w, r, "p", &password, 128) {
 			return
 		}
-		ok, err := s.ph.IsCorrectPassword(hashedPassword, []byte(password))
+		ok, err := ph.IsCorrectPassword(hashedPassword, []byte(password))
 		if err != nil {
 			httpInternalServerError(w, err)
 			return
