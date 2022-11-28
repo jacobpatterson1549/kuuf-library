@@ -12,17 +12,6 @@ import (
 	"golang.org/x/time/rate"
 )
 
-func withRateLimiter(h http.HandlerFunc, lim *rate.Limiter) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if !lim.Allow() {
-			err := fmt.Errorf("too many POSTS to server")
-			httpError(w, http.StatusTooManyRequests, err)
-			return
-		}
-		h.ServeHTTP(w, r)
-	}
-}
-
 // withCacheControl adds a cache-control to GET requests that are not to edit a book
 func withCacheControl(h http.Handler, d time.Duration) http.HandlerFunc {
 	maxAge := "max-age=" + strconv.Itoa(int(d.Seconds()))
@@ -59,6 +48,17 @@ type wrappedResponseWriter struct {
 
 func (wrw wrappedResponseWriter) Write(p []byte) (n int, err error) {
 	return wrw.Writer.Write(p)
+}
+
+func withRateLimiter(h http.HandlerFunc, lim *rate.Limiter) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !lim.Allow() {
+			err := fmt.Errorf("too many POSTS to server")
+			httpError(w, http.StatusTooManyRequests, err)
+			return
+		}
+		h.ServeHTTP(w, r)
+	}
 }
 
 // mux is http Handler that maps methods to paths to handlers.
