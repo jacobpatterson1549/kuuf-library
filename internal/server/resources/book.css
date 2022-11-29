@@ -5,3 +5,7 @@ p:nth-child(1) {
 p:nth-child(1)::after {
     content: ':';
 }
+
+img {
+    image-rendering: pixelated;
+}
