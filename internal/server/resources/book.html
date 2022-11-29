@@ -3,61 +3,61 @@
 	{{- if .ImageBase64}}
 	<img alt="Picture of book" src="data:image/webp;base64,{{.ImageBase64}}">
 	{{- end}}
-	<div>
+	<p>
 		<span>Author</span>
 		<span>{{.Author}}</span>
-	</div>
-	<div>
+	</p>
+	<p>
 		<span>Subject</span>
 		<span>{{.Subject}}</span>
-	</div>
-	<div>
+	</p>
+	<p>
 		<span>Description</span>
 		<span>{{.Description}}</span>
-	</div>
+	</p>
 	{{- with .DeweyDecClass}}
-	<div>
+	<p>
 		<span>Shelf Location</span>
 		<span>{{.}}</span>
-	</div>
+	</p>
 	{{- end}}
 	{{- with .Pages}}
-	<div>
+	<p>
 		<span>Page Count</span>
 		<span>{{.}}</span>
-	</div>
+	</p>
 	{{end}}
 	{{- with .Publisher}}
-	<div>
+	<p>
 		<span>Publisher</span>
 		<span>{{.}}</span>
-	</div>
+	</p>
 	{{- end}}
 	{{- if not .PublishDate.IsZero}}
 	{{- with dateInputValue .PublishDate}}
-	<div>
+	<p>
 		<span>Publish Date</span>
 		<span>{{.}}</span>
-	</div>
+	</p>
 	{{- end}}
 	{{- end}}
 	{{- with dateInputValue .AddedDate}}
-	<div>
+	<p>
 		<span>Added Date</span>
 		<span>{{.}}</span>
-	</div>
+	</p>
 	{{- end}}
 	{{- with .EAN_ISBN13}}
-	<div>
+	<p>
 		<span>EAN_ISBN13</span>
 		<span>{{.}}</span>
-	</div>
+	</p>
 	{{- end}}
 	{{- with .UPC_ISBN10}}
-	<div>
+	<p>
 		<span>UPC_ISBN10</span>
 		<span>{{.}}</span>
-	</div>
+	</p>
 	{{- end}}
 	<a href="/admin?book-id={{urlquery .ID}}">Admin</a>
 </div>

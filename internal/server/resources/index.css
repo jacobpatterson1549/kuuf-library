@@ -12,6 +12,10 @@ h1, h2, h3 {
     color: rgba(13,94,21,.9);
 }
 
+p {
+    max-width: 75ch;
+}
+
 .book > *,
 .list .header,
 .subjects .subject,
