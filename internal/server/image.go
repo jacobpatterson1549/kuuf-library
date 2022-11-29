@@ -147,7 +147,7 @@ func webP(img image.Image, title string) ([]byte, error) {
 		return nil, fmt.Errorf("writing image to temporary file: %w", err)
 	}
 	defer os.Remove(n)
-	cmd := exec.Command("cwebp", n, "-o", "-")
+	cmd := exec.Command("cwebp", n, "-lossless", "-o", "-")
 	b2, err := cmd.Output()
 	if err != nil {
 		return nil, fmt.Errorf("running cwebp: %w", err)
