@@ -1,6 +1,5 @@
 fieldset {
     display: table;
-    width: min-content;
 }
 
 fieldset > *:not([hidden]) {
@@ -27,4 +26,10 @@ code {
 .item:has( #db-start:not(:checked)) ~ .item,
 .item:has( input:checked:not([value="true"])) ~ .item:has( input[type="file"]) {
     display: none;
+}
+
+@media (min-width: 500px) {
+    fieldset {
+        width: 500px;
+    }
 }
