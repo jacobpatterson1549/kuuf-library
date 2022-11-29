@@ -19,12 +19,6 @@ input[type="radio"] {
     float: right;
 }
 
-form[action^="/book"] .item:has( input:not([type="hidden"]):not([type="password"]):not(:valid)) {
-    border-color: red;
-    border-width: 1px;
-    border-style: solid;
-}
-
 .item:has( #db-start:checked),
 .item:has( #db-start:not(:checked)) ~ .item,
 .item:has( input:checked:not([value="true"])) ~ .item:has( input[type="file"]) {
