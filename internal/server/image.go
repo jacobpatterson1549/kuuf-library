@@ -114,7 +114,7 @@ func scaleImage(img image.Image) image.Image {
 	boundsR := image.Rect(0, 0, maxImageWidth, maxImageHeight)
 	destR := scaleRect(srcR, boundsR)
 	destImg := image.NewRGBA(destR)
-	var s = draw.BiLinear
+	var s = draw.CatmullRom
 	s.Scale(destImg, destR, img, srcR, draw.Over, nil)
 	return destImg
 }
