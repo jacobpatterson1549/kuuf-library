@@ -24,11 +24,7 @@ func (s *Server) getBookHeaders(w http.ResponseWriter, r *http.Request) {
 	if !ParseFormValue(w, r, "s", &subject, 256) {
 		return
 	}
-	filter, err := book.NewFilter(headerParts, subject)
-	if err != nil {
-		httpBadRequest(w, err)
-		return
-	}
+	filter := book.NewFilter(headerParts, subject)
 	pageLoader := func(limit, offset int) ([]book.Header, error) {
 		return s.db.ReadBookHeaders(*filter, limit, offset)
 	}

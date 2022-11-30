@@ -35,7 +35,7 @@ func (f Filter) From(filter book.Filter) []bson.E {
 		parts = append(parts, subjectPart)
 	}
 	if len(filter.HeaderParts) != 0 {
-		joinedFilter := strings.Join(filter.HeaderParts, "|")
+		joinedFilter := strings.Join(filter.RegexpSafeHeaderParts(), "|")
 		regex := primitive.Regex{
 			Pattern: joinedFilter,
 			Options: "i",

@@ -93,15 +93,15 @@ func TestFilter(t *testing.T) {
 			want: []bson.E{{Key: "k1", Value: "abc"}},
 		},
 		{
-			name: "query only",
+			name: "query only, with escapes",
 			filter: book.Filter{
-				HeaderParts: []string{"x", "y", "z"},
+				HeaderParts: []string{"x", "y", "z+0"},
 			},
 			want: []bson.E{{
 				Key: "$or",
 				Value: bson.A{
-					bson.D{bson.E{Key: "k2", Value: primitive.MatchAnyIgnoreCaseRegex("x", "y", "z")}},
-					bson.D{bson.E{Key: "k3", Value: primitive.MatchAnyIgnoreCaseRegex("x", "y", "z")}},
+					bson.D{bson.E{Key: "k2", Value: primitive.MatchAnyIgnoreCaseRegex("x", "y", "z\\+0")}},
+					bson.D{bson.E{Key: "k3", Value: primitive.MatchAnyIgnoreCaseRegex("x", "y", "z\\+0")}},
 				}}},
 		},
 		{

@@ -163,7 +163,7 @@ func (d *Database) ReadBookSubjects(limit, offset int) ([]book.Subject, error) {
 func (d *Database) ReadBookHeaders(filter book.Filter, limit, offset int) ([]book.Header, error) {
 	hasSubject := len(filter.Subject) != 0
 	hasFilter := len(filter.HeaderParts) != 0
-	joinedFilter := strings.Join(filter.HeaderParts, "|")
+	joinedFilter := strings.Join(filter.RegexpSafeHeaderParts(), "|")
 	cmd := `SELECT id, title, author, subject
 	FROM books
 	WHERE ($1 OR subject = $2)

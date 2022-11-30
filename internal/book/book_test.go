@@ -100,8 +100,11 @@ func TestNewFilter(t *testing.T) {
 			want:   Filter{HeaderParts: []string{}},
 		},
 		{
-			name:        "alphaNumeric only",
-			headerParts: "not-allowed",
+			name:        "alphaNumeric and more",
+			headerParts: "also-allowed",
+			want: Filter{
+				HeaderParts: []string{"also-allowed"},
+			},
 		},
 		{
 			name:        "happy path",
@@ -122,15 +125,8 @@ func TestNewFilter(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got, err := NewFilter(test.headerParts, test.subject)
-			switch {
-			case !test.wantOk:
-				if err == nil {
-					t.Errorf("wanted error")
-				}
-			case err != nil:
-				t.Errorf("unwanted error: %v", err)
-			case !reflect.DeepEqual(&test.want, got):
+			got := NewFilter(test.headerParts, test.subject)
+			if !reflect.DeepEqual(&test.want, got) {
 				t.Errorf("filters not equal: \n wanted: %v \n got:    %v", &test.want, got)
 			}
 		})
@@ -189,6 +185,40 @@ func TestFilterMatches(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			if want, got := test.want, test.filter.Matches(test.book); want != got {
 				t.Error()
+			}
+		})
+	}
+}
+
+func TestRegexpSafeHeaderParts(t *testing.T) {
+	tests := []struct {
+		name        string
+		HeaderParts []string
+		want        []string
+	}{
+		{
+			name:        "Basic1",
+			HeaderParts: []string{"Basic1", "2+2=4"},
+			want:        []string{"Basic1", "2\\+2=4"},
+		},
+		{
+			name:        "fancy",
+			HeaderParts: []string{"Here, I am!", "a|b", "[uu]", "Pérez"},
+			want:        []string{"Here, I am!", "a\\|b", "\\[uu\\]", "Pérez"},
+		},
+		{
+			name:        "all special",
+			HeaderParts: []string{`\.+*?()|[]{}^$`},
+			want:        []string{"\\\\\\.\\+\\*\\?\\(\\)\\|\\[\\]\\{\\}\\^\\$"},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			f := Filter{
+				HeaderParts: test.HeaderParts,
+			}
+			if want, got := test.want, f.RegexpSafeHeaderParts(); !reflect.DeepEqual(want, got) {
+				t.Errorf("not equal: \n wanted: %v \n got:    %v", want, got)
 			}
 		})
 	}

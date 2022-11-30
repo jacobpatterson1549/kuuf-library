@@ -168,11 +168,6 @@ func TestGetRequest(t *testing.T) {
 			wantCode: 413,
 		},
 		{
-			name:     "bad filter",
-			url:      "/list?q=(_invalid!!)",
-			wantCode: 400,
-		},
-		{
 			name:     "db error form",
 			url:      "/list",
 			wantCode: 500,

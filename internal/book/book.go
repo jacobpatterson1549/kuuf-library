@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -107,15 +108,21 @@ type Filter struct {
 	HeaderParts []string
 }
 
-func NewFilter(headerParts, subject string) (*Filter, error) {
-	if strings.IndexFunc(headerParts, isSpecial) >= 0 {
-		return nil, fmt.Errorf("filter can only contain letters, numbers, and spaces")
-	}
+func NewFilter(headerParts, subject string) *Filter {
+	fields := strings.Fields(headerParts)
 	f := Filter{
 		Subject:     subject,
-		HeaderParts: strings.Fields(headerParts),
+		HeaderParts: fields,
 	}
-	return &f, nil
+	return &f
+}
+
+func (f Filter) RegexpSafeHeaderParts() []string {
+	hp := make([]string, len(f.HeaderParts))
+	for i, p := range f.HeaderParts {
+		hp[i] = regexp.QuoteMeta(p)
+	}
+	return hp
 }
 
 func (f Filter) Matches(b Book) bool {
@@ -135,13 +142,6 @@ func (f Filter) Matches(b Book) bool {
 		}
 	}
 	return false
-}
-
-func isSpecial(r rune) bool {
-	return r != ' ' &&
-		!('a' <= r && r <= 'z') &&
-		!('A' <= r && r <= 'Z') &&
-		!('0' <= r && r <= '9')
 }
 
 func (sb StringBook) Book(dl DateLayout) (*Book, error) {
