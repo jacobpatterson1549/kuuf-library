@@ -10,8 +10,10 @@
 {{template "index.css" .}}
 {{if eq .Name "list"}}
 {{- template "list.css"}}
+{{- template "link-box.css"}}
 {{- else if eq .Name "subjects"}}
 {{- template "subjects.css"}}
+{{- template "link-box.css"}}
 {{- else if eq .Name "book"}}
 {{- template "book.css"}}
 {{- else if eq .Name "admin"}}

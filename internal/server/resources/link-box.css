@@ -1,0 +1,26 @@
+.link-box-parent {
+    display: flex;
+    flex-direction: column;
+    gap: 1em;
+}
+
+.link-box {
+    padding: 0.2em;
+    text-decoration: none;
+    color: inherit;
+    word-wrap: break-word;
+    border-radius: 1em;
+    padding-left: 1em;
+    background-color: hsl(180, 15%, 80%);
+}
+
+.title {
+    margin: inherit;
+    text-decoration: underline;
+}
+
+@media (min-width: 500px) {
+    .link-box {
+        width: 500px;
+    }
+}

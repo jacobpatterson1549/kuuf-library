@@ -17,11 +17,9 @@ p {
 }
 
 .book > *,
-.list .header,
-.subjects .subject,
 .admin .item,
 input[type="submit"] {
-    margin-top: 0.5rem;
+    margin-top: 1rem;
 }
 
 a[href^="/admin"] {

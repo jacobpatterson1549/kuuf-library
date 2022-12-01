@@ -16,14 +16,14 @@
 			<input type="submit" value="Submit">
 		</div>
 	</form>
-	<div>
-		<h3>Books</h3>
+	<h3>Books</h3>
+	<div class="link-box-parent">
 		{{- range .Books}}
-		<div class="header">
-			<div title="Title"><a href="/book?id={{urlquery .ID}}">{{.Title}}</a></div>
+		<a class="header link-box" href="/book?id={{urlquery .ID}}">
+			<div title="Title" class="title">{{.Title}}</div>
 			<div title="Author">{{.Author}}</div>
 			<div title="Subject">{{.Subject}}</div>
-		</div>
+		</a>
 		{{- end}}
 	</div>
 	{{- if .NextPage}}

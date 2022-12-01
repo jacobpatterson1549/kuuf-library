@@ -3,12 +3,12 @@
 		<a href="/list">All books</a>
 	</div>
 	<h2>Book subjects</h2>
-	<div>
+	<div class="link-box-parent">
 		{{- range .Subjects}}
-		<div class="subject">
-			<div title="Subject"><a href="/list?s={{urlquery .Name}}">{{.Name}}</a></div>
-			<div title="Count">{{.Count}}</div>
-		</div>
+		<a class="subject link-box" href="/list?s={{urlquery .Name}}">
+			<span title="Subject" class="title">{{.Name}}</span>
+			<span title="Count" class="subject-count">{{.Count}}</span>
+		</a>
 		{{- end}}
 	</div>
 	{{- if .NextPage}}
