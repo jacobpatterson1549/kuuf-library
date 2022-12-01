@@ -255,8 +255,8 @@ func TestBookRecord(t *testing.T) {
 		Publisher:     "8",
 		PublishDate:   time.Date(2001, 7, 4, 0, 0, 0, 0, time.UTC),
 		AddedDate:     time.Date(2022, 11, 16, 0, 0, 0, 0, time.UTC),
-		EAN_ISBN13:    "11",
-		UPC_ISBN10:    "12",
+		EanIsbn13:     "11",
+		UpcIsbn10:     "12",
 		ImageBase64:   "13",
 	}
 	t.Run("bookFromRecord", func(t *testing.T) {
@@ -317,8 +317,8 @@ xyz*34,Thoughts,Anonymous,"Many essays about ""life,"" abridged.",poems,88.79,12
 			Publisher:     "8",
 			PublishDate:   time.Date(2001, 7, 4, 0, 0, 0, 0, time.UTC),
 			AddedDate:     time.Date(2022, 11, 16, 0, 0, 0, 0, time.UTC),
-			EAN_ISBN13:    "11",
-			UPC_ISBN10:    "12",
+			EanIsbn13:     "11",
+			UpcIsbn10:     "12",
 			ImageBase64:   "13",
 		},
 		{
@@ -334,8 +334,8 @@ xyz*34,Thoughts,Anonymous,"Many essays about ""life,"" abridged.",poems,88.79,12
 			Publisher:     "publisher8",
 			PublishDate:   time.Date(2008, 1, 11, 0, 0, 0, 0, time.UTC),
 			AddedDate:     time.Date(2020, 6, 1, 0, 0, 0, 0, time.UTC),
-			EAN_ISBN13:    "ean11",
-			UPC_ISBN10:    "upc12",
+			EanIsbn13:     "ean11",
+			UpcIsbn10:     "upc12",
 			ImageBase64:   "image13",
 		},
 		{
@@ -351,8 +351,8 @@ xyz*34,Thoughts,Anonymous,"Many essays about ""life,"" abridged.",poems,88.79,12
 			Publisher:     "the world",
 			PublishDate:   time.Date(2009, 7, 4, 0, 0, 0, 0, time.UTC),
 			AddedDate:     time.Date(2022, 8, 26, 0, 0, 0, 0, time.UTC),
-			EAN_ISBN13:    "xxx",
-			UPC_ISBN10:    "yyy",
+			EanIsbn13:     "xxx",
+			UpcIsbn10:     "yyy",
 			ImageBase64:   "zzz",
 		},
 	},

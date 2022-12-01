@@ -155,8 +155,8 @@ func bookFromRecord(r []string) (*book.Book, error) {
 	sb.Publisher = r[7]
 	sb.PublishDate = r[8]
 	sb.AddedDate = r[9]
-	sb.EAN_ISBN13 = r[10]
-	sb.UPC_ISBN10 = r[11]
+	sb.EanIsbn13 = r[10]
+	sb.UpcIsbn10 = r[11]
 	sb.ImageBase64 = r[12]
 	return sb.Book(dateLayout)
 }
@@ -173,8 +173,8 @@ func record(b book.Book) []string {
 		b.Publisher,
 		b.PublishDate.Format(string(dateLayout)),
 		b.AddedDate.Format(string(dateLayout)),
-		b.EAN_ISBN13,
-		b.UPC_ISBN10,
+		b.EanIsbn13,
+		b.UpcIsbn10,
 		b.ImageBase64,
 	}
 }

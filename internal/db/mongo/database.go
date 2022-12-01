@@ -27,8 +27,8 @@ type (
 		Publisher     string    `bson:"publisher"`
 		PublishDate   time.Time `bson:"publish_date"`
 		AddedDate     time.Time `bson:"added_date"`
-		EAN_ISBN13    string    `bson:"ean_isbn13"`
-		UPC_ISBN10    string    `bson:"upc_isbn10"`
+		EanIsbn13     string    `bson:"ean_isbn13"`
+		UpcIsbn10     string    `bson:"upc_isbn10"`
 		ImageBase64   string    `bson:"image_base64"`
 	}
 	mHeader struct {
@@ -62,8 +62,8 @@ const (
 	bookPublisherField     = "publisher"
 	bookPublishDateField   = "publish_date"
 	bookAddedDateField     = "added_date"
-	bookEAN_ISBN13Field    = "ean_isbn13"
-	bookUPC_ISBN10Field    = "upc_isbn10"
+	bookEanIsbn13Field     = "ean_isbn13"
+	bookUpcIsbn0Field      = "upc_isbn10"
 	bookImageBase64Field   = "image_base64"
 	subjectNameField       = "_id"
 	subjectCountField      = "count"
@@ -254,8 +254,8 @@ func (d *Database) UpdateBook(b book.Book, updateImage bool) error {
 		bson.E(bookPublisherField, b.Publisher),
 		bson.E(bookPublishDateField, b.PublishDate),
 		bson.E(bookAddedDateField, b.AddedDate),
-		bson.E(bookEAN_ISBN13Field, b.EAN_ISBN13),
-		bson.E(bookUPC_ISBN10Field, b.UPC_ISBN10),
+		bson.E(bookEanIsbn13Field, b.EanIsbn13),
+		bson.E(bookUpcIsbn0Field, b.UpcIsbn10),
 	)
 	if updateImage {
 		sets = append(sets, bson.E(bookImageBase64Field, b.ImageBase64))
@@ -298,12 +298,9 @@ func (d *Database) ReadAdminPassword() (hashedPassword []byte, err error) {
 	filter := bson.D(bson.E(usernameField, adminUsername))
 	coll := d.usersCollection()
 	var u mUser
-	if err := d.withTimeoutContext(func(ctx context.Context) error {
+	if err = d.withTimeoutContext(func(ctx context.Context) error {
 		result := coll.FindOne(ctx, filter)
-		if err != nil {
-			return err
-		}
-		if err := result.Decode(&u); err != nil {
+		if err = result.Decode(&u); err != nil {
 			return err
 		}
 		return nil

@@ -138,8 +138,8 @@ func TestGetRequest(t *testing.T) {
 					Publisher:     "pub",
 					PublishDate:   time.Date(2022, 11, 25, 0, 0, 0, 0, time.UTC),
 					AddedDate:     time.Date(2022, 11, 25, 0, 0, 0, 0, time.UTC),
-					EAN_ISBN13:    "weird_isbn",
-					UPC_ISBN10:    "isbn10",
+					EanIsbn13:     "weird_isbn",
+					UpcIsbn10:     "isbn10",
 					ImageBase64:   "invalid_file",
 				}
 				return &b, nil
@@ -759,8 +759,8 @@ func TestBookFrom(t *testing.T) {
 				PublishDate:   dateP,
 				AddedDate:     dateA,
 				Pages:         8,
-				EAN_ISBN13:    "h",
-				UPC_ISBN10:    "i",
+				EanIsbn13:     "h",
+				UpcIsbn10:     "i",
 			},
 			wantOk: true,
 		},

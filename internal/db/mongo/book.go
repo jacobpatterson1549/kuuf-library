@@ -11,8 +11,8 @@ func mongoBook(b book.Book) mBook {
 		Publisher:     b.Publisher,
 		PublishDate:   b.PublishDate,
 		AddedDate:     b.AddedDate,
-		EAN_ISBN13:    b.EAN_ISBN13,
-		UPC_ISBN10:    b.UPC_ISBN10,
+		EanIsbn13:     b.EanIsbn13,
+		UpcIsbn10:     b.UpcIsbn10,
 		ImageBase64:   b.ImageBase64,
 	}
 }
@@ -35,8 +35,8 @@ func (m mBook) Book() book.Book {
 		Publisher:     m.Publisher,
 		PublishDate:   m.PublishDate,
 		AddedDate:     m.AddedDate,
-		EAN_ISBN13:    m.EAN_ISBN13,
-		UPC_ISBN10:    m.UPC_ISBN10,
+		EanIsbn13:     m.EanIsbn13,
+		UpcIsbn10:     m.UpcIsbn10,
 		ImageBase64:   m.ImageBase64,
 	}
 }

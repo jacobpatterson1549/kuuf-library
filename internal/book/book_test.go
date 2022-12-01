@@ -261,8 +261,8 @@ func TestStringBookBook(t *testing.T) {
 			Publisher:     "Nobody",
 			PublishDate:   "06/09/2001", // note the leading zeroes in the date
 			AddedDate:     "12/31/2012",
-			EAN_ISBN13:    "1234567890123",
-			UPC_ISBN10:    "1234567890",
+			EanIsbn13:     "1234567890123",
+			UpcIsbn10:     "1234567890",
 			ImageBase64:   "base64_encoded",
 		}, &Book{
 			Header: Header{
@@ -276,8 +276,8 @@ func TestStringBookBook(t *testing.T) {
 			Publisher:     "Nobody",
 			PublishDate:   time.Date(2001, 6, 9, 0, 0, 0, 0, time.UTC),
 			AddedDate:     time.Date(2012, 12, 31, 0, 0, 0, 0, time.UTC),
-			EAN_ISBN13:    "1234567890123",
-			UPC_ISBN10:    "1234567890",
+			EanIsbn13:     "1234567890123",
+			UpcIsbn10:     "1234567890",
 			ImageBase64:   "base64_encoded",
 		}, true},
 	}

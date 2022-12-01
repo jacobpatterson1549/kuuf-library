@@ -126,7 +126,7 @@ func (d *Database) CreateBooks(books ...book.Book) ([]book.Book, error) {
 		b.ID = book.NewID()
 		queries[i].cmd = `INSERT INTO books (id, title, author, subject, description, dewey_dec_class, pages, publisher, publish_date, added_date, ean_isbn13, upc_isbn10, image_base64)
 		VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`
-		queries[i].args = []interface{}{b.ID, b.Title, b.Author, b.Subject, b.Description, b.DeweyDecClass, b.Pages, b.Publisher, b.PublishDate, b.AddedDate, b.EAN_ISBN13, b.UPC_ISBN10, b.ImageBase64}
+		queries[i].args = []interface{}{b.ID, b.Title, b.Author, b.Subject, b.Description, b.DeweyDecClass, b.Pages, b.Publisher, b.PublishDate, b.AddedDate, b.EanIsbn13, b.UpcIsbn10, b.ImageBase64}
 		books[i] = b
 	}
 	if err := d.execTx(queries...); err != nil {
@@ -202,7 +202,7 @@ func (d *Database) ReadBook(id string) (*book.Book, error) {
 		args: []interface{}{id},
 	}
 	dest := func() []interface{} {
-		return []interface{}{&b.ID, &b.Title, &b.Author, &b.Subject, &b.Description, &b.DeweyDecClass, &b.Pages, &b.Publisher, &b.PublishDate, &b.AddedDate, &b.EAN_ISBN13, &b.UPC_ISBN10, &b.ImageBase64}
+		return []interface{}{&b.ID, &b.Title, &b.Author, &b.Subject, &b.Description, &b.DeweyDecClass, &b.Pages, &b.Publisher, &b.PublishDate, &b.AddedDate, &b.EanIsbn13, &b.UpcIsbn10, &b.ImageBase64}
 	}
 	if err := d.query(q, dest); err != nil {
 		return nil, fmt.Errorf("reading book: %w", err)
@@ -212,7 +212,7 @@ func (d *Database) ReadBook(id string) (*book.Book, error) {
 
 func (d *Database) UpdateBook(b book.Book, updateImage bool) error {
 	cmd := `UPDATE books SET title = $1, author = $2, subject = $3, description = $4, dewey_dec_class = $5, pages = $6, publisher = $7, publish_date = $8, added_date = $9, ean_isbn13 = $10, upc_isbn10 = $11`
-	args := []interface{}{b.Title, b.Author, b.Subject, b.Description, b.DeweyDecClass, b.Pages, b.Publisher, b.PublishDate, b.AddedDate, b.EAN_ISBN13, b.UPC_ISBN10}
+	args := []interface{}{b.Title, b.Author, b.Subject, b.Description, b.DeweyDecClass, b.Pages, b.Publisher, b.PublishDate, b.AddedDate, b.EanIsbn13, b.UpcIsbn10}
 	if updateImage {
 		cmd += `, image_base64 = $12 WHERE id = $13`
 		args = append(args, b.ImageBase64, b.ID)

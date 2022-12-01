@@ -13,15 +13,13 @@ import (
 )
 
 type (
-
-	// Book contains tne basic identifier of a book
+	// Header contains tne basic identifier of a book
 	Header struct {
 		ID      string
 		Title   string
 		Author  string
 		Subject string
 	}
-
 	// Book contains common book fields
 	Book struct {
 		Header
@@ -31,8 +29,8 @@ type (
 		Publisher     string
 		PublishDate   time.Time
 		AddedDate     time.Time
-		EAN_ISBN13    string
-		UPC_ISBN10    string
+		EanIsbn13     string
+		UpcIsbn10     string
 		ImageBase64   string
 	}
 	StringBook struct {
@@ -46,8 +44,8 @@ type (
 		Publisher     string
 		PublishDate   string
 		AddedDate     string
-		EAN_ISBN13    string
-		UPC_ISBN10    string
+		EanIsbn13     string
+		UpcIsbn10     string
 		ImageBase64   string
 	}
 	DateLayout string
@@ -169,8 +167,8 @@ func (sb StringBook) Book(dl DateLayout) (*Book, error) {
 			return nil, fmt.Errorf("added date: %w", err)
 		}
 	}
-	b.EAN_ISBN13 = sb.EAN_ISBN13
-	b.UPC_ISBN10 = sb.UPC_ISBN10
+	b.EanIsbn13 = sb.EanIsbn13
+	b.UpcIsbn10 = sb.UpcIsbn10
 	b.ImageBase64 = sb.ImageBase64
 	return &b, nil
 }

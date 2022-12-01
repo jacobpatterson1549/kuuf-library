@@ -183,8 +183,8 @@ func bookFrom(w http.ResponseWriter, r *http.Request) (*book.Book, error) {
 		!ParseFormValue(w, r, "publisher", &sb.Publisher, 256) ||
 		!ParseFormValue(w, r, "publish-date", &sb.PublishDate, 32) ||
 		!ParseFormValue(w, r, "added-date", &sb.AddedDate, 32) ||
-		!ParseFormValue(w, r, "ean-isbn-13", &sb.EAN_ISBN13, 32) ||
-		!ParseFormValue(w, r, "upc-isbn-10", &sb.UPC_ISBN10, 32) {
+		!ParseFormValue(w, r, "ean-isbn-13", &sb.EanIsbn13, 32) ||
+		!ParseFormValue(w, r, "upc-isbn-10", &sb.UpcIsbn10, 32) {
 		return nil, fmt.Errorf("parse error")
 	}
 	switch {

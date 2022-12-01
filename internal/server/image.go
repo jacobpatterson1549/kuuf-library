@@ -143,7 +143,7 @@ func webP(img image.Image, title string) ([]byte, error) {
 		return nil, fmt.Errorf("creating temp file: %w", err)
 	}
 	n := f.Name()
-	if err := png.Encode(f, img); err != nil { // HACKY
+	if err2 := png.Encode(f, img); err2 != nil {
 		return nil, fmt.Errorf("writing image to temporary file: %w", err)
 	}
 	defer os.Remove(n)

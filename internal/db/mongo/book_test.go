@@ -25,8 +25,8 @@ func TestMBook(t *testing.T) {
 		Publisher:     "8",
 		PublishDate:   datePD,
 		AddedDate:     dateAD,
-		EAN_ISBN13:    "11",
-		UPC_ISBN10:    "12",
+		EanIsbn13:     "11",
+		UpcIsbn10:     "12",
 		ImageBase64:   "13",
 	}
 	b := book.Book{
@@ -42,8 +42,8 @@ func TestMBook(t *testing.T) {
 		Publisher:     "8",
 		PublishDate:   datePD,
 		AddedDate:     dateAD,
-		EAN_ISBN13:    "11",
-		UPC_ISBN10:    "12",
+		EanIsbn13:     "11",
+		UpcIsbn10:     "12",
 		ImageBase64:   "13",
 	}
 	t.Run("mBook.Book()", func(t *testing.T) {
