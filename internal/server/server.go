@@ -15,7 +15,7 @@ import (
 	"github.com/jacobpatterson1549/kuuf-library/internal/book"
 	"github.com/jacobpatterson1549/kuuf-library/internal/db/csv"
 	"github.com/jacobpatterson1549/kuuf-library/internal/db/mongo"
-	"github.com/jacobpatterson1549/kuuf-library/internal/db/postgres"
+	"github.com/jacobpatterson1549/kuuf-library/internal/db/sql"
 	"github.com/jacobpatterson1549/kuuf-library/internal/server/bcrypt"
 )
 
