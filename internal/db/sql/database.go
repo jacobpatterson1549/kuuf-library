@@ -1,5 +1,5 @@
 // Package postgres provides a database for the library.
-package postgres
+package sql
 
 import (
 	"context"
@@ -17,10 +17,8 @@ type Database struct {
 	QueryTimeout time.Duration
 }
 
-const DriverName = "postgres"
-
-func NewDatabase(url string, queryTimeout time.Duration) (*Database, error) {
-	db, err := sql.Open(DriverName, url)
+func NewDatabase(driverName, url string, queryTimeout time.Duration) (*Database, error) {
+	db, err := sql.Open(driverName, url)
 	if err != nil {
 		return nil, fmt.Errorf("opening database: %w", err)
 	}

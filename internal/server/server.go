@@ -115,8 +115,8 @@ func (cfg Config) createDatabase() (Database, error) {
 		return embeddedCSVDatabase()
 	case "mongodb+srv":
 		return mongo.NewDatabase(url.String(), cfg.queryTimeout())
-	case postgres.DriverName:
-		return postgres.NewDatabase(url.String(), cfg.queryTimeout())
+	case "postgres":
+		return sql.NewDatabase(s, url.String(), cfg.queryTimeout())
 	default:
 		return nil, fmt.Errorf("unknown database: %q", s)
 	}
