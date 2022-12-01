@@ -1,8 +1,8 @@
-p:nth-child(1) {
+p :first-child {
     font-weight: bold;
 }
 
-p:nth-child(1)::after {
+p :first-child::after {
     content: ':';
 }
 
