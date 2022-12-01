@@ -2,10 +2,10 @@
     display: inline-block;
 }
 
-.subject > *[title="Count"]::before {
+[title="Count"]::before {
     content: "(";
 }
 
-.subject > *[title="Count"]::after {
+[title="Count"]::after {
     content: ")";
 }
