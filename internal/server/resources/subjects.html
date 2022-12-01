@@ -4,12 +4,12 @@
 	</div>
 	<h2>Book subjects</h2>
 	<div>
-	{{- range .Subjects}}
-	<div class="subject">
-		<div title="Subject"><a href="/list?s={{urlquery .Name}}">{{.Name}}</a></div>
-		<div title="Count">{{.Count}}</div>
-	</div>
-	{{- end}}
+		{{- range .Subjects}}
+		<div class="subject">
+			<div title="Subject"><a href="/list?s={{urlquery .Name}}">{{.Name}}</a></div>
+			<div title="Count">{{.Count}}</div>
+		</div>
+		{{- end}}
 	</div>
 	{{- if .NextPage}}
 	<form method="get">
