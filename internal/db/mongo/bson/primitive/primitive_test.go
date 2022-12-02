@@ -87,20 +87,20 @@ func TestObjectIDFrom(t *testing.T) {
 	}
 }
 
-func TestMatchAnyIgnoreCaseRegex(t *testing.T) {
+func TestMatchIgnoreCaseRegex(t *testing.T) {
 	tests := []struct {
-		name  string
-		words []string
-		want  primitive.Regex
+		name string
+		word string
+		want primitive.Regex
 	}{
-		{"nil", nil, primitive.Regex{Options: "i"}},
-		{"empty", []string{}, primitive.Regex{Options: "i"}},
-		{"single", []string{"word"}, primitive.Regex{Pattern: "word", Options: "i"}},
-		{"three", []string{"a", "b", "c"}, primitive.Regex{Pattern: "a|b|c", Options: "i"}},
+		{"empty", "", primitive.Regex{Options: "i"}},
+		{"single", "word", primitive.Regex{Pattern: "word", Options: "i"}},
+		{"three", "a b c", primitive.Regex{Pattern: "a b c", Options: "i"}},
+		{"specials", `\.+*?()|[]{}^$`,primitive.Regex{Pattern: `\\\.\+\*\?\(\)\|\[\]\{\}\^\$`, Options: "i"}},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			if want, got := test.want, MatchAnyIgnoreCaseRegex(test.words...); !reflect.DeepEqual(want, got) {
+			if want, got := test.want, MatchIgnoreCaseRegex(test.word); !reflect.DeepEqual(want, got) {
 				t.Errorf("not equal: \n wanted %v \n got:   %v", test.want, got)
 			}
 		})

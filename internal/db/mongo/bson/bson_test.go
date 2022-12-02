@@ -95,28 +95,28 @@ func TestFilter(t *testing.T) {
 		{
 			name: "query only, with escapes",
 			filter: book.Filter{
-				HeaderParts: []string{"x", "y", "z+0"},
+				HeaderPart: "x y z+0",
 			},
 			want: []bson.E{{
 				Key: "$or",
 				Value: bson.A{
-					bson.D{bson.E{Key: "k2", Value: primitive.MatchAnyIgnoreCaseRegex("x", "y", "z\\+0")}},
-					bson.D{bson.E{Key: "k3", Value: primitive.MatchAnyIgnoreCaseRegex("x", "y", "z\\+0")}},
+					bson.D{bson.E{Key: "k2", Value: primitive.MatchIgnoreCaseRegex("x y z+0")}},
+					bson.D{bson.E{Key: "k3", Value: primitive.MatchIgnoreCaseRegex("x y z+0")}},
 				}}},
 		},
 		{
 			name: "full filter",
 			filter: book.Filter{
-				Subject:     "simple",
-				HeaderParts: []string{"good"},
+				Subject:    "simple",
+				HeaderPart: "good",
 			},
 			want: []bson.E{
 				{Key: "k1", Value: "simple"},
 				{
 					Key: "$or",
 					Value: bson.A{
-						bson.D{bson.E{Key: "k2", Value: primitive.MatchAnyIgnoreCaseRegex("good")}},
-						bson.D{bson.E{Key: "k3", Value: primitive.MatchAnyIgnoreCaseRegex("good")}},
+						bson.D{bson.E{Key: "k2", Value: primitive.MatchIgnoreCaseRegex("good")}},
+						bson.D{bson.E{Key: "k3", Value: primitive.MatchIgnoreCaseRegex("good")}},
 					},
 				},
 			},

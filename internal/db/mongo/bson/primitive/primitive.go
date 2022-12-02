@@ -3,7 +3,7 @@ package primitive
 
 import (
 	"fmt"
-	"strings"
+	"regexp"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -14,7 +14,7 @@ func ObjectIDFromString(id string) (*primitive.ObjectID, error) {
 		return nil, fmt.Errorf("invalid object id: %w", err)
 	}
 	return &objID, nil
-}
+}	
 
 func ToObjectID(id interface{}) (*primitive.ObjectID, error) {
 	objID, ok := id.(primitive.ObjectID)
@@ -24,10 +24,10 @@ func ToObjectID(id interface{}) (*primitive.ObjectID, error) {
 	return &objID, nil
 }
 
-func MatchAnyIgnoreCaseRegex(words ...string) primitive.Regex {
-	joinedWords := strings.Join(words, "|")
+func MatchIgnoreCaseRegex(word string) primitive.Regex {
+	word = regexp.QuoteMeta(word)
 	r := primitive.Regex{
-		Pattern: joinedWords,
+		Pattern: word,
 		Options: "i",
 	}
 	return r

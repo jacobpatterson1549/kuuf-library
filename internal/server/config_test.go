@@ -208,7 +208,7 @@ func TestSetupDumpCSV(t *testing.T) {
 			readBookHeaders: func(f book.Filter, limit, offset int) ([]book.Header, error) {
 				var headers []book.Header
 				switch {
-				case len(f.HeaderParts) != 0, len(f.Subject) != 0:
+				case len(f.HeaderPart) != 0, len(f.Subject) != 0:
 					return nil, fmt.Errorf("wanted no filter, got %v", f)
 				case limit == 3 && offset == 0:
 					headers = append(headers,

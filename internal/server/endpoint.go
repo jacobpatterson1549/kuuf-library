@@ -16,21 +16,19 @@ func (s *Server) getBookSubjects(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) getBookHeaders(w http.ResponseWriter, r *http.Request) {
-	var headerParts string
-	if !ParseFormValue(w, r, "q", &headerParts, 256) {
+	var filter book.Filter
+	if !ParseFormValue(w, r, "q", &filter.HeaderPart, 256) {
 		return
 	}
-	var subject string
-	if !ParseFormValue(w, r, "s", &subject, 256) {
+	if !ParseFormValue(w, r, "s", &filter.Subject, 256) {
 		return
 	}
-	filter := book.NewFilter(headerParts, subject)
 	pageLoader := func(limit, offset int) ([]book.Header, error) {
-		return s.db.ReadBookHeaders(*filter, limit, offset)
+		return s.db.ReadBookHeaders(filter, limit, offset)
 	}
 	if data, ok := loadPage(w, r, s.cfg.MaxRows, "Books", pageLoader); ok {
-		data["Filter"] = headerParts
-		data["Subject"] = subject
+		data["Filter"] = filter.HeaderPart
+		data["Subject"] = filter.Subject
 		s.serveTemplate(w, "list", data)
 	}
 }

@@ -195,7 +195,7 @@ func TestGetRequest(t *testing.T) {
 			wantCode: 200,
 			maxRows:  2,
 			readBookHeaders: func(f book.Filter, limit, offset int) ([]book.Header, error) {
-				wantFilter := book.Filter{HeaderParts: []string{"many", "items"}, Subject: "stuff"}
+				wantFilter := book.Filter{HeaderPart: "many items", Subject: "stuff"}
 				switch {
 				case !reflect.DeepEqual(wantFilter, f):
 					return nil, fmt.Errorf("filters not equal: \n wanted: %v \n got:    %v", wantFilter, f)

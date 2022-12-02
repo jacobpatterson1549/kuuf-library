@@ -5,7 +5,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/jacobpatterson1549/kuuf-library/internal/book"
@@ -20,13 +19,13 @@ type (
 		QueryTimeout time.Duration
 	}
 	driver struct {
-		Regexp string
+		ILike string
 	}
 )
 
 var drivers = map[string]driver{
-	"postgres": {"~*"},
-	"sqlite3":  {"REGEXP"},
+	"postgres": {"ILIKE"},
+	"sqlite3":  {"LIKE"},
 }
 
 func NewDatabase(driverName, url string, queryTimeout time.Duration) (*Database, error) {
@@ -176,22 +175,21 @@ func (d *Database) ReadBookSubjects(limit, offset int) ([]book.Subject, error) {
 
 func (d *Database) ReadBookHeaders(filter book.Filter, limit, offset int) ([]book.Header, error) {
 	hasSubject := len(filter.Subject) != 0
-	hasFilter := len(filter.HeaderParts) != 0
-	joinedFilter := strings.Join(filter.RegexpSafeHeaderParts(), "|")
-	cmd := fmt.Sprintf(`SELECT id, title, author, subject
+	hasHeaderPart := len(filter.HeaderPart) != 0
+	likeHeaderPart := "%" + filter.HeaderPart + "%"
+	cmd := `SELECT id, title, author, subject
 	FROM books
 	WHERE ($1 OR subject = $2)
 		AND ($3
-			OR title   %v $4
-			OR author  %v $4
-			OR subject %v $4)
+			OR title   ` + d.driver.ILike + ` $4
+			OR author  ` + d.driver.ILike + ` $4
+			OR subject ` + d.driver.ILike + ` $4)
 	ORDER BY subject ASC, Title ASC
 	LIMIT $5
-	OFFSET $6`, d.driver.Regexp, d.driver.Regexp, d.driver.Regexp)
-	// TODO: REGEXP does not work with the mattn/go-sqlite3 driver
+	OFFSET $6`
 	q := query{
 		cmd:  cmd,
-		args: []interface{}{!hasSubject, filter.Subject, !hasFilter, joinedFilter, limit, offset},
+		args: []interface{}{!hasSubject, filter.Subject, !hasHeaderPart, likeHeaderPart, limit, offset},
 	}
 	headers := make([]book.Header, limit)
 	n := 0

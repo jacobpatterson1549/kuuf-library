@@ -86,53 +86,6 @@ func TestSubjectsSort(t *testing.T) {
 	}
 }
 
-func TestNewFilter(t *testing.T) {
-	tests := []struct {
-		name        string
-		headerParts string
-		subject     string
-		wantOk      bool
-		want        Filter
-	}{
-		{
-			name:   "empty",
-			wantOk: true,
-			want:   Filter{HeaderParts: []string{}},
-		},
-		{
-			name:        "alphaNumeric and more",
-			headerParts: "also-allowed",
-			want: Filter{
-				HeaderParts: []string{"also-allowed"},
-			},
-		},
-		{
-			name:        "happy path",
-			headerParts: "How 2  make a   FILTER",
-			subject:     "info",
-			wantOk:      true,
-			want: Filter{
-				Subject: "info",
-				HeaderParts: []string{
-					"How",
-					"2",
-					"make",
-					"a",
-					"FILTER",
-				},
-			},
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			got := NewFilter(test.headerParts, test.subject)
-			if !reflect.DeepEqual(&test.want, got) {
-				t.Errorf("filters not equal: \n wanted: %v \n got:    %v", &test.want, got)
-			}
-		})
-	}
-}
-
 func TestFilterMatches(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -147,13 +100,25 @@ func TestFilterMatches(t *testing.T) {
 		{
 			name:   "case-insensitive",
 			book:   Book{Header: Header{Title: "The big day"}},
-			filter: Filter{HeaderParts: []string{"the", "THE"}},
+			filter: Filter{HeaderPart: "the"},
 			want:   true,
 		},
 		{
 			name:   "middle of word",
-			book:   Book{Header: Header{Title: "Fruits"}, Description: "Apples, pears, and watermelons are all fruits."},
-			filter: Filter{HeaderParts: []string{"the", "term", "ends"}},
+			book:   Book{Header: Header{Title: "Fruits", Subject: "Apples, pears, and watermelons are all fruits."}},
+			filter: Filter{HeaderPart: "melon"},
+			want:   true,
+		},
+		{
+			name:   "multiple words connected with spaces",
+			book:   Book{Header: Header{Title: "Fruits", Subject: "Apples, pears, and watermelons are all fruits."}},
+			filter: Filter{HeaderPart: "are all fruit"},
+			want:   true,
+		},
+		{
+			name:   "multiple words not connected",
+			book:   Book{Header: Header{Title: "Fruits", Subject: "Apples, pears, and watermelons are all fruits."}},
+			filter: Filter{HeaderPart: "apples watermelons"},
 			want:   false,
 		},
 		{
@@ -171,13 +136,13 @@ func TestFilterMatches(t *testing.T) {
 		{
 			name:   "header match 2",
 			book:   Book{Header: Header{Title: "Fruit Trees", Subject: "Fruits"}},
-			filter: Filter{Subject: "fruits", HeaderParts: []string{"trees"}},
+			filter: Filter{Subject: "fruits", HeaderPart: "trees"},
 			want:   true,
 		},
 		{
 			name:   "header match 3, both must match",
 			book:   Book{Header: Header{Title: "Fruit Trees", Subject: "Fruits"}},
-			filter: Filter{Subject: "fruits", HeaderParts: []string{"pears"}},
+			filter: Filter{Subject: "fruits", HeaderPart: "pears"},
 			want:   false,
 		},
 	}
@@ -185,40 +150,6 @@ func TestFilterMatches(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			if want, got := test.want, test.filter.Matches(test.book); want != got {
 				t.Error()
-			}
-		})
-	}
-}
-
-func TestRegexpSafeHeaderParts(t *testing.T) {
-	tests := []struct {
-		name        string
-		HeaderParts []string
-		want        []string
-	}{
-		{
-			name:        "Basic1",
-			HeaderParts: []string{"Basic1", "2+2=4"},
-			want:        []string{"Basic1", "2\\+2=4"},
-		},
-		{
-			name:        "fancy",
-			HeaderParts: []string{"Here, I am!", "a|b", "[uu]", "Pérez"},
-			want:        []string{"Here, I am!", "a\\|b", "\\[uu\\]", "Pérez"},
-		},
-		{
-			name:        "all special",
-			HeaderParts: []string{`\.+*?()|[]{}^$`},
-			want:        []string{"\\\\\\.\\+\\*\\?\\(\\)\\|\\[\\]\\{\\}\\^\\$"},
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			f := Filter{
-				HeaderParts: test.HeaderParts,
-			}
-			if want, got := test.want, f.RegexpSafeHeaderParts(); !reflect.DeepEqual(want, got) {
-				t.Errorf("not equal: \n wanted: %v \n got:    %v", want, got)
 			}
 		})
 	}

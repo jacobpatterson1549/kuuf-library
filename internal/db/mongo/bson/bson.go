@@ -2,11 +2,9 @@
 package bson
 
 import (
-	"strings"
-
 	"github.com/jacobpatterson1549/kuuf-library/internal/book"
+	"github.com/jacobpatterson1549/kuuf-library/internal/db/mongo/bson/primitive"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func D(e ...bson.E) bson.D {
@@ -34,12 +32,8 @@ func (f Filter) From(filter book.Filter) []bson.E {
 		subjectPart := E(f.SubjectKey, filter.Subject)
 		parts = append(parts, subjectPart)
 	}
-	if len(filter.HeaderParts) != 0 {
-		joinedFilter := strings.Join(filter.RegexpSafeHeaderParts(), "|")
-		regex := primitive.Regex{
-			Pattern: joinedFilter,
-			Options: "i",
-		}
+	if len(filter.HeaderPart) != 0 {
+		regex := primitive.MatchIgnoreCaseRegex(filter.HeaderPart)
 		headerFilters := make([]interface{}, len(f.HeaderKeys))
 		for i, k := range f.HeaderKeys {
 			headerFilters[i] = D(E(k, regex))

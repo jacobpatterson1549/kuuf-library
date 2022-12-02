@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
-	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -102,41 +101,22 @@ func (s Subject) less(other Subject) bool {
 
 // Filter is used to match books weth the exact subject (if set) or a whole word match to any of the header parts.
 type Filter struct {
-	Subject     string
-	HeaderParts []string
-}
-
-func NewFilter(headerParts, subject string) *Filter {
-	fields := strings.Fields(headerParts)
-	f := Filter{
-		Subject:     subject,
-		HeaderParts: fields,
-	}
-	return &f
-}
-
-func (f Filter) RegexpSafeHeaderParts() []string {
-	hp := make([]string, len(f.HeaderParts))
-	for i, p := range f.HeaderParts {
-		hp[i] = regexp.QuoteMeta(p)
-	}
-	return hp
+	Subject    string
+	HeaderPart string
 }
 
 func (f Filter) Matches(b Book) bool {
 	if len(f.Subject) != 0 && !strings.EqualFold(f.Subject, b.Subject) {
 		return false
 	}
-	if len(f.HeaderParts) == 0 {
+	if len(f.HeaderPart) == 0 {
 		return true
 	}
+	headerPart := strings.ToLower(f.HeaderPart)
 	for _, part := range []string{b.Title, b.Author, b.Subject} {
-		for _, w := range strings.Fields(part) {
-			for _, v := range f.HeaderParts {
-				if strings.EqualFold(w, v) {
-					return true
-				}
-			}
+		part = strings.ToLower(part)
+		if strings.Contains(part, headerPart) {
+			return true
 		}
 	}
 	return false
