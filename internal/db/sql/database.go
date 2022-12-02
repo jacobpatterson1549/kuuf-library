@@ -9,21 +9,38 @@ import (
 	"time"
 
 	"github.com/jacobpatterson1549/kuuf-library/internal/book"
-	_ "github.com/lib/pq" // register "postgres" database driver from package init() function
+	_ "github.com/lib/pq"           // register "postgres" database driver from package init() function
+	_ "github.com/mattn/go-sqlite3" // register "sqlite3" database driver from package init() function
 )
 
-type Database struct {
-	db           *sql.DB
-	QueryTimeout time.Duration
+type (
+	Database struct {
+		db           *sql.DB
+		driver       driver
+		QueryTimeout time.Duration
+	}
+	driver struct {
+		Regexp string
+	}
+)
+
+var drivers = map[string]driver{
+	"postgres": {"~*"},
+	"sqlite3":  {"REGEXP"},
 }
 
 func NewDatabase(driverName, url string, queryTimeout time.Duration) (*Database, error) {
+	driver, ok := drivers[driverName]
+	if !ok {
+		return nil, fmt.Errorf("unknown driverName: %q", driverName)
+	}
 	db, err := sql.Open(driverName, url)
 	if err != nil {
 		return nil, fmt.Errorf("opening database: %w", err)
 	}
 	d := Database{
 		db:           db,
+		driver:       driver,
 		QueryTimeout: queryTimeout,
 	}
 	if err := d.setupTables(); err != nil {
@@ -35,24 +52,23 @@ func NewDatabase(driverName, url string, queryTimeout time.Duration) (*Database,
 func (d *Database) setupTables() error {
 	cmds := []string{
 		`CREATE TABLE IF NOT EXISTS books
-		( _id SERIAL PRIMARY KEY
-		, id CHAR(32) UNIQUE
-		, title VARCHAR
-		, author VARCHAR
+		( id TEXT PRIMARY KEY
+		, title TEXT
+		, author TEXT
 		, subject TEXT
 		, description TEXT
-		, dewey_dec_class VARCHAR
+		, dewey_dec_class TEXT
 		, pages INT
-		, publisher VARCHAR
+		, publisher TEXT
 		, publish_date TIMESTAMP
 		, added_date TIMESTAMP
-		, ean_isbn13 VARCHAR
-		, upc_isbn10 VARCHAR
+		, ean_isbn13 TEXT
+		, upc_isbn10 TEXT
 		, image_base64 TEXT
 		)`,
 		`CREATE TABLE IF NOT EXISTS users
-		( username VARCHAR(32) PRIMARY KEY
-		, password CHAR(60)
+		( username TEXT PRIMARY KEY
+		, password TEXT
 		)`,
 		`INSERT INTO users (username)
 		VALUES ('admin')
@@ -162,16 +178,17 @@ func (d *Database) ReadBookHeaders(filter book.Filter, limit, offset int) ([]boo
 	hasSubject := len(filter.Subject) != 0
 	hasFilter := len(filter.HeaderParts) != 0
 	joinedFilter := strings.Join(filter.RegexpSafeHeaderParts(), "|")
-	cmd := `SELECT id, title, author, subject
+	cmd := fmt.Sprintf(`SELECT id, title, author, subject
 	FROM books
 	WHERE ($1 OR subject = $2)
 		AND ($3
-			OR title   ~* $4
-			OR author  ~* $4
-			OR subject ~* $4)
+			OR title   %v $4
+			OR author  %v $4
+			OR subject %v $4)
 	ORDER BY subject ASC, Title ASC
 	LIMIT $5
-	OFFSET $6`
+	OFFSET $6`, d.driver.Regexp, d.driver.Regexp, d.driver.Regexp)
+	// TODO: REGEXP does not work with the mattn/go-sqlite3 driver
 	q := query{
 		cmd:  cmd,
 		args: []interface{}{!hasSubject, filter.Subject, !hasFilter, joinedFilter, limit, offset},

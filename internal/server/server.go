@@ -117,6 +117,8 @@ func (cfg Config) createDatabase() (Database, error) {
 		return mongo.NewDatabase(url.String(), cfg.queryTimeout())
 	case "postgres":
 		return sql.NewDatabase(s, url.String(), cfg.queryTimeout())
+	case "file":
+		return sql.NewDatabase("sqlite3", url.String(), cfg.queryTimeout())
 	default:
 		return nil, fmt.Errorf("unknown database: %q", s)
 	}

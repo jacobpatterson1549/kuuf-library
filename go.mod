@@ -4,6 +4,7 @@ go 1.19
 
 require (
 	github.com/lib/pq v1.10.7
+	github.com/mattn/go-sqlite3 v1.14.16
 	go.mongodb.org/mongo-driver v1.11.0
 	golang.org/x/crypto v0.1.0
 	golang.org/x/image v0.1.0

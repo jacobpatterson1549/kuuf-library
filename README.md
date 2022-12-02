@@ -69,6 +69,14 @@ A MongoDB database can be used.
 Do this by setting the `-database-URL` application argument or the `DATABASE_URL` environment variable.
 The database url should begin with `mongodb+srv://` for the connection to work.
 
+#### SQLite
+
+A SQLite database can be used.
+Do this by setting the `-database-URL` application argument or the `DATABASE_URL` environment variable.
+The code has been testing with sqlite3 version 3.37.
+The database url should be like `file:library.db` for the connection to use the `library.db` file in the same folder as the application.
+To use an absolute to the path to the database file, set the database url to `file://localhost/home/username/library.db` to reference `/home/username/library.db`.
+
 #### Postgres
 
 A Postgres database can be used.
