@@ -3,7 +3,8 @@ services:
   web:
     build:
       context: .
-      dockerfile: sqlite3.Dockerfile
+      args:
+        - CGO_ENABLED=1
     container_name: "kuuf-library"
     env_file: ./.env
     ports:
