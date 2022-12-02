@@ -18,34 +18,30 @@ The library administrator can create and update book listings.
 ### Docker
 
 It is easiest to run the application using [Docker](https://github.com/docker/docker) and [docker-compose](https://github.com/docker/compose).
-This bundles the application into a small image (~20 MB).
-A Postgres Docker image is used to store the database.
-This image is a bit larger (~200 MB), but requires very little configuration.
+This bundles the application into a small image (~30 MB).
+The image is built to use SQLite for storing data.
 
 1. The only configuration required is to create a `.env` file.
 It contains environment variable mappings that are read by `docker-compose`.
-Values are required for `PORT`, `DOCKER_POSTGRES_PASSWORD`, and `ADMIN_PASSWORD`.
+Values are required for `PORT` and `ADMIN_PASSWORD`.
 The port used by Docker is forwarded to through to the host.
     ```
-    PORT=8007
-    DOCKER_POSTGRES_PASSWORD=
+    PORT=8000
     ADMIN_PASSWORD=
     ```
 
-1. In a terminal, start the postgres-db instance with `docker-compose up postgres-db`.
-This creates a new postgres user with the password specified by `DOCKER_POSTGRES_PASSWORD`.
-
 1. In a *separate* terminal, build and start the application with `docker-compose up web`.
+Building the application might take a few minutes because the sqlite driver requires CGO.
 This starts the server on the port specified by `PORT`.
 The initial admin password is specified by `ADMIN_PASSWORD`.
 This is what the administrator of the library uses to create and update books.
 
 Stop the application by running `docker-compose down` in a separate terminal.
-This can also be accomplished by pressing `Ctrl-C` in both terminals.
+This can also be accomplished by pressing `Ctrl-C` in the terminal the app was started with.
 
 The database can be initialized with the `CSV_BACKFILL=true` environment variable.
 Edit [internal/server/resources/library.csv](internal/server/resources/library.csv), with one row for each book.
-The application may need to be rebuilt by Docker: `docker-compose up web`.
+The application may need to be rebuilt by Docker: `docker-compose up web --build`.
 
 ### localhost
 
