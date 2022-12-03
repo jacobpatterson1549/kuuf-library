@@ -145,7 +145,7 @@ func (s *Server) putAdminPassword(w http.ResponseWriter, r *http.Request) {
 	httpRedirect(w, r, "/")
 }
 
-func withAdminPassword(h http.HandlerFunc, db Database, ph PasswordHandler) http.HandlerFunc {
+func withAdminPassword(h http.HandlerFunc, db database, ph passwordHandler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		hashedPassword, err := db.ReadAdminPassword()
 		if err != nil {

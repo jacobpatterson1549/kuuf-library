@@ -51,15 +51,15 @@ type (
 		cfg     Config
 		favicon string
 		tmpl    *template.Template
-		db      Database
-		ph      PasswordHandler
+		db      database
+		ph      passwordHandler
 		out     io.Writer
 	}
-	PasswordHandler interface {
+	passwordHandler interface {
 		Hash(password []byte) (hashedPassword []byte, err error)
 		IsCorrectPassword(hashedPassword, password []byte) (ok bool, err error)
 	}
-	Database interface {
+	database interface {
 		CreateBooks(books ...book.Book) ([]book.Book, error)
 		ReadBookSubjects(limit, offset int) ([]book.Subject, error)
 		ReadBookHeaders(f book.Filter, limit, offset int) ([]book.Header, error)
@@ -105,7 +105,7 @@ func (s *Server) Run() error {
 	return http.ListenAndServe(addr, handler)
 }
 
-func (cfg Config) createDatabase() (Database, error) {
+func (cfg Config) createDatabase() (database, error) {
 	url, err := url.Parse(cfg.DatabaseURL)
 	if err != nil {
 		return nil, fmt.Errorf("parsing database url: %w", err)

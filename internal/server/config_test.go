@@ -133,7 +133,7 @@ func TestSetupBackfillCSV(t *testing.T) {
 	tests := []struct {
 		name       string
 		libraryCSV string
-		db         Database
+		db         database
 		wantOk     bool
 	}{
 		{

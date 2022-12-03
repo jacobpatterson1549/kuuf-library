@@ -23,7 +23,7 @@ func (cfg Config) postRateLimiter() *rate.Limiter {
 	return lim
 }
 
-func (cfg Config) setup(db Database, ph PasswordHandler, out io.Writer) error {
+func (cfg Config) setup(db database, ph passwordHandler, out io.Writer) error {
 	if len(cfg.AdminPassword) != 0 {
 		if err := cfg.initAdminPassword(db, ph); err != nil {
 			return fmt.Errorf("initializing admin password from server configuration: %w", err)
@@ -42,7 +42,7 @@ func (cfg Config) setup(db Database, ph PasswordHandler, out io.Writer) error {
 	return nil
 }
 
-func (cfg Config) initAdminPassword(db Database, ph PasswordHandler) error {
+func (cfg Config) initAdminPassword(db database, ph passwordHandler) error {
 	if err := validatePassword(cfg.AdminPassword); err != nil {
 		return err
 	}
@@ -56,7 +56,7 @@ func (cfg Config) initAdminPassword(db Database, ph PasswordHandler) error {
 	return nil
 }
 
-func (cfg Config) backfillCSV(db Database) error {
+func (cfg Config) backfillCSV(db database) error {
 	src, err := embeddedCSVDatabase()
 	if err != nil {
 		return fmt.Errorf("loading csv database: %w", err)
@@ -68,7 +68,7 @@ func (cfg Config) backfillCSV(db Database) error {
 	return nil
 }
 
-func (cfg Config) updateImages(db Database, out io.Writer) error {
+func (cfg Config) updateImages(db database, out io.Writer) error {
 	d := csv.NewDump(out)
 	offset := 0
 	for {
@@ -92,7 +92,7 @@ func (cfg Config) updateImages(db Database, out io.Writer) error {
 	}
 }
 
-func (cfg Config) updateImage(h book.Header, db Database, d csv.Dump) error {
+func (cfg Config) updateImage(h book.Header, db database, d csv.Dump) error {
 	b, err := db.ReadBook(h.ID)
 	if err != nil {
 		return fmt.Errorf("reading book %q: %w", h.ID, err)
