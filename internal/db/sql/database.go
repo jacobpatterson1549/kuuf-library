@@ -1,4 +1,4 @@
-// Package postgres provides a database for the library.
+// Package sql provides a database for the library.
 package sql
 
 import (
