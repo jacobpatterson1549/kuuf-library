@@ -17,10 +17,10 @@ func (s *Server) getBookSubjects(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) getBookHeaders(w http.ResponseWriter, r *http.Request) {
 	var filter book.Filter
-	if !ParseFormValue(w, r, "q", &filter.HeaderPart, 256) {
+	if !parseFormValue(w, r, "q", &filter.HeaderPart, 256) {
 		return
 	}
-	if !ParseFormValue(w, r, "s", &filter.Subject, 256) {
+	if !parseFormValue(w, r, "s", &filter.Subject, 256) {
 		return
 	}
 	pageLoader := func(limit, offset int) ([]book.Header, error) {
@@ -35,7 +35,7 @@ func (s *Server) getBookHeaders(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) getBook(w http.ResponseWriter, r *http.Request) {
 	var id string
-	if !ParseFormValue(w, r, "id", &id, 64) {
+	if !parseFormValue(w, r, "id", &id, 64) {
 		return
 	}
 	b, err := s.db.ReadBook(id)
@@ -88,7 +88,7 @@ func (s *Server) putBook(w http.ResponseWriter, r *http.Request) {
 	}
 	var updateImage bool
 	var updateImageVal string
-	if !ParseFormValue(w, r, "update-image", &updateImageVal, 10) {
+	if !parseFormValue(w, r, "update-image", &updateImageVal, 10) {
 		return
 	}
 	switch updateImageVal {
@@ -108,7 +108,7 @@ func (s *Server) putBook(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) deleteBook(w http.ResponseWriter, r *http.Request) {
 	var id string
-	if !ParseFormValue(w, r, "id", &id, 64) {
+	if !parseFormValue(w, r, "id", &id, 64) {
 		return
 	}
 	if err := s.db.DeleteBook(id); err != nil {
@@ -120,7 +120,7 @@ func (s *Server) deleteBook(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) putAdminPassword(w http.ResponseWriter, r *http.Request) {
 	var p1, p2 string
-	if !ParseFormValue(w, r, "p1", &p1, 128) || !ParseFormValue(w, r, "p2", &p2, 128) {
+	if !parseFormValue(w, r, "p1", &p1, 128) || !parseFormValue(w, r, "p2", &p2, 128) {
 		return
 	}
 	if p1 != p2 {
@@ -153,7 +153,7 @@ func withAdminPassword(h http.HandlerFunc, db database, ph passwordHandler) http
 			return
 		}
 		var password string
-		if !ParseFormValue(w, r, "p", &password, 128) {
+		if !parseFormValue(w, r, "p", &password, 128) {
 			return
 		}
 		ok, err := ph.IsCorrectPassword(hashedPassword, []byte(password))
@@ -171,18 +171,18 @@ func withAdminPassword(h http.HandlerFunc, db database, ph passwordHandler) http
 
 func bookFrom(w http.ResponseWriter, r *http.Request) (*book.Book, error) {
 	var sb book.StringBook
-	if !ParseFormValue(w, r, "id", &sb.ID, 256) ||
-		!ParseFormValue(w, r, "title", &sb.Title, 256) ||
-		!ParseFormValue(w, r, "author", &sb.Author, 256) ||
-		!ParseFormValue(w, r, "description", &sb.Description, 10000) ||
-		!ParseFormValue(w, r, "subject", &sb.Subject, 256) ||
-		!ParseFormValue(w, r, "dewey-dec-class", &sb.DeweyDecClass, 256) ||
-		!ParseFormValue(w, r, "pages", &sb.Pages, 32) ||
-		!ParseFormValue(w, r, "publisher", &sb.Publisher, 256) ||
-		!ParseFormValue(w, r, "publish-date", &sb.PublishDate, 32) ||
-		!ParseFormValue(w, r, "added-date", &sb.AddedDate, 32) ||
-		!ParseFormValue(w, r, "ean-isbn-13", &sb.EanIsbn13, 32) ||
-		!ParseFormValue(w, r, "upc-isbn-10", &sb.UpcIsbn10, 32) {
+	if !parseFormValue(w, r, "id", &sb.ID, 256) ||
+		!parseFormValue(w, r, "title", &sb.Title, 256) ||
+		!parseFormValue(w, r, "author", &sb.Author, 256) ||
+		!parseFormValue(w, r, "description", &sb.Description, 10000) ||
+		!parseFormValue(w, r, "subject", &sb.Subject, 256) ||
+		!parseFormValue(w, r, "dewey-dec-class", &sb.DeweyDecClass, 256) ||
+		!parseFormValue(w, r, "pages", &sb.Pages, 32) ||
+		!parseFormValue(w, r, "publisher", &sb.Publisher, 256) ||
+		!parseFormValue(w, r, "publish-date", &sb.PublishDate, 32) ||
+		!parseFormValue(w, r, "added-date", &sb.AddedDate, 32) ||
+		!parseFormValue(w, r, "ean-isbn-13", &sb.EanIsbn13, 32) ||
+		!parseFormValue(w, r, "upc-isbn-10", &sb.UpcIsbn10, 32) {
 		return nil, fmt.Errorf("parse error")
 	}
 	switch {
@@ -212,7 +212,7 @@ func bookFrom(w http.ResponseWriter, r *http.Request) (*book.Book, error) {
 
 func loadPage[V interface{}](w http.ResponseWriter, r *http.Request, maxRows int, sliceName string, pageLoader func(limit, offset int) ([]V, error)) (data map[string]interface{}, ok bool) {
 	var a string
-	if !ParseFormValue(w, r, "page", &a, 32) {
+	if !parseFormValue(w, r, "page", &a, 32) {
 		return nil, false
 	}
 	page := 1
@@ -241,9 +241,9 @@ func loadPage[V interface{}](w http.ResponseWriter, r *http.Request, maxRows int
 	return data, true
 }
 
-// ParseFormValue reads the value the form by key into dest.
+// parseFormValue reads the value the form by key into dest.
 // If the length of the value is longer than maxLength, an error will be written tot he response writer and false is returned.
-func ParseFormValue(w http.ResponseWriter, r *http.Request, key string, dest *string, maxLength int) (ok bool) {
+func parseFormValue(w http.ResponseWriter, r *http.Request, key string, dest *string, maxLength int) (ok bool) {
 	value := r.FormValue(key)
 	if len(value) > maxLength {
 		err := fmt.Errorf("form value %q too long", key)

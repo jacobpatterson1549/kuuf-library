@@ -820,7 +820,7 @@ func TestParseFormValue(t *testing.T) {
 			r.Form = test.form
 			var dest string
 			switch {
-			case test.want != ParseFormValue(w, r, test.key, &dest, test.maxLength):
+			case test.want != parseFormValue(w, r, test.key, &dest, test.maxLength):
 				t.Errorf("unwanted return value")
 			case test.want && dest != test.wantValue:
 				t.Errorf("value not set to %q: got %q", test.wantValue, dest)
