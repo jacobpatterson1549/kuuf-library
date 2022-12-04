@@ -7,7 +7,6 @@ import (
 	"io"
 	"io/fs"
 	"net/http"
-	"net/url"
 	"strings"
 	"text/template"
 	"time"
@@ -96,7 +95,8 @@ func (s *Server) Run() error {
 	if err := s.cfg.setup(s.db, s.ph, s.out); err != nil {
 		return fmt.Errorf("setting up server: %w", err)
 	}
-	fmt.Fprintf(s.out, "Using database: %T.\n", s.db)
+	dbScheme, _, _ := strings.Cut(s.cfg.DatabaseURL, ":")
+	fmt.Fprintf(s.out, "Using database: %q (%T).\n", dbScheme, s.db)
 	fmt.Fprintf(s.out, "Serving library at at http://localhost:%v\n", s.cfg.Port)
 	fmt.Fprintf(s.out, "Press Ctrl-C to stop.\n")
 	lim := s.cfg.postRateLimiter()
@@ -106,19 +106,15 @@ func (s *Server) Run() error {
 }
 
 func (cfg Config) createDatabase() (database, error) {
-	url, err := url.Parse(cfg.DatabaseURL)
-	if err != nil {
-		return nil, fmt.Errorf("parsing database url: %w", err)
-	}
-	switch s := url.Scheme; s {
+	switch s := cfg.databaseScheme(); s {
 	case "csv":
 		return embeddedCSVDatabase()
 	case "mongodb+srv":
-		return mongo.NewDatabase(url.String(), cfg.queryTimeout())
+		return mongo.NewDatabase(cfg.DatabaseURL, cfg.queryTimeout())
 	case "postgres":
-		return sql.NewDatabase(s, url.String(), cfg.queryTimeout())
+		return sql.NewDatabase(s, cfg.DatabaseURL, cfg.queryTimeout())
 	case "file":
-		return sql.NewDatabase("sqlite3", url.String(), cfg.queryTimeout())
+		return sql.NewDatabase("sqlite3", cfg.DatabaseURL, cfg.queryTimeout())
 	default:
 		return nil, fmt.Errorf("unknown database: %q", s)
 	}

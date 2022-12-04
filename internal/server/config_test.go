@@ -58,6 +58,30 @@ func TestPostRateLimiter(t *testing.T) {
 	}
 }
 
+func TestDatabaseScheme(t *testing.T) {
+	tests := []struct {
+		name        string
+		databaseURL string
+		want        string
+	}{
+		{"empty", "", ""},
+		{"no-colon", "no-colon", "no-colon"},
+		{"two-colon", "http://localhost:8000", "http"},
+		{"csv", "csv://", "csv"},
+		{"mongodb", "mongodb+srv://u:p@host/?retryWrites=true&w=majority", "mongodb+srv"},
+		{"postgres", "postgres://u:p@host:port/db", "postgres"},
+		{"sqlite", "file:library.db", "file"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			cfg := Config{DatabaseURL: test.databaseURL}
+			if want, got := test.want, cfg.databaseScheme(); want != got {
+				t.Errorf("not equal: \n wanted: %q \n got:    %q", want, got)
+			}
+		})
+	}
+}
+
 func TestSetupInitAdminPassword(t *testing.T) {
 	tests := []struct {
 		name                string

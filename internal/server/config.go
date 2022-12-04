@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
 	"github.com/jacobpatterson1549/kuuf-library/internal/book"
@@ -21,6 +22,11 @@ func (cfg Config) postRateLimiter() *rate.Limiter {
 	}
 	lim := rate.NewLimiter(r, cfg.PostMaxBurst)
 	return lim
+}
+
+func (cfg Config) databaseScheme() string {
+	beforeColon, _, _ := strings.Cut(cfg.DatabaseURL, ":")
+	return beforeColon
 }
 
 func (cfg Config) setup(db database, ph passwordHandler, out io.Writer) error {
