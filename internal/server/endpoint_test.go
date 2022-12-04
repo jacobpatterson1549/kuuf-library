@@ -241,26 +241,24 @@ func TestGetRequest(t *testing.T) {
 			var lim countRateLimiter
 			h := s.mux(&lim)
 			h.ServeHTTP(w, r)
-			t.Run(fmt.Sprintf("%v (%v)", test.url, test.name), func(t *testing.T) {
-				switch {
-				case sb.Len() != 0:
-					t.Errorf("unwanted log: %q", sb.String())
-				case test.wantCode != w.Code:
-					t.Errorf("codes not equal: wanted %v, got %v", test.wantCode, w.Code)
-				case w.Code == 200:
-					got := w.Body.String()
-					for _, want := range test.wantData {
-						if !strings.Contains(got, want) {
-							t.Errorf("wanted %q in body, got: \n %v", want, got)
-						}
-					}
-					for _, exclude := range test.unwantedData {
-						if strings.Contains(got, exclude) {
-							t.Errorf("unwanted %q in body, got: \n %v", exclude, got)
-						}
+			switch {
+			case sb.Len() != 0:
+				t.Errorf("unwanted log: %q", sb.String())
+			case test.wantCode != w.Code:
+				t.Errorf("codes not equal: wanted %v, got %v", test.wantCode, w.Code)
+			case w.Code == 200:
+				got := w.Body.String()
+				for _, want := range test.wantData {
+					if !strings.Contains(got, want) {
+						t.Errorf("wanted %q in body, got: \n %v", want, got)
 					}
 				}
-			})
+				for _, exclude := range test.unwantedData {
+					if strings.Contains(got, exclude) {
+						t.Errorf("unwanted %q in body, got: \n %v", exclude, got)
+					}
+				}
+			}
 		})
 	}
 }
