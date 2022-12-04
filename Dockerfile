@@ -13,7 +13,6 @@ WORKDIR /app
 COPY go.mod go.sum ./
 RUN apk add --no-cache \
         make=~4.3 \
-        sqlite=~3.38 \
         gcc=~11.2 \
         musl-dev=~1.2 \
     && go mod download
