@@ -124,7 +124,7 @@ func TestGetRequest(t *testing.T) {
 			url:  "/book?id=id7",
 			readBook: func(id string) (*book.Book, error) {
 				if id != "id7" {
-					t.Errorf("unwanted id: %q", id)
+					return nil, fmt.Errorf("unwanted id: %q", id)
 				}
 				b := book.Book{
 					Header: book.Header{
