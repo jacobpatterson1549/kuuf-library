@@ -1,4 +1,8 @@
+# object directory used by Makefile
 /build/
+
+# volume used by docer to persist sqlite3 database with docker-compose
+/docker/
 
 # environment variables
 /.env

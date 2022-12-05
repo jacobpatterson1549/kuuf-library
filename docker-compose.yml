@@ -10,4 +10,6 @@ services:
     ports:
       - "${PORT}:${PORT}"
     environment:
-      - DATABASE_URL=file:kuuf-library.db
+      - DATABASE_URL=file:mnt/kuuf-library.db
+    volumes:
+      - ${PWD}/docker:/app/mnt

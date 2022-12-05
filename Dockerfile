@@ -20,6 +20,7 @@ RUN apk add --no-cache \
 # build the server
 COPY . ./
 ARG CGO_ENABLED=0
+ARG CGO_ENABLED=$CGO_ENABLED
 RUN make build/kuuf-library \
         GO_ARGS="CGO_ENABLED=$CGO_ENABLED"
 
