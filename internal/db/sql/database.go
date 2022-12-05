@@ -100,7 +100,7 @@ func (d *Database) execTx(queries ...query) error {
 			return fmt.Errorf("beginning transaction: %w", err)
 		}
 		for _, q := range queries {
-			if _, err = tx.Exec(q.cmd, q.args...); err != nil {
+			if _, err = tx.ExecContext(ctx, q.cmd, q.args...); err != nil {
 				break
 			}
 		}
