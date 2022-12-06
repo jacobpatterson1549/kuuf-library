@@ -135,17 +135,18 @@ func (d *Database) query(q query, dest func() []interface{}) error {
 
 func (d *Database) CreateBooks(books ...book.Book) ([]book.Book, error) {
 	queries := make([]query, len(books))
+	created := make([]book.Book, len(books))
 	for i, b := range books {
 		b.ID = book.NewID()
 		queries[i].cmd = `INSERT INTO books (id, title, author, subject, description, dewey_dec_class, pages, publisher, publish_date, added_date, ean_isbn13, upc_isbn10, image_base64)
 		VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`
 		queries[i].args = []interface{}{b.ID, b.Title, b.Author, b.Subject, b.Description, b.DeweyDecClass, b.Pages, b.Publisher, b.PublishDate, b.AddedDate, b.EanIsbn13, b.UpcIsbn10, b.ImageBase64}
-		books[i] = b
+		created[i] = b
 	}
 	if err := d.execTx(queries...); err != nil {
 		return nil, fmt.Errorf("creating books: %w", err)
 	}
-	return books, nil
+	return created, nil
 }
 
 func (d *Database) ReadBookSubjects(limit, offset int) ([]book.Subject, error) {
