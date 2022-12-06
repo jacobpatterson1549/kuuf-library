@@ -15,15 +15,15 @@ import (
 type (
 	Database struct {
 		db           *sql.DB
-		driver       driver
+		driver       driverInfo
 		QueryTimeout time.Duration
 	}
-	driver struct {
+	driverInfo struct {
 		ILike string
 	}
 )
 
-var drivers = map[string]driver{
+var drivers = map[string]driverInfo{
 	"postgres": {"ILIKE"},
 	"sqlite3":  {"LIKE"},
 }
