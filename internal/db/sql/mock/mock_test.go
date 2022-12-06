@@ -31,7 +31,7 @@ func TestNewQuery(t *testing.T) {
 
 func TestQueryCheckEquals(t *testing.T) {
 	want := NewQuery("Hello, World!", 1, "two", 3.14, AnyArg)
-	if err := want.checkEquals("Hello, \n World!", 1, "two", 3.14, 42); err != nil {
+	if err := want.checkEquals("Hello, World!", 1, "two", 3.14, 42); err != nil {
 		t.Errorf("unwanted error: %v", err)
 	}
 }

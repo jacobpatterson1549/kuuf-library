@@ -50,29 +50,28 @@ func NewDatabase(driverName, url string, queryTimeout time.Duration) (*Database,
 
 func (d *Database) setupTables() error {
 	cmds := []string{
-		`CREATE TABLE IF NOT EXISTS books
-		( id TEXT PRIMARY KEY
-		, title TEXT
-		, author TEXT
-		, subject TEXT
-		, description TEXT
-		, dewey_dec_class TEXT
-		, pages INT
-		, publisher TEXT
-		, publish_date TIMESTAMP
-		, added_date TIMESTAMP
-		, ean_isbn13 TEXT
-		, upc_isbn10 TEXT
-		, image_base64 TEXT
-		)`,
-		`CREATE TABLE IF NOT EXISTS users
-		( username TEXT PRIMARY KEY
-		, password TEXT
-		)`,
-		`INSERT INTO users (username)
-		VALUES ('admin')
-		ON CONFLICT DO NOTHING
-		`,
+		"CREATE TABLE IF NOT EXISTS books" +
+			" ( id TEXT PRIMARY KEY" +
+			" , title TEXT" +
+			" , author TEXT" +
+			" , subject TEXT" +
+			" , description TEXT" +
+			" , dewey_dec_class TEXT" +
+			" , pages INT" +
+			" , publisher TEXT" +
+			" , publish_date TIMESTAMP" +
+			" , added_date TIMESTAMP" +
+			" , ean_isbn13 TEXT" +
+			" , upc_isbn10 TEXT" +
+			" , image_base64 TEXT" +
+			" )",
+		"CREATE TABLE IF NOT EXISTS users" +
+			" ( username TEXT PRIMARY KEY" +
+			" , password TEXT" +
+			" )",
+		"INSERT INTO users (username)" +
+			" VALUES ('admin')" +
+			" ON CONFLICT DO NOTHING",
 	}
 	queries := make([]query, len(cmds))
 	for i, cmd := range cmds {
@@ -138,8 +137,8 @@ func (d *Database) CreateBooks(books ...book.Book) ([]book.Book, error) {
 	created := make([]book.Book, len(books))
 	for i, b := range books {
 		b.ID = book.NewID()
-		queries[i].cmd = `INSERT INTO books (id, title, author, subject, description, dewey_dec_class, pages, publisher, publish_date, added_date, ean_isbn13, upc_isbn10, image_base64)
-		VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`
+		queries[i].cmd = "INSERT INTO books (id, title, author, subject, description, dewey_dec_class, pages, publisher, publish_date, added_date, ean_isbn13, upc_isbn10, image_base64)" +
+			" VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)"
 		queries[i].args = []interface{}{b.ID, b.Title, b.Author, b.Subject, b.Description, b.DeweyDecClass, b.Pages, b.Publisher, b.PublishDate, b.AddedDate, b.EanIsbn13, b.UpcIsbn10, b.ImageBase64}
 		created[i] = b
 	}
@@ -150,12 +149,12 @@ func (d *Database) CreateBooks(books ...book.Book) ([]book.Book, error) {
 }
 
 func (d *Database) ReadBookSubjects(limit, offset int) ([]book.Subject, error) {
-	cmd := `SELECT subject, COUNT(*)
-	FROM books
-	GROUP BY subject
-	ORDER BY subject ASC	
-	LIMIT $1
-	OFFSET $2`
+	cmd := "SELECT subject, COUNT(*)" +
+		" FROM books" +
+		" GROUP BY subject" +
+		" ORDER BY subject ASC" +
+		" LIMIT $1" +
+		" OFFSET $2"
 	q := query{
 		cmd:  cmd,
 		args: []interface{}{limit, offset},
@@ -178,16 +177,16 @@ func (d *Database) ReadBookHeaders(filter book.Filter, limit, offset int) ([]boo
 	hasSubject := len(filter.Subject) != 0
 	hasHeaderPart := len(filter.HeaderPart) != 0
 	likeHeaderPart := "%" + filter.HeaderPart + "%"
-	cmd := `SELECT id, title, author, subject
-	FROM books
-	WHERE ($1 OR subject = $2)
-		AND ($3
-			OR title   ` + d.driver.ILike + ` $4
-			OR author  ` + d.driver.ILike + ` $4
-			OR subject ` + d.driver.ILike + ` $4)
-	ORDER BY subject ASC, Title ASC
-	LIMIT $5
-	OFFSET $6`
+	cmd := "SELECT id, title, author, subject" +
+		" FROM books" +
+		" WHERE ($1 OR subject = $2)" +
+		" AND ($3" +
+		" OR title " + d.driver.ILike + " $4" +
+		" OR author " + d.driver.ILike + " $4" +
+		" OR subject " + d.driver.ILike + " $4)" +
+		" ORDER BY subject ASC, Title ASC" +
+		" LIMIT $5" +
+		" OFFSET $6"
 	q := query{
 		cmd:  cmd,
 		args: []interface{}{!hasSubject, filter.Subject, !hasHeaderPart, likeHeaderPart, limit, offset},
@@ -207,9 +206,9 @@ func (d *Database) ReadBookHeaders(filter book.Filter, limit, offset int) ([]boo
 }
 
 func (d *Database) ReadBook(id string) (*book.Book, error) {
-	cmd := `SELECT id, title, author, subject, description, dewey_dec_class, pages, publisher, publish_date, added_date, ean_isbn13, upc_isbn10, image_base64
-	FROM books
-	WHERE id = $1`
+	cmd := "SELECT id, title, author, subject, description, dewey_dec_class, pages, publisher, publish_date, added_date, ean_isbn13, upc_isbn10, image_base64" +
+		" FROM books" +
+		" WHERE id = $1"
 	var b book.Book
 	q := query{
 		cmd:  cmd,
@@ -225,13 +224,14 @@ func (d *Database) ReadBook(id string) (*book.Book, error) {
 }
 
 func (d *Database) UpdateBook(b book.Book, updateImage bool) error {
-	cmd := `UPDATE books SET title = $1, author = $2, subject = $3, description = $4, dewey_dec_class = $5, pages = $6, publisher = $7, publish_date = $8, added_date = $9, ean_isbn13 = $10, upc_isbn10 = $11`
+	cmd := "UPDATE books" +
+		" SET title = $1, author = $2, subject = $3, description = $4, dewey_dec_class = $5, pages = $6, publisher = $7, publish_date = $8, added_date = $9, ean_isbn13 = $10, upc_isbn10 = $11"
 	args := []interface{}{b.Title, b.Author, b.Subject, b.Description, b.DeweyDecClass, b.Pages, b.Publisher, b.PublishDate, b.AddedDate, b.EanIsbn13, b.UpcIsbn10}
 	if updateImage {
-		cmd += `, image_base64 = $12 WHERE id = $13`
+		cmd += ", image_base64 = $12 WHERE id = $13"
 		args = append(args, b.ImageBase64, b.ID)
 	} else {
-		cmd += ` WHERE id = $12`
+		cmd += " WHERE id = $12"
 		args = append(args, b.ID)
 	}
 	q := query{
@@ -245,7 +245,7 @@ func (d *Database) UpdateBook(b book.Book, updateImage bool) error {
 }
 
 func (d *Database) DeleteBook(id string) error {
-	cmd := `DELETE FROM books WHERE id = $1`
+	cmd := "DELETE FROM books WHERE id = $1"
 	q := query{
 		cmd:  cmd,
 		args: []interface{}{id},
@@ -257,7 +257,7 @@ func (d *Database) DeleteBook(id string) error {
 }
 
 func (d *Database) ReadAdminPassword() (hashedPassword []byte, err error) {
-	cmd := `SELECT password FROM users WHERE username = $1`
+	cmd := "SELECT password FROM users WHERE username = $1"
 	q := query{
 		cmd:  cmd,
 		args: []interface{}{"admin"},
@@ -272,7 +272,7 @@ func (d *Database) ReadAdminPassword() (hashedPassword []byte, err error) {
 }
 
 func (d *Database) UpdateAdminPassword(hashedPassword string) error {
-	cmd := `UPDATE users SET password = $1 WHERE username = $2`
+	cmd := "UPDATE users SET password = $1 WHERE username = $2"
 	q := query{
 		cmd:  cmd,
 		args: []interface{}{hashedPassword, "admin"},

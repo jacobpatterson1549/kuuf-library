@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"reflect"
-	"regexp"
 )
 
 // Driver implements the sql/driver.Conn interface.
@@ -36,7 +35,6 @@ func (q Query) checkEquals(query string, args ...driver.Value) error {
 	if reflect.DeepEqual(q, AnyQuery) {
 		return nil
 	}
-	query = string(regexp.MustCompile(`\s+`).ReplaceAll([]byte(query), []byte(" "))) // TODO: Update sql queries not to have double spaces/newlines
 	if want, got := q.Name, query; want != got {
 		return fmt.Errorf("queries not equal: \n wanted: %q \n got:    %q", want, got)
 	}
