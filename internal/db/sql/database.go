@@ -49,40 +49,70 @@ func NewDatabase(driverName, url string, queryTimeout time.Duration) (*Database,
 }
 
 func (d *Database) setupTables() error {
-	cmds := []string{
-		"CREATE TABLE IF NOT EXISTS books" +
-			" ( id TEXT PRIMARY KEY" +
-			" , title TEXT" +
-			" , author TEXT" +
-			" , subject TEXT" +
-			" , description TEXT" +
-			" , dewey_dec_class TEXT" +
-			" , pages INT" +
-			" , publisher TEXT" +
-			" , publish_date TIMESTAMP" +
-			" , added_date TIMESTAMP" +
-			" , ean_isbn13 TEXT" +
-			" , upc_isbn10 TEXT" +
-			" , image_base64 TEXT" +
-			" )",
-		"CREATE TABLE IF NOT EXISTS users" +
-			" ( username TEXT PRIMARY KEY" +
-			" , password TEXT" +
-			" )",
-		"INSERT INTO users (username)" +
-			" VALUES ('admin')" +
-			" ON CONFLICT DO NOTHING",
-	}
-	queries := make([]query, len(cmds))
-	for i, cmd := range cmds {
-		queries[i].cmd = cmd
+	queries := []query{
+		{
+			cmd: "CREATE TABLE IF NOT EXISTS books" +
+				" ( id TEXT PRIMARY KEY" +
+				" , title TEXT" +
+				" , author TEXT" +
+				" , subject TEXT" +
+				" , description TEXT" +
+				" , dewey_dec_class TEXT" +
+				" , pages INT" +
+				" , publisher TEXT" +
+				" , publish_date TIMESTAMP" +
+				" , added_date TIMESTAMP" +
+				" , ean_isbn13 TEXT" +
+				" , upc_isbn10 TEXT" +
+				" , image_base64 TEXT" +
+				" )",
+			wantedRowsAffected: []int64{0},
+		},
+		{
+			cmd: "CREATE TABLE IF NOT EXISTS users" +
+				" ( username TEXT PRIMARY KEY" +
+				" , password TEXT" +
+				" )",
+			wantedRowsAffected: []int64{0},
+		},
+		{
+			cmd: "INSERT INTO users (username)" +
+				" VALUES ('admin')" +
+				" ON CONFLICT DO NOTHING",
+			wantedRowsAffected: []int64{0, 1},
+		},
 	}
 	return d.execTx(queries...)
 }
 
 type query struct {
-	cmd  string
-	args []interface{}
+	cmd                string
+	args               []interface{}
+	wantedRowsAffected []int64
+}
+
+func (q query) execute(ctx context.Context, tx *sql.Tx) error {
+	result, err := tx.ExecContext(ctx, q.cmd, q.args...)
+	if err != nil {
+		return fmt.Errorf("executing query: %w", err)
+	}
+	got, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("getting rows affected: %w", err)
+	}
+	if !q.allowsRowsAffected(got) {
+		return fmt.Errorf("unwanted rows affected: %v", got)
+	}
+	return nil
+}
+
+func (q query) allowsRowsAffected(target int64) bool {
+	for _, v := range q.wantedRowsAffected {
+		if v == target {
+			return true
+		}
+	}
+	return false
 }
 
 func (d *Database) withTimeoutContext(f func(context.Context) error) error {
@@ -99,7 +129,7 @@ func (d *Database) execTx(queries ...query) error {
 			return fmt.Errorf("beginning transaction: %w", err)
 		}
 		for _, q := range queries {
-			if _, err = tx.ExecContext(ctx, q.cmd, q.args...); err != nil {
+			if err = q.execute(ctx, tx); err != nil {
 				break
 			}
 		}
@@ -140,6 +170,7 @@ func (d *Database) CreateBooks(books ...book.Book) ([]book.Book, error) {
 		queries[i].cmd = "INSERT INTO books (id, title, author, subject, description, dewey_dec_class, pages, publisher, publish_date, added_date, ean_isbn13, upc_isbn10, image_base64)" +
 			" VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)"
 		queries[i].args = []interface{}{b.ID, b.Title, b.Author, b.Subject, b.Description, b.DeweyDecClass, b.Pages, b.Publisher, b.PublishDate, b.AddedDate, b.EanIsbn13, b.UpcIsbn10, b.ImageBase64}
+		queries[i].wantedRowsAffected = []int64{1}
 		created[i] = b
 	}
 	if err := d.execTx(queries...); err != nil {
@@ -235,8 +266,9 @@ func (d *Database) UpdateBook(b book.Book, updateImage bool) error {
 		args = append(args, b.ID)
 	}
 	q := query{
-		cmd:  cmd,
-		args: args,
+		cmd:                cmd,
+		args:               args,
+		wantedRowsAffected: []int64{1},
 	}
 	if err := d.execTx(q); err != nil {
 		return fmt.Errorf("updating book: %w", err)
@@ -247,8 +279,9 @@ func (d *Database) UpdateBook(b book.Book, updateImage bool) error {
 func (d *Database) DeleteBook(id string) error {
 	cmd := "DELETE FROM books WHERE id = $1"
 	q := query{
-		cmd:  cmd,
-		args: []interface{}{id},
+		cmd:                cmd,
+		args:               []interface{}{id},
+		wantedRowsAffected: []int64{1},
 	}
 	if err := d.execTx(q); err != nil {
 		return fmt.Errorf("deleting book: %w", err)
@@ -274,8 +307,9 @@ func (d *Database) ReadAdminPassword() (hashedPassword []byte, err error) {
 func (d *Database) UpdateAdminPassword(hashedPassword string) error {
 	cmd := "UPDATE users SET password = $1 WHERE username = $2"
 	q := query{
-		cmd:  cmd,
-		args: []interface{}{hashedPassword, "admin"},
+		cmd:                cmd,
+		args:               []interface{}{hashedPassword, "admin"},
+		wantedRowsAffected: []int64{1},
 	}
 	if err := d.execTx(q); err != nil {
 		return fmt.Errorf("updating admin password: %w", err)

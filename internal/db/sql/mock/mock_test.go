@@ -2,6 +2,8 @@ package mock
 
 import (
 	"database/sql"
+	"database/sql/driver"
+	"fmt"
 	"reflect"
 	"testing"
 )
@@ -15,7 +17,7 @@ func init() {
 }
 
 func TestNewQuery(t *testing.T) {
-	got := NewQuery("abc", 1, "Bear", 3.14)
+	got := NewQuery("abc", 8, 1, "Bear", 3.14)
 	want := Query{
 		Name: "abc",
 		Args: []interface{}{
@@ -23,16 +25,38 @@ func TestNewQuery(t *testing.T) {
 			"Bear",
 			3.14,
 		},
+		RowsAffected: 8,
 	}
 	if !reflect.DeepEqual(want, got) {
-		t.Errorf("queries not equal: \n wanted: %v \n got:    %v", want, got)
+		t.Errorf("queries not equal: \n wanted: %#v \n got:    %#v", want, got)
 	}
 }
 
 func TestQueryCheckEquals(t *testing.T) {
-	want := NewQuery("Hello, World!", 1, "two", 3.14, AnyArg)
+	want := NewQuery("Hello, World!", 0, 1, "two", 3.14, AnyArg)
 	if err := want.checkEquals("Hello, World!", 1, "two", 3.14, 42); err != nil {
 		t.Errorf("unwanted error: %v", err)
+	}
+}
+
+func TestDriverValue(t *testing.T) {
+	q := Query{
+		Name:         "xyz",
+		Args:         []interface{}{9, ":)", false},
+		RowsAffected: 7,
+	}
+	want := Query{
+		Name:         "xyz",
+		Args:         []interface{}{int64(9), ":)", false},
+		RowsAffected: 7,
+	}
+	got := q.driverValue()
+	if !reflect.DeepEqual(want, got) {
+		t.Fatalf("driver values not equal: \n wanted: %#v \n got:    %#v", want, got)
+	}
+	q.Args[2] = true
+	if q.Args[2] == got.Args[2] {
+		t.Errorf("driver value should not have a shallow copy of the arguments")
 	}
 }
 
@@ -47,26 +71,26 @@ func TestQueryConn(t *testing.T) {
 	}{
 		{
 			name:      "queries not equal",
-			queryConn: NewQueryConn(NewQuery("A"), nil),
-			wantQuery: NewQuery("B"),
+			queryConn: NewQueryConn(NewQuery("A", 0), nil),
+			wantQuery: NewQuery("B", 0),
 		},
 		{
 			name:      "args not equal",
-			queryConn: NewQueryConn(NewQuery("A", "C", "D"), nil),
-			wantQuery: NewQuery("A", "C", "E"),
+			queryConn: NewQueryConn(NewQuery("A", 0, "C", "D"), nil),
+			wantQuery: NewQuery("A", 0, "C", "E"),
 		},
 		{
 			name:      "happy path",
-			queryConn: NewQueryConn(NewQuery("SELECT 'mock query', $1;", 42), [][]interface{}{{"mock query", 42}}),
-			wantQuery: NewQuery("SELECT 'mock query', $1;", 42),
+			queryConn: NewQueryConn(NewQuery("SELECT 'mock query', $1;", 0, 42), [][]interface{}{{"mock query", 42}}),
+			wantQuery: NewQuery("SELECT 'mock query', $1;", 0, 42),
 			wantOk:    true,
 			want:      [][]interface{}{{"mock query", 42}},
 			got:       [][]interface{}{{"", 0}},
 		},
 		{
 			name:      "happy path: no results",
-			queryConn: NewQueryConn(NewQuery("SELECT 1 WHERE 2 = 3;"), [][]interface{}{}),
-			wantQuery: NewQuery("SELECT 1 WHERE 2 = 3;"),
+			queryConn: NewQueryConn(Query{Name: "SELECT 1 WHERE 2 = 3;"}, [][]interface{}{}),
+			wantQuery: NewQuery("SELECT 1 WHERE 2 = 3;", 0),
 			wantOk:    true,
 			want:      [][]interface{}{},
 			got:       [][]interface{}{},
@@ -148,10 +172,19 @@ func TestTransactionConn(t *testing.T) {
 		{
 			name: "wrong query",
 			txConn: NewTransactionConn(
-				NewQuery("c1"),
+				Query{Name: "c1"},
 			),
 			wantCommands: []Query{
-				NewQuery("c2"),
+				{Name: "c2"},
+			},
+		},
+		{
+			name: "bad rows affected",
+			txConn: NewTransactionConn(
+				Query{Name: "c1", RowsAffected: 3},
+			),
+			wantCommands: []Query{
+				{Name: "c2", RowsAffected: 2},
 			},
 		},
 		{
@@ -169,7 +202,7 @@ func TestTransactionConn(t *testing.T) {
 		{
 			name: "any query",
 			txConn: NewTransactionConn(
-				AnyQuery,
+				*NewAnyQuery(-1),
 			),
 			wantCommands: []Query{
 				NewQuery("c1", 1, "uno", 0.1),
@@ -189,11 +222,25 @@ func TestTransactionConn(t *testing.T) {
 			tx, err := db.Begin()
 			if err == nil {
 				for _, c := range test.wantCommands {
-					if _, err = tx.Exec(c.Name, c.Args...); err != nil {
+					var result driver.Result
+					result, err = tx.Exec(c.Name, c.Args...)
+					if err != nil {
+						break
+					}
+					var gotRowsAffected int64
+					gotRowsAffected, err = result.RowsAffected()
+					if err != nil {
+						break
+					}
+					if want, got := c.RowsAffected, gotRowsAffected; got != -1 && want != got {
+						err = fmt.Errorf("rows affected not equal: wanted %v, got %v", want, got)
 						break
 					}
 				}
-				if err == nil {
+				switch {
+				case err != nil:
+					err = tx.Rollback()
+				default:
 					err = tx.Commit()
 				}
 			}
@@ -204,7 +251,36 @@ func TestTransactionConn(t *testing.T) {
 				}
 			case err != nil:
 				t.Errorf("unwanted error: %v", err)
-				// TODO: check results
+			}
+		})
+	}
+}
+
+func TestNotImplemented(t *testing.T) {
+	tests := []struct {
+		name    string
+		errFunc func() error
+	}{
+		{
+			name: "Result: LastInsertId",
+			errFunc: func() error {
+				var r Result
+				_, err := r.LastInsertId()
+				return err
+			},
+		},
+		{
+			name: "Connection: Close",
+			errFunc: func() error {
+				var conn Conn
+				return conn.Close()
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if err := test.errFunc(); err == nil {
+				t.Error()
 			}
 		})
 	}

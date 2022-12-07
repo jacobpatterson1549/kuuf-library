@@ -17,22 +17,39 @@ func (m *Driver) Open(name string) (driver.Conn, error) {
 }
 
 type Query struct {
-	Name string
-	Args []interface{}
+	Name         string
+	Args         []interface{}
+	RowsAffected int64
 }
 
-func NewQuery(name string, args ...interface{}) Query {
+func NewQuery(name string, rowsAffected int64, args ...interface{}) Query {
 	return Query{
-		Name: name,
-		Args: args,
+		Name:         name,
+		Args:         args,
+		RowsAffected: rowsAffected,
 	}
 }
 
-var AnyQuery = NewQuery("magic_value", "should+match+any+query+1549")
-var AnyArg = &struct{ Name string }{"any argument"}
+var anyQueryName = "magic_value"
+var anyQueryArgs = []interface{}{"should+match+any+query+1549"}
+var AnyArg = &struct{ name string }{"any argument"}
+
+// NewAnyQuery creates a query that allows any name/args.
+func NewAnyQuery(rowsAffected int64) *Query {
+	q := Query{
+		Name:         anyQueryName,
+		Args:         anyQueryArgs,
+		RowsAffected: rowsAffected,
+	}
+	return &q
+}
+
+func (q Query) isAny() bool {
+	return q.Name == anyQueryName && reflect.DeepEqual(q.Args, anyQueryArgs)
+}
 
 func (q Query) checkEquals(query string, args ...driver.Value) error {
-	if reflect.DeepEqual(q, AnyQuery) {
+	if q.isAny() {
 		return nil
 	}
 	if want, got := q.Name, query; want != got {
@@ -50,11 +67,10 @@ func (q Query) checkEquals(query string, args ...driver.Value) error {
 }
 
 func (q Query) driverValue() Query {
-	q2 := Query{
-		Name: q.Name,
-		Args: make([]interface{}, len(q.Args)),
-	}
-	copy(q2.Args, q.Args)
+	q2 := q
+	args1 := q.Args
+	q2.Args = make([]interface{}, len(args1))
+	copy(q2.Args, args1)
 	for i, a := range q2.Args {
 		switch a := a.(type) {
 		case int:
@@ -128,7 +144,7 @@ func NewTransactionConn(commands ...Query) Conn {
 			return Stmt{
 				NumInputFunc: func() int {
 					q := commands[commandIndex]
-					if reflect.DeepEqual(q, AnyQuery) {
+					if q.isAny() {
 						return -1
 					}
 					return len(q.Args)
@@ -142,7 +158,11 @@ func NewTransactionConn(commands ...Query) Conn {
 					if err := q.checkEquals(query, args...); err != nil {
 						return nil, err
 					}
-					return nil, nil
+					return Result{
+						RowsAffectedFunc: func() (int64, error) {
+							return q.RowsAffected, nil
+						},
+					}, nil
 				},
 			}, nil
 		},
@@ -205,20 +225,18 @@ func (m Tx) Rollback() error {
 	return m.RollbackFunc()
 }
 
-// TODO: use Result
 // Result implements the sql/driver.Result interface.
-// type Result struct {
-// 	LastInsertIDFunc func() (int64, error)
-// 	RowsAffectedFunc func() (int64, error)
-// }
+type Result struct {
+	RowsAffectedFunc func() (int64, error)
+}
 
-// func (m Result) LastInsertId() (int64, error) {
-// 	return fmt.Errorf("not implemented")
-// }
+func (m Result) LastInsertId() (int64, error) {
+	return 0, fmt.Errorf("not implemented")
+}
 
-// func (m Result) RowsAffected() (int64, error) {
-// 	return m.RowsAffectedFunc()
-// }
+func (m Result) RowsAffected() (int64, error) {
+	return m.RowsAffectedFunc()
+}
 
 // Rows implements the sql/driver.Rows interface.
 type Rows struct {

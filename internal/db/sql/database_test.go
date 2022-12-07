@@ -64,10 +64,21 @@ func TestNewDatabase(t *testing.T) {
 			queryTimeout: time.Hour,
 		},
 		{
+			name:       "happy path (create user)",
+			driverName: testDriverName,
+			openFunc: func(name string) (mock.Conn, error) {
+				return mock.NewTransactionConn(*mock.NewAnyQuery(0), *mock.NewAnyQuery(0), *mock.NewAnyQuery(1)), nil
+			},
+			queryTimeout:     time.Hour,
+			wantOk:           true,
+			wantDriver:       testDriveInfo,
+			wantQueryTimeout: time.Hour,
+		},
+		{
 			name:       "happy path",
 			driverName: testDriverName,
 			openFunc: func(name string) (mock.Conn, error) {
-				return mock.NewTransactionConn(mock.AnyQuery, mock.AnyQuery, mock.AnyQuery), nil
+				return mock.NewTransactionConn(*mock.NewAnyQuery(0), *mock.NewAnyQuery(0), *mock.NewAnyQuery(0)), nil
 			},
 			queryTimeout:     37 * time.Hour,
 			wantOk:           true,
@@ -101,6 +112,68 @@ func TestExecTxError(t *testing.T) {
 		conn    mock.Conn
 		queries []query
 	}{
+		{
+			name: "exec error",
+			conn: mock.Conn{
+				PrepareFunc: func(query string) (driver.Stmt, error) {
+					return mock.Stmt{
+						NumInputFunc: func() int {
+							return -1
+						},
+						ExecFunc: func(args []driver.Value) (driver.Result, error) {
+							return nil, fmt.Errorf("exec error")
+						},
+						CloseFunc: func() error {
+							return nil
+						},
+					}, nil
+				},
+				BeginFunc: func() (driver.Tx, error) {
+					return mock.Tx{
+						RollbackFunc: func() error {
+							return nil
+						},
+						CommitFunc: func() error {
+							return nil
+						},
+					}, nil
+				},
+			},
+			queries: []query{{cmd: "DROP unknown"}},
+		},
+		{
+			name: "rows affected error error",
+			conn: mock.Conn{
+				PrepareFunc: func(query string) (driver.Stmt, error) {
+					return mock.Stmt{
+						NumInputFunc: func() int {
+							return -1
+						},
+						ExecFunc: func(args []driver.Value) (driver.Result, error) {
+							return mock.Result{
+								RowsAffectedFunc: func() (int64, error) {
+									return 0, fmt.Errorf("mock error")
+								},
+							}, nil
+						},
+						CloseFunc: func() error {
+							return nil
+						},
+					}, nil
+				},
+				BeginFunc: func() (driver.Tx, error) {
+					return mock.Tx{
+						RollbackFunc: func() error {
+							return fmt.Errorf("rollback error")
+						},
+						CommitFunc: func() error {
+							return nil
+						},
+					}, nil
+				},
+			},
+			queries: []query{{cmd: "DROP unknown"}},
+		},
 		{
 			name: "exec/rollback error",
 			conn: mock.Conn{
@@ -218,7 +291,7 @@ func TestCreateBooks(t *testing.T) {
 		{
 			name: "happy path: one book",
 			conn: mock.NewTransactionConn(
-				mock.NewQuery(wantInsert, mock.AnyArg, "t1", "a1", "s1", "d1", "ddc1", 2, "p1", d1, d2, "ean", "upc", "?"),
+				mock.NewQuery(wantInsert, 1, mock.AnyArg, "t1", "a1", "s1", "d1", "ddc1", 2, "p1", d1, d2, "ean", "upc", "?"),
 			),
 			books: []book.Book{
 				{
@@ -233,8 +306,8 @@ func TestCreateBooks(t *testing.T) {
 		{
 			name: "happy path: two books",
 			conn: mock.NewTransactionConn(
-				mock.NewQuery(wantInsert, mock.AnyArg, "", "", "", "", "", 14, "", time.Time{}, time.Time{}, "", "", ""),
-				mock.NewQuery(wantInsert, mock.AnyArg, "Title2", "", "", "", "", 0, "", time.Time{}, time.Time{}, "", "", ""),
+				mock.NewQuery(wantInsert, 1, mock.AnyArg, "", "", "", "", "", 14, "", time.Time{}, time.Time{}, "", "", ""),
+				mock.NewQuery(wantInsert, 1, mock.AnyArg, "Title2", "", "", "", "", 0, "", time.Time{}, time.Time{}, "", "", ""),
 			),
 			books: []book.Book{
 				{Pages: 14},
@@ -294,7 +367,7 @@ func TestReadBookSubjects(t *testing.T) {
 			limit:  2,
 			offset: 3,
 			conn: mock.NewQueryConn(
-				mock.NewQuery(wantQuery, 2, 3),
+				mock.NewQuery(wantQuery, 0, 2, 3),
 				[][]interface{}{
 					{"elephants", 8},
 					{"lizards", 7},
@@ -350,7 +423,7 @@ func TestReadBookHeaders(t *testing.T) {
 		{
 			name: "no filter",
 			conn: mock.NewQueryConn(
-				mock.NewQuery(wantQuery, true, "", true, "%%", 0, 0),
+				mock.NewQuery(wantQuery, 1, true, "", true, "%%", 0, 0),
 				[][]interface{}{}),
 			wantOk: true,
 			want:   []book.Header{},
@@ -361,7 +434,7 @@ func TestReadBookHeaders(t *testing.T) {
 			limit:  5,
 			offset: 100,
 			conn: mock.NewQueryConn(
-				mock.NewQuery(wantQuery, false, "SBJ", false, "%cat%", 5, 100),
+				mock.NewQuery(wantQuery, 1, false, "SBJ", false, "%cat%", 5, 100),
 				[][]interface{}{
 					{"x1", "cats", "a3", "SBJ"},
 					{"a0", "cats", "b2", "SBJ"},
@@ -415,7 +488,7 @@ func TestReadBook(t *testing.T) {
 			name:   "no result",
 			bookID: "b52",
 			conn: mock.NewQueryConn(
-				mock.NewQuery(wantSelect, "b52"),
+				mock.NewQuery(wantSelect, 1, "b52"),
 				[][]interface{}{},
 			),
 			wantOk: true, // TODO: BUG: this should return an error if no rows exist
@@ -425,7 +498,7 @@ func TestReadBook(t *testing.T) {
 			name:   "happy path",
 			bookID: "b52",
 			conn: mock.NewQueryConn(
-				mock.NewQuery(wantSelect, "b52"),
+				mock.NewQuery(wantSelect, 1, "b52"),
 				[][]interface{}{
 					{"id0", "t2", "a3", "s4", "d5", "ddc6", 7, "p8", d0, d1, "EAN", "UPC", "IMG"},
 				},
@@ -483,7 +556,7 @@ func TestUpdateBook(t *testing.T) {
 			},
 			conn: mock.NewTransactionConn(
 				mock.NewQuery("UPDATE books SET title = $1, author = $2, subject = $3, description = $4, dewey_dec_class = $5, pages = $6, publisher = $7, publish_date = $8, added_date = $9, ean_isbn13 = $10, upc_isbn10 = $11 WHERE id = $12",
-					"t1", "a1", "s1", "d1", "ddc1", int64(9), "p1", d1, d2, "ean", "upc", "b81"),
+					1, "t1", "a1", "s1", "d1", "ddc1", int64(9), "p1", d1, d2, "ean", "upc", "b81"),
 			),
 			wantOk: true,
 		},
@@ -498,7 +571,7 @@ func TestUpdateBook(t *testing.T) {
 			updateImage: true,
 			conn: mock.NewTransactionConn(
 				mock.NewQuery("UPDATE books SET title = $1, author = $2, subject = $3, description = $4, dewey_dec_class = $5, pages = $6, publisher = $7, publish_date = $8, added_date = $9, ean_isbn13 = $10, upc_isbn10 = $11, image_base64 = $12 WHERE id = $13",
-					"t2", "a2", "s2", "d2", "ddc2", int64(4), "p2", d2, d1, "ean", "upc", "333", "b82"),
+					1, "t2", "a2", "s2", "d2", "ddc2", int64(4), "p2", d2, d1, "ean", "upc", "333", "b82"),
 			),
 			wantOk: true,
 		},
@@ -538,7 +611,7 @@ func TestDeleteBook(t *testing.T) {
 			name:   "happy path",
 			bookID: "113=zoom",
 			conn: mock.NewTransactionConn(
-				mock.NewQuery("DELETE FROM books WHERE id = $1", "113=zoom"),
+				mock.NewQuery("DELETE FROM books WHERE id = $1", 1, "113=zoom"),
 			),
 			wantOk: true,
 		},
@@ -577,7 +650,7 @@ func TestReadAdminPassword(t *testing.T) {
 		{
 			name: "happy path",
 			conn: mock.NewQueryConn(
-				mock.NewQuery("SELECT password FROM users WHERE username = $1", "admin"),
+				mock.NewQuery("SELECT password FROM users WHERE username = $1", 0, "admin"),
 				[][]interface{}{
 					{"p3pp3r$"},
 				},
@@ -622,10 +695,17 @@ func TestUpdateAdminPassword(t *testing.T) {
 			},
 		},
 		{
+			name:           "bad update count",
+			hashedPassword: "H4#h",
+			conn: mock.NewTransactionConn(
+				mock.NewQuery("UPDATE users SET password = $1 WHERE username = $2", 0, "H4#h", "admin"),
+			),
+		},
+		{
 			name:           "happy path",
 			hashedPassword: "H4#h",
 			conn: mock.NewTransactionConn(
-				mock.NewQuery("UPDATE users SET password = $1 WHERE username = $2", "H4#h", "admin"),
+				mock.NewQuery("UPDATE users SET password = $1 WHERE username = $2", 1, "H4#h", "admin"),
 			),
 			wantOk: true,
 		},
