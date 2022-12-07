@@ -193,6 +193,9 @@ func (d *Database) ReadBookSubjects(limit, offset int) ([]book.Subject, error) {
 	subjects := make([]book.Subject, limit)
 	n := 0
 	dest := func() []interface{} {
+		if n >= limit {
+			return nil
+		}
 		s := &subjects[n]
 		n++
 		return []interface{}{&s.Name, &s.Count}
@@ -225,6 +228,9 @@ func (d *Database) ReadBookHeaders(filter book.Filter, limit, offset int) ([]boo
 	headers := make([]book.Header, limit)
 	n := 0
 	dest := func() []interface{} {
+		if n >= limit {
+			return nil
+		}
 		h := &headers[n]
 		n++
 		return []interface{}{&h.ID, &h.Title, &h.Author, &h.Subject}

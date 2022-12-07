@@ -375,6 +375,18 @@ func TestReadBookSubjects(t *testing.T) {
 			},
 		},
 		{
+			name:  "more than limit",
+			limit: 0,
+			conn: mock.NewQueryConn(
+				mock.Query{
+					Name: wantQuery,
+					Args: []interface{}{0, 0},
+				},
+				[][]interface{}{
+					{"elephants", 8},
+				}),
+		},
+		{
 			name:   "happy path",
 			limit:  2,
 			offset: 3,
@@ -432,9 +444,20 @@ func TestReadBookHeaders(t *testing.T) {
 				},
 			},
 		},
-		// {
-		// 	name:   "more than limit", // TODO: write tests for this and readBookSubjects that return more than requested
-		// },
+		{
+			name:  "more than limit",
+			limit: 1,
+			conn: mock.NewQueryConn(
+				mock.Query{
+					Name: wantQuery,
+					Args: []interface{}{true, "", true, "%%", 1, 0},
+				},
+				[][]interface{}{
+					{"x1", "cats", "a3", "SBJ"},
+					{"a0", "cats", "b2", "SBJ"},
+				}),
+			want: []book.Header{},
+		},
 		{
 			name: "no filter",
 			conn: mock.NewQueryConn(
