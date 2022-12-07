@@ -13,12 +13,11 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-type Database struct {
-	client       *mongo.Client
-	QueryTimeout time.Duration
-}
-
 type (
+	Database struct {
+		client       *mongo.Client
+		QueryTimeout time.Duration
+	}
 	mBook struct {
 		Header        mHeader   `bson:",inline"`
 		Description   string    `bson:"description"`
@@ -76,9 +75,9 @@ func NewDatabase(url string, queryTimeout time.Duration) (*Database, error) {
 	d := Database{
 		QueryTimeout: queryTimeout,
 	}
+	opts := options.Client().
+		ApplyURI(url)
 	if err := d.withTimeoutContext(func(ctx context.Context) error {
-		opts := options.Client().
-			ApplyURI(url)
 		client, err := mongo.Connect(ctx, opts)
 		if err != nil {
 			return err
@@ -318,7 +317,8 @@ func (d *Database) UpdateAdminPassword(hashedPassword string) error {
 		SetUpsert(true)
 	coll := d.usersCollection()
 	if err := d.withTimeoutContext(func(ctx context.Context) error {
-		if _, err := coll.UpdateOne(ctx, filter, update, opts); err != nil {
+		_, err := coll.UpdateOne(ctx, filter, update, opts)
+		if err != nil {
 			return err
 		}
 		return nil
