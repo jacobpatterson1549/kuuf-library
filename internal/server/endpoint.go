@@ -156,6 +156,10 @@ func withAdminPassword(h http.HandlerFunc, db database, ph passwordHandler) http
 		if !parseFormValue(w, r, "p", &password, 128) {
 			return
 		}
+		if len(hashedPassword) == 0 {
+			httpError(w, http.StatusServiceUnavailable, fmt.Errorf("password not set"))
+			return
+		}
 		ok, err := ph.IsCorrectPassword(hashedPassword, []byte(password))
 		if err != nil {
 			httpInternalServerError(w, err)

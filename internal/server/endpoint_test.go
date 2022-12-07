@@ -631,9 +631,16 @@ func TestWithAdminPassword(t *testing.T) {
 			wantCode: 413,
 		},
 		{
+			name: "password not set in database",
+			readAdminPassword: func() (hashedPassword []byte, err error) {
+				return []byte{}, nil
+			},
+			wantCode: 503,
+		},
+		{
 			name: "is correct error",
 			readAdminPassword: func() (hashedPassword []byte, err error) {
-				return nil, nil
+				return []byte("HAsh#"), nil
 			},
 			isCorrectPassword: func(hashedPassword, password []byte) (ok bool, err error) {
 				return false, fmt.Errorf("is correct error")
@@ -644,7 +651,7 @@ func TestWithAdminPassword(t *testing.T) {
 		{
 			name: "incorrect",
 			readAdminPassword: func() (hashedPassword []byte, err error) {
-				return nil, nil
+				return []byte("HAsh#"), nil
 			},
 			isCorrectPassword: func(hashedPassword, password []byte) (ok bool, err error) {
 				return false, nil
