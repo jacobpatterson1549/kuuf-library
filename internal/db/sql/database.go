@@ -162,6 +162,25 @@ func (d *Database) query(q query, dest func() []interface{}) error {
 	})
 }
 
+func (d *Database) queryRow(q query, dest ...interface{}) error {
+	n := 0
+	destF := func() []interface{} {
+		if n != 0 {
+			return nil
+		}
+		n++
+		return dest
+	}
+	err := d.query(q, destF)
+	switch {
+	case err != nil:
+		return err
+	case n != 1:
+		return fmt.Errorf("wanted to get 1 row, got %v", n)
+	}
+	return nil
+}
+
 func (d *Database) CreateBooks(books ...book.Book) ([]book.Book, error) {
 	queries := make([]query, len(books))
 	created := make([]book.Book, len(books))
@@ -251,10 +270,8 @@ func (d *Database) ReadBook(id string) (*book.Book, error) {
 		cmd:  cmd,
 		args: []interface{}{id},
 	}
-	dest := func() []interface{} {
-		return []interface{}{&b.ID, &b.Title, &b.Author, &b.Subject, &b.Description, &b.DeweyDecClass, &b.Pages, &b.Publisher, &b.PublishDate, &b.AddedDate, &b.EanIsbn13, &b.UpcIsbn10, &b.ImageBase64}
-	}
-	if err := d.query(q, dest); err != nil {
+	dest := []interface{}{&b.ID, &b.Title, &b.Author, &b.Subject, &b.Description, &b.DeweyDecClass, &b.Pages, &b.Publisher, &b.PublishDate, &b.AddedDate, &b.EanIsbn13, &b.UpcIsbn10, &b.ImageBase64}
+	if err := d.queryRow(q, dest...); err != nil {
 		return nil, fmt.Errorf("reading book: %w", err)
 	}
 	return &b, nil
@@ -301,10 +318,7 @@ func (d *Database) ReadAdminPassword() (hashedPassword []byte, err error) {
 		cmd:  cmd,
 		args: []interface{}{"admin"},
 	}
-	dest := func() []interface{} {
-		return []interface{}{&hashedPassword}
-	}
-	if err := d.query(q, dest); err != nil {
+	if err := d.queryRow(q, &hashedPassword); err != nil {
 		return nil, fmt.Errorf("reading admin password: %w", err)
 	}
 	return hashedPassword, nil

@@ -538,8 +538,6 @@ func TestReadBook(t *testing.T) {
 				},
 				[][]interface{}{},
 			),
-			wantOk: true, // TODO: BUG: this should return an error if no rows exist
-			want:   &book.Book{},
 		},
 		{
 			name:   "happy path",
@@ -710,6 +708,19 @@ func TestReadAdminPassword(t *testing.T) {
 					return nil, fmt.Errorf("db error")
 				},
 			},
+		},
+		{
+			name: "two passwords",
+			conn: mock.NewQueryConn(
+				mock.Query{
+					Name: "SELECT password FROM users WHERE username = $1",
+					Args: []interface{}{"admin"},
+				},
+				[][]interface{}{
+					{"p3pp3r$"},
+					{"eXtra!"},
+				},
+			),
 		},
 		{
 			name: "happy path",
