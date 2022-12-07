@@ -17,7 +17,11 @@ func init() {
 }
 
 func TestNewQuery(t *testing.T) {
-	got := NewQuery("abc", 8, 1, "Bear", 3.14)
+	got := Query{
+		Name:         "abc",
+		Args:         []interface{}{1, "Bear", 3.14},
+		RowsAffected: 8,
+	}
 	want := Query{
 		Name: "abc",
 		Args: []interface{}{
@@ -33,7 +37,11 @@ func TestNewQuery(t *testing.T) {
 }
 
 func TestQueryCheckEquals(t *testing.T) {
-	want := NewQuery("Hello, World!", 0, 1, "two", 3.14, AnyArg)
+	want := Query{
+		Name:         "Hello, World!",
+		Args:         []interface{}{1, "two", 3.14, AnyArg},
+		RowsAffected: 55, // should not be checked
+	}
 	if err := want.checkEquals("Hello, World!", 1, "two", 3.14, 42); err != nil {
 		t.Errorf("unwanted error: %v", err)
 	}
@@ -71,18 +79,21 @@ func TestQueryConn(t *testing.T) {
 	}{
 		{
 			name:      "queries not equal",
-			queryConn: NewQueryConn(NewQuery("A", 0), nil),
-			wantQuery: NewQuery("B", 0),
+			queryConn: NewQueryConn(Query{Name: "A"}, nil),
+			wantQuery: Query{Name: "B"},
 		},
 		{
 			name:      "args not equal",
-			queryConn: NewQueryConn(NewQuery("A", 0, "C", "D"), nil),
-			wantQuery: NewQuery("A", 0, "C", "E"),
+			queryConn: NewQueryConn(Query{Name: "A", Args: []interface{}{"C", "D"}}, nil),
+			wantQuery: Query{Name: "A", Args: []interface{}{"C", "E"}},
 		},
 		{
-			name:      "happy path",
-			queryConn: NewQueryConn(NewQuery("SELECT 'mock query', $1;", 0, 42), [][]interface{}{{"mock query", 42}}),
-			wantQuery: NewQuery("SELECT 'mock query', $1;", 0, 42),
+			name: "happy path",
+			queryConn: NewQueryConn(
+				Query{Name: "SELECT 'mock query', $1;", Args: []interface{}{42}},
+				[][]interface{}{{"mock query", 42}},
+			),
+			wantQuery: Query{Name: "SELECT 'mock query', $1;", Args: []interface{}{42}},
 			wantOk:    true,
 			want:      [][]interface{}{{"mock query", 42}},
 			got:       [][]interface{}{{"", 0}},
@@ -90,7 +101,7 @@ func TestQueryConn(t *testing.T) {
 		{
 			name:      "happy path: no results",
 			queryConn: NewQueryConn(Query{Name: "SELECT 1 WHERE 2 = 3;"}, [][]interface{}{}),
-			wantQuery: NewQuery("SELECT 1 WHERE 2 = 3;", 0),
+			wantQuery: Query{Name: "SELECT 1 WHERE 2 = 3;"},
 			wantOk:    true,
 			want:      [][]interface{}{},
 			got:       [][]interface{}{},
@@ -190,12 +201,28 @@ func TestTransactionConn(t *testing.T) {
 		{
 			name: "happy path",
 			txConn: NewTransactionConn(
-				NewQuery("c1", 1, "uno", 0.1),
-				NewQuery("c2", 2, "dos", 0.2),
+				Query{
+					Name:         "c1",
+					Args:         []interface{}{"uno", 0.1},
+					RowsAffected: 1,
+				},
+				Query{
+					Name:         "c2",
+					Args:         []interface{}{"dos", 0.2},
+					RowsAffected: 2,
+				},
 			),
 			wantCommands: []Query{
-				NewQuery("c1", 1, "uno", 0.1),
-				NewQuery("c2", 2, "dos", 0.2),
+				{
+					Name:         "c1",
+					Args:         []interface{}{"uno", 0.1},
+					RowsAffected: 1,
+				},
+				{
+					Name:         "c2",
+					Args:         []interface{}{"dos", 0.2},
+					RowsAffected: 2,
+				},
 			},
 			wantOk: true,
 		},
@@ -205,7 +232,11 @@ func TestTransactionConn(t *testing.T) {
 				*NewAnyQuery(-1),
 			),
 			wantCommands: []Query{
-				NewQuery("c1", 1, "uno", 0.1),
+				{
+					Name:         "c1",
+					Args:         []interface{}{"uno", 0.1},
+					RowsAffected: 1,
+				},
 			},
 			wantOk: true,
 		},

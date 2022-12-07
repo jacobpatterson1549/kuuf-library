@@ -22,14 +22,6 @@ type Query struct {
 	RowsAffected int64
 }
 
-func NewQuery(name string, rowsAffected int64, args ...interface{}) Query {
-	return Query{
-		Name:         name,
-		Args:         args,
-		RowsAffected: rowsAffected,
-	}
-}
-
 var anyQueryName = "magic_value"
 var anyQueryArgs = []interface{}{"should+match+any+query+1549"}
 var AnyArg = &struct{ name string }{"any argument"}
