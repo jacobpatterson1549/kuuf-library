@@ -263,11 +263,11 @@ func (d *Database) UpdateBook(b book.Book, updateImage bool) error {
 	opts := options.Update()
 	coll := d.booksCollection()
 	if err := d.withTimeoutContext(func(ctx context.Context) error {
-		_, err := coll.UpdateOne(ctx, filter, update, opts)
+		result, err := coll.UpdateOne(ctx, filter, update, opts)
 		if err != nil {
 			return err
 		}
-		return nil
+		return d.expectSingleModify(result.ModifiedCount)
 	}); err != nil {
 		return fmt.Errorf("updating book: %w", err)
 	}
@@ -282,11 +282,11 @@ func (d *Database) DeleteBook(id string) error {
 	opts := options.Delete()
 	coll := d.booksCollection()
 	if err := d.withTimeoutContext(func(ctx context.Context) error {
-		_, err := coll.DeleteOne(ctx, filter, opts)
+		result, err := coll.DeleteOne(ctx, filter, opts)
 		if err != nil {
 			return err
 		}
-		return nil
+		return d.expectSingleModify(result.DeletedCount)
 	}); err != nil {
 		return fmt.Errorf("deleting book: %w", err)
 	}
@@ -317,11 +317,11 @@ func (d *Database) UpdateAdminPassword(hashedPassword string) error {
 		SetUpsert(true)
 	coll := d.usersCollection()
 	if err := d.withTimeoutContext(func(ctx context.Context) error {
-		_, err := coll.UpdateOne(ctx, filter, update, opts)
+		result, err := coll.UpdateOne(ctx, filter, update, opts)
 		if err != nil {
 			return err
 		}
-		return nil
+		return d.expectSingleModify(result.ModifiedCount)
 	}); err != nil {
 		return fmt.Errorf("updating admin password: %w", err)
 	}
@@ -334,4 +334,11 @@ func (d Database) idFilter(id string) (interface{}, error) {
 		return nil, err
 	}
 	return bson.D(bson.E(bookIDField, objID)), nil
+}
+
+func (d Database) expectSingleModify(got int64) error {
+	if got != 1 {
+		return fmt.Errorf("wanted to modify 1 document, got %v", got)
+	}
+	return nil
 }
