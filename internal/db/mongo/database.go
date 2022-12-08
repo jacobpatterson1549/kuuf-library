@@ -15,8 +15,17 @@ import (
 
 type (
 	Database struct {
-		client       *mongo.Client
-		QueryTimeout time.Duration
+		booksCollection mCollection
+		usersCollection mCollection
+		QueryTimeout    time.Duration
+	}
+	mCollection interface {
+		InsertMany(ctx context.Context, documents []interface{}, opts ...*options.InsertManyOptions) (*mongo.InsertManyResult, error)
+		Aggregate(ctx context.Context, pipeline interface{}, opts ...*options.AggregateOptions) (*mongo.Cursor, error)
+		Find(ctx context.Context, filter interface{}, opts ...*options.FindOptions) (cur *mongo.Cursor, err error)
+		FindOne(ctx context.Context, filter interface{}, opts ...*options.FindOneOptions) *mongo.SingleResult
+		UpdateOne(ctx context.Context, filter interface{}, update interface{}, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error)
+		DeleteOne(ctx context.Context, filter interface{}, opts ...*options.DeleteOptions) (*mongo.DeleteResult, error)
 	}
 	mBook struct {
 		Header        mHeader   `bson:",inline"`
@@ -82,7 +91,9 @@ func NewDatabase(url string, queryTimeout time.Duration) (*Database, error) {
 		if err != nil {
 			return err
 		}
-		d.client = client
+		database := client.Database(libraryDatabase)
+		d.booksCollection = database.Collection(booksCollection)
+		d.usersCollection = database.Collection(usersCollection)
 		return nil
 	}); err != nil {
 		return nil, fmt.Errorf("connecting to mongo: %w", err)
@@ -97,18 +108,6 @@ func (d *Database) withTimeoutContext(f func(ctx context.Context) error) error {
 	return f(ctx)
 }
 
-func (d *Database) libraryDatabase() *mongo.Database {
-	return d.client.Database(libraryDatabase)
-}
-
-func (d *Database) booksCollection() *mongo.Collection {
-	return d.libraryDatabase().Collection(booksCollection)
-}
-
-func (d *Database) usersCollection() *mongo.Collection {
-	return d.libraryDatabase().Collection(usersCollection)
-}
-
 func (d *Database) CreateBooks(books ...book.Book) ([]book.Book, error) {
 	if len(books) == 0 {
 		return nil, nil
@@ -119,7 +118,7 @@ func (d *Database) CreateBooks(books ...book.Book) ([]book.Book, error) {
 		docs[i] = mongoBook(b)
 	}
 	opts := options.InsertMany()
-	coll := d.booksCollection()
+	coll := d.booksCollection
 	if err := d.withTimeoutContext(func(ctx context.Context) error {
 		ids, err := coll.InsertMany(ctx, docs, opts)
 		if err != nil {
@@ -152,7 +151,7 @@ func (d *Database) ReadBookSubjects(limit, offset int) ([]book.Subject, error) {
 		bson.D(bson.E("$limit", limit)),
 	}
 	opts := options.Aggregate()
-	coll := d.booksCollection()
+	coll := d.booksCollection
 	var all []mSubject
 	if err := d.withTimeoutContext(func(ctx context.Context) error {
 		cur, err := coll.Aggregate(ctx, pipeline, opts)
@@ -196,7 +195,7 @@ func (d *Database) ReadBookHeaders(f book.Filter, limit, offset int) ([]book.Hea
 			bson.E(bookAuthorField, 1),
 			bson.E(bookSubjectField, 1),
 		))
-	coll := d.booksCollection()
+	coll := d.booksCollection
 	var all []mHeader
 	if err := d.withTimeoutContext(func(ctx context.Context) error {
 		cur, err := coll.Find(ctx, filter, opts)
@@ -222,7 +221,7 @@ func (d *Database) ReadBook(id string) (*book.Book, error) {
 	if err != nil {
 		return nil, err
 	}
-	coll := d.booksCollection()
+	coll := d.booksCollection
 	opts := options.FindOne()
 	var m mBook
 	if err := d.withTimeoutContext(func(ctx context.Context) error {
@@ -261,7 +260,7 @@ func (d *Database) UpdateBook(b book.Book, updateImage bool) error {
 	}
 	update := bson.D(bson.E("$set", sets))
 	opts := options.Update()
-	coll := d.booksCollection()
+	coll := d.booksCollection
 	if err := d.withTimeoutContext(func(ctx context.Context) error {
 		result, err := coll.UpdateOne(ctx, filter, update, opts)
 		if err != nil {
@@ -280,7 +279,7 @@ func (d *Database) DeleteBook(id string) error {
 		return err
 	}
 	opts := options.Delete()
-	coll := d.booksCollection()
+	coll := d.booksCollection
 	if err := d.withTimeoutContext(func(ctx context.Context) error {
 		result, err := coll.DeleteOne(ctx, filter, opts)
 		if err != nil {
@@ -295,7 +294,7 @@ func (d *Database) DeleteBook(id string) error {
 
 func (d *Database) ReadAdminPassword() (hashedPassword []byte, err error) {
 	filter := bson.D(bson.E(usernameField, adminUsername))
-	coll := d.usersCollection()
+	coll := d.usersCollection
 	var u mUser
 	if err = d.withTimeoutContext(func(ctx context.Context) error {
 		result := coll.FindOne(ctx, filter)
@@ -315,7 +314,7 @@ func (d *Database) UpdateAdminPassword(hashedPassword string) error {
 	update := bson.D(bson.E("$set", bson.D(bson.E(passwordField, hashedPassword))))
 	opts := options.Update().
 		SetUpsert(true)
-	coll := d.usersCollection()
+	coll := d.usersCollection
 	if err := d.withTimeoutContext(func(ctx context.Context) error {
 		result, err := coll.UpdateOne(ctx, filter, update, opts)
 		if err != nil {
