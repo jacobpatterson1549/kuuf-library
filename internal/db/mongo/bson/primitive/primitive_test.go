@@ -17,7 +17,7 @@ func TestObjectID(t *testing.T) {
 		name   string
 		id     string
 		wantOk bool
-		want   *primitive.ObjectID
+		want   primitive.ObjectID
 	}{
 		{
 			name: "invalid",
@@ -27,7 +27,7 @@ func TestObjectID(t *testing.T) {
 			name:   "happy path",
 			id:     id,
 			wantOk: true,
-			want:   &objID,
+			want:   objID,
 		},
 	}
 	for _, test := range tests {
@@ -57,7 +57,7 @@ func TestObjectIDFrom(t *testing.T) {
 		name   string
 		id     interface{}
 		wantOk bool
-		want   *primitive.ObjectID
+		want   primitive.ObjectID
 	}{
 		{
 			name: "not objectID",
@@ -67,7 +67,7 @@ func TestObjectIDFrom(t *testing.T) {
 			name:   "happy path",
 			id:     objID,
 			wantOk: true,
-			want:   &objID,
+			want:   objID,
 		},
 	}
 	for _, test := range tests {
@@ -96,7 +96,7 @@ func TestMatchIgnoreCaseRegex(t *testing.T) {
 		{"empty", "", primitive.Regex{Options: "i"}},
 		{"single", "word", primitive.Regex{Pattern: "word", Options: "i"}},
 		{"three", "a b c", primitive.Regex{Pattern: "a b c", Options: "i"}},
-		{"specials", `\.+*?()|[]{}^$`,primitive.Regex{Pattern: `\\\.\+\*\?\(\)\|\[\]\{\}\^\$`, Options: "i"}},
+		{"specials", `\.+*?()|[]{}^$`, primitive.Regex{Pattern: `\\\.\+\*\?\(\)\|\[\]\{\}\^\$`, Options: "i"}},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
