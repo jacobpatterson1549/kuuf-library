@@ -124,6 +124,9 @@ func (d *Database) CreateBooks(books ...book.Book) ([]book.Book, error) {
 		if err != nil {
 			return err
 		}
+		if want, got := len(books), len(ids.InsertedIDs); want != got {
+			return fmt.Errorf("unwanted length of created book ids: wanted %v, got %v", want, got)
+		}
 		for i, id := range ids.InsertedIDs {
 			objID, err := primitive.ToObjectID(id)
 			if err != nil {

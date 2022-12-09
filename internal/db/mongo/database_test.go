@@ -95,19 +95,19 @@ func TestCreateBooks(t *testing.T) {
 				return &result, nil
 			},
 		},
-		// {
-		// 	name:        "wrong number of insert ids", // TODO: FIXME (the code should check if insertedIDs != len(insertBooks))
-		// 	insertBooks: []book.Book{b1},
-		// 	InsertManyFunc: func(ctx context.Context, documents []interface{}, opts ...*options.InsertManyOptions) (*mongo.InsertManyResult, error) {
-		// 		result := mongo.InsertManyResult{
-		// 			InsertedIDs: []interface{}{
-		// 				objectIDHelper(t, okID1),
-		// 				objectIDHelper(t, okID2),
-		// 			},
-		// 		}
-		// 		return &result, nil
-		// 	},
-		// },
+		{
+			name:        "wrong number of insert ids",
+			insertBooks: []book.Book{b1},
+			InsertManyFunc: func(ctx context.Context, documents []interface{}, opts ...*options.InsertManyOptions) (*mongo.InsertManyResult, error) {
+				result := mongo.InsertManyResult{
+					InsertedIDs: []interface{}{
+						objectIDHelper(t, okID1),
+						objectIDHelper(t, okID2),
+					},
+				}
+				return &result, nil
+			},
+		},
 		{
 			name:        "happy path",
 			insertBooks: []book.Book{b1, b2},
