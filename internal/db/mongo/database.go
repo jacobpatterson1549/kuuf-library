@@ -172,7 +172,7 @@ func (d *Database) ReadBookSubjects(limit, offset int) ([]book.Subject, error) {
 	return subjects, nil
 }
 
-func (d *Database) ReadBookHeaders(f book.Filter, limit, offset int) ([]book.Header, error) {
+func (d *Database) ReadBookHeaders(filter book.Filter, limit, offset int) ([]book.Header, error) {
 	bsonFilter := bson.Filter{
 		SubjectKey: bookSubjectField,
 		HeaderKeys: []string{
@@ -181,7 +181,7 @@ func (d *Database) ReadBookHeaders(f book.Filter, limit, offset int) ([]book.Hea
 			bookSubjectField,
 		},
 	}
-	filter := bson.D(bsonFilter.From(f)...)
+	mongoFilter := bson.D(bsonFilter.From(filter)...)
 	opts := options.Find().
 		SetSort(bson.D(
 			bson.E(bookSubjectField, 1),
@@ -198,7 +198,7 @@ func (d *Database) ReadBookHeaders(f book.Filter, limit, offset int) ([]book.Hea
 	coll := d.booksCollection
 	var all []mHeader
 	if err := d.withTimeoutContext(func(ctx context.Context) error {
-		cur, err := coll.Find(ctx, filter, opts)
+		cur, err := coll.Find(ctx, mongoFilter, opts)
 		if err != nil {
 			return err
 		}
@@ -295,9 +295,10 @@ func (d *Database) DeleteBook(id string) error {
 func (d *Database) ReadAdminPassword() (hashedPassword []byte, err error) {
 	filter := bson.D(bson.E(usernameField, adminUsername))
 	coll := d.usersCollection
+	opts := options.FindOne()
 	var u mUser
 	if err = d.withTimeoutContext(func(ctx context.Context) error {
-		result := coll.FindOne(ctx, filter)
+		result := coll.FindOne(ctx, filter, opts)
 		if err = result.Decode(&u); err != nil {
 			return err
 		}
