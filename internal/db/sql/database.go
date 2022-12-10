@@ -5,7 +5,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"time"
 
 	"github.com/jacobpatterson1549/kuuf-library/internal/book"
 	_ "github.com/lib/pq"           // register "postgres" database driver from package init() function
@@ -14,9 +13,8 @@ import (
 
 type (
 	Database struct {
-		db           *sql.DB
-		driver       driverInfo
-		QueryTimeout time.Duration
+		db     *sql.DB
+		driver driverInfo
 	}
 	driverInfo struct {
 		ILike string
@@ -28,7 +26,7 @@ var drivers = map[string]driverInfo{
 	"sqlite3":  {"LIKE"},
 }
 
-func NewDatabase(driverName, url string, queryTimeout time.Duration) (*Database, error) {
+func NewDatabase(ctx context.Context, driverName, url string) (*Database, error) {
 	driver, ok := drivers[driverName]
 	if !ok {
 		return nil, fmt.Errorf("unknown driverName: %q", driverName)
@@ -38,17 +36,16 @@ func NewDatabase(driverName, url string, queryTimeout time.Duration) (*Database,
 		return nil, fmt.Errorf("opening database: %w", err)
 	}
 	d := Database{
-		db:           db,
-		driver:       driver,
-		QueryTimeout: queryTimeout,
+		db:     db,
+		driver: driver,
 	}
-	if err := d.setupTables(); err != nil {
+	if err := d.setupTables(ctx); err != nil {
 		return nil, fmt.Errorf("setting up tables: %w", err)
 	}
 	return &d, nil
 }
 
-func (d *Database) setupTables() error {
+func (d *Database) setupTables(ctx context.Context) error {
 	queries := []query{
 		{
 			cmd: "CREATE TABLE IF NOT EXISTS books" +
@@ -82,7 +79,7 @@ func (d *Database) setupTables() error {
 			wantedRowsAffected: []int64{0, 1},
 		},
 	}
-	return d.execTx(queries...)
+	return d.execTx(ctx, queries...)
 }
 
 type query struct {
@@ -115,54 +112,43 @@ func (q query) allowsRowsAffected(target int64) bool {
 	return false
 }
 
-func (d *Database) withTimeoutContext(f func(context.Context) error) error {
-	ctx := context.Background()
-	ctx, cancelFunc := context.WithTimeout(ctx, d.QueryTimeout)
-	defer cancelFunc()
-	return f(ctx)
+func (d *Database) execTx(ctx context.Context, queries ...query) error {
+	tx, err := d.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("beginning transaction: %w", err)
+	}
+	for _, q := range queries {
+		if err = q.execute(ctx, tx); err != nil {
+			break
+		}
+	}
+	if err != nil {
+		if err2 := tx.Rollback(); err2 != nil {
+			err = fmt.Errorf("rollback error: %v, root cause: %w", err, err2)
+		}
+		return fmt.Errorf("executing transaction queries: %w", err)
+	}
+	if err != tx.Commit() {
+		return fmt.Errorf("committing transaction: %w", err)
+	}
+	return nil
 }
 
-func (d *Database) execTx(queries ...query) error {
-	return d.withTimeoutContext(func(ctx context.Context) error {
-		tx, err := d.db.BeginTx(ctx, nil)
-		if err != nil {
-			return fmt.Errorf("beginning transaction: %w", err)
+func (d *Database) query(ctx context.Context, q query, dest func() []interface{}) error {
+	rows, err := d.db.QueryContext(ctx, q.cmd, q.args...)
+	if err != nil {
+		return fmt.Errorf("running query: %w", err)
+	}
+	defer rows.Close()
+	for i := 0; rows.Next(); i++ {
+		if err := rows.Scan(dest()...); err != nil {
+			return fmt.Errorf("scanning row %v: %w", i, err)
 		}
-		for _, q := range queries {
-			if err = q.execute(ctx, tx); err != nil {
-				break
-			}
-		}
-		if err != nil {
-			if err2 := tx.Rollback(); err2 != nil {
-				err = fmt.Errorf("rollback error: %v, root cause: %w", err, err2)
-			}
-			return fmt.Errorf("executing transaction queries: %w", err)
-		}
-		if err != tx.Commit() {
-			return fmt.Errorf("committing transaction: %w", err)
-		}
-		return nil
-	})
+	}
+	return nil
 }
 
-func (d *Database) query(q query, dest func() []interface{}) error {
-	return d.withTimeoutContext(func(ctx context.Context) error {
-		rows, err := d.db.QueryContext(ctx, q.cmd, q.args...)
-		if err != nil {
-			return fmt.Errorf("running query: %w", err)
-		}
-		defer rows.Close()
-		for i := 0; rows.Next(); i++ {
-			if err := rows.Scan(dest()...); err != nil {
-				return fmt.Errorf("scanning row %v: %w", i, err)
-			}
-		}
-		return nil
-	})
-}
-
-func (d *Database) queryRow(q query, dest ...interface{}) error {
+func (d *Database) queryRow(ctx context.Context, q query, dest ...interface{}) error {
 	n := 0
 	destF := func() []interface{} {
 		if n != 0 {
@@ -171,7 +157,7 @@ func (d *Database) queryRow(q query, dest ...interface{}) error {
 		n++
 		return dest
 	}
-	err := d.query(q, destF)
+	err := d.query(ctx, q, destF)
 	switch {
 	case err != nil:
 		return err
@@ -181,7 +167,7 @@ func (d *Database) queryRow(q query, dest ...interface{}) error {
 	return nil
 }
 
-func (d *Database) CreateBooks(books ...book.Book) ([]book.Book, error) {
+func (d *Database) CreateBooks(ctx context.Context, books ...book.Book) ([]book.Book, error) {
 	queries := make([]query, len(books))
 	created := make([]book.Book, len(books))
 	for i, b := range books {
@@ -192,13 +178,13 @@ func (d *Database) CreateBooks(books ...book.Book) ([]book.Book, error) {
 		queries[i].wantedRowsAffected = []int64{1}
 		created[i] = b
 	}
-	if err := d.execTx(queries...); err != nil {
+	if err := d.execTx(ctx, queries...); err != nil {
 		return nil, fmt.Errorf("creating books: %w", err)
 	}
 	return created, nil
 }
 
-func (d *Database) ReadBookSubjects(limit, offset int) ([]book.Subject, error) {
+func (d *Database) ReadBookSubjects(ctx context.Context, limit, offset int) ([]book.Subject, error) {
 	cmd := "SELECT subject, COUNT(*)" +
 		" FROM books" +
 		" GROUP BY subject" +
@@ -219,14 +205,14 @@ func (d *Database) ReadBookSubjects(limit, offset int) ([]book.Subject, error) {
 		n++
 		return []interface{}{&s.Name, &s.Count}
 	}
-	if err := d.query(q, dest); err != nil {
+	if err := d.query(ctx, q, dest); err != nil {
 		return nil, fmt.Errorf("reading book subjects: %w", err)
 	}
 	subjects = subjects[:n]
 	return subjects, nil
 }
 
-func (d *Database) ReadBookHeaders(filter book.Filter, limit, offset int) ([]book.Header, error) {
+func (d *Database) ReadBookHeaders(ctx context.Context, filter book.Filter, limit, offset int) ([]book.Header, error) {
 	hasSubject := len(filter.Subject) != 0
 	hasHeaderPart := len(filter.HeaderPart) != 0
 	likeHeaderPart := "%" + filter.HeaderPart + "%"
@@ -254,14 +240,14 @@ func (d *Database) ReadBookHeaders(filter book.Filter, limit, offset int) ([]boo
 		n++
 		return []interface{}{&h.ID, &h.Title, &h.Author, &h.Subject}
 	}
-	if err := d.query(q, dest); err != nil {
+	if err := d.query(ctx, q, dest); err != nil {
 		return nil, fmt.Errorf("reading book headers: %w", err)
 	}
 	headers = headers[:n]
 	return headers, nil
 }
 
-func (d *Database) ReadBook(id string) (*book.Book, error) {
+func (d *Database) ReadBook(ctx context.Context, id string) (*book.Book, error) {
 	cmd := "SELECT id, title, author, subject, description, dewey_dec_class, pages, publisher, publish_date, added_date, ean_isbn13, upc_isbn10, image_base64" +
 		" FROM books" +
 		" WHERE id = $1"
@@ -271,13 +257,13 @@ func (d *Database) ReadBook(id string) (*book.Book, error) {
 		args: []interface{}{id},
 	}
 	dest := []interface{}{&b.ID, &b.Title, &b.Author, &b.Subject, &b.Description, &b.DeweyDecClass, &b.Pages, &b.Publisher, &b.PublishDate, &b.AddedDate, &b.EanIsbn13, &b.UpcIsbn10, &b.ImageBase64}
-	if err := d.queryRow(q, dest...); err != nil {
+	if err := d.queryRow(ctx, q, dest...); err != nil {
 		return nil, fmt.Errorf("reading book: %w", err)
 	}
 	return &b, nil
 }
 
-func (d *Database) UpdateBook(b book.Book, updateImage bool) error {
+func (d *Database) UpdateBook(ctx context.Context, b book.Book, updateImage bool) error {
 	cmd := "UPDATE books" +
 		" SET title = $1, author = $2, subject = $3, description = $4, dewey_dec_class = $5, pages = $6, publisher = $7, publish_date = $8, added_date = $9, ean_isbn13 = $10, upc_isbn10 = $11"
 	args := []interface{}{b.Title, b.Author, b.Subject, b.Description, b.DeweyDecClass, b.Pages, b.Publisher, b.PublishDate, b.AddedDate, b.EanIsbn13, b.UpcIsbn10}
@@ -293,45 +279,45 @@ func (d *Database) UpdateBook(b book.Book, updateImage bool) error {
 		args:               args,
 		wantedRowsAffected: []int64{1},
 	}
-	if err := d.execTx(q); err != nil {
+	if err := d.execTx(ctx, q); err != nil {
 		return fmt.Errorf("updating book: %w", err)
 	}
 	return nil
 }
 
-func (d *Database) DeleteBook(id string) error {
+func (d *Database) DeleteBook(ctx context.Context, id string) error {
 	cmd := "DELETE FROM books WHERE id = $1"
 	q := query{
 		cmd:                cmd,
 		args:               []interface{}{id},
 		wantedRowsAffected: []int64{1},
 	}
-	if err := d.execTx(q); err != nil {
+	if err := d.execTx(ctx, q); err != nil {
 		return fmt.Errorf("deleting book: %w", err)
 	}
 	return nil
 }
 
-func (d *Database) ReadAdminPassword() (hashedPassword []byte, err error) {
+func (d *Database) ReadAdminPassword(ctx context.Context) (hashedPassword []byte, err error) {
 	cmd := "SELECT password FROM users WHERE username = $1"
 	q := query{
 		cmd:  cmd,
 		args: []interface{}{"admin"},
 	}
-	if err := d.queryRow(q, &hashedPassword); err != nil {
+	if err := d.queryRow(ctx, q, &hashedPassword); err != nil {
 		return nil, fmt.Errorf("reading admin password: %w", err)
 	}
 	return hashedPassword, nil
 }
 
-func (d *Database) UpdateAdminPassword(hashedPassword string) error {
+func (d *Database) UpdateAdminPassword(ctx context.Context, hashedPassword string) error {
 	cmd := "UPDATE users SET password = $1 WHERE username = $2"
 	q := query{
 		cmd:                cmd,
 		args:               []interface{}{hashedPassword, "admin"},
 		wantedRowsAffected: []int64{1},
 	}
-	if err := d.execTx(q); err != nil {
+	if err := d.execTx(ctx, q); err != nil {
 		return fmt.Errorf("updating admin password: %w", err)
 	}
 	return nil

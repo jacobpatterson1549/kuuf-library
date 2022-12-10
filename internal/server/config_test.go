@@ -1,7 +1,9 @@
 package server
 
 import (
+	"context"
 	"fmt"
+	"io"
 	"reflect"
 	"strings"
 	"testing"
@@ -140,7 +142,9 @@ func TestSetupInitAdminPassword(t *testing.T) {
 			cfg := Config{
 				AdminPassword: test.adminPassword,
 			}
-			err := cfg.setup(db, ph, nil)
+			var w io.Writer
+			ctx := context.Background()
+			err := cfg.setup(ctx, db, ph, w)
 			switch {
 			case !test.wantOk:
 				if err == nil {
@@ -191,7 +195,10 @@ func TestSetupBackfillCSV(t *testing.T) {
 			cfg := Config{
 				BackfillCSV: true,
 			}
-			err := cfg.setup(test.db, nil, nil)
+			var ph passwordHandler
+			var w io.Writer
+			ctx := context.Background()
+			err := cfg.setup(ctx, test.db, ph, w)
 			switch {
 			case !test.wantOk:
 				if err == nil {
@@ -273,8 +280,10 @@ bk3,,,bk3_description,,,0,,01/01/0001,01/01/0001,,,
 				DumpCSV: true,
 				MaxRows: 2,
 			}
+			var ph passwordHandler
 			var sb strings.Builder
-			err := cfg.setup(db, nil, &sb)
+			ctx := context.Background()
+			err := cfg.setup(ctx, db, ph, &sb)
 			switch {
 			case !test.wantOk:
 				if err == nil {

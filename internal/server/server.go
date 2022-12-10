@@ -2,6 +2,7 @@
 package server
 
 import (
+	"context"
 	"embed"
 	"fmt"
 	"io"
@@ -59,19 +60,19 @@ type (
 		IsCorrectPassword(hashedPassword, password []byte) (ok bool, err error)
 	}
 	database interface {
-		CreateBooks(books ...book.Book) ([]book.Book, error)
-		ReadBookSubjects(limit, offset int) ([]book.Subject, error)
-		ReadBookHeaders(f book.Filter, limit, offset int) ([]book.Header, error)
-		ReadBook(id string) (*book.Book, error)
-		UpdateBook(b book.Book, updateImage bool) error
-		DeleteBook(id string) error
-		ReadAdminPassword() (hashedPassword []byte, err error)
-		UpdateAdminPassword(hashedPassword string) error
+		CreateBooks(ctx context.Context, books ...book.Book) ([]book.Book, error)
+		ReadBookSubjects(ctx context.Context, limit, offset int) ([]book.Subject, error)
+		ReadBookHeaders(ctx context.Context, f book.Filter, limit, offset int) ([]book.Header, error)
+		ReadBook(ctx context.Context, id string) (*book.Book, error)
+		UpdateBook(ctx context.Context, b book.Book, updateImage bool) error
+		DeleteBook(ctx context.Context, id string) error
+		ReadAdminPassword(ctx context.Context) (hashedPassword []byte, err error)
+		UpdateAdminPassword(ctx context.Context, hashedPassword string) error
 	}
 )
 
-func (cfg Config) NewServer(out io.Writer) (*Server, error) {
-	db, err := cfg.createDatabase()
+func (cfg Config) NewServer(ctx context.Context, out io.Writer) (*Server, error) {
+	db, err := cfg.createDatabase(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("creating database: %W", err)
 	}
@@ -91,8 +92,8 @@ func (cfg Config) NewServer(out io.Writer) (*Server, error) {
 
 // Run initializes the server and then serves it.
 // Initialization reads the config to set the admin password and backfill books from the csv database if desired.
-func (s *Server) Run() error {
-	if err := s.cfg.setup(s.db, s.ph, s.out); err != nil {
+func (s *Server) Run(ctx context.Context) error {
+	if err := s.cfg.setup(ctx, s.db, s.ph, s.out); err != nil {
 		return fmt.Errorf("setting up server: %w", err)
 	}
 	dbScheme, _, _ := strings.Cut(s.cfg.DatabaseURL, ":")
@@ -105,16 +106,16 @@ func (s *Server) Run() error {
 	return http.ListenAndServe(addr, handler)
 }
 
-func (cfg Config) createDatabase() (database, error) {
+func (cfg Config) createDatabase(ctx context.Context) (database, error) {
 	switch s := cfg.databaseScheme(); s {
 	case "csv":
 		return embeddedCSVDatabase()
 	case "mongodb+srv":
-		return mongo.NewDatabase(cfg.DatabaseURL, cfg.queryTimeout())
+		return mongo.NewDatabase(ctx, cfg.DatabaseURL)
 	case "postgres":
-		return sql.NewDatabase(s, cfg.DatabaseURL, cfg.queryTimeout())
+		return sql.NewDatabase(ctx, s, cfg.DatabaseURL)
 	case "file":
-		return sql.NewDatabase("sqlite3", cfg.DatabaseURL, cfg.queryTimeout())
+		return sql.NewDatabase(ctx, "sqlite3", cfg.DatabaseURL)
 	default:
 		return nil, fmt.Errorf("unknown database: %q", s)
 	}

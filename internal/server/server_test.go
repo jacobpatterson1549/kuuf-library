@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -42,7 +43,8 @@ func TestNewServer(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			var sb strings.Builder
-			got, err := test.cfg.NewServer(&sb)
+			ctx := context.Background()
+			got, err := test.cfg.NewServer(ctx, &sb)
 			switch {
 			case !test.wantOk:
 				if err == nil {

@@ -18,15 +18,15 @@ func TestNewDatabase(t *testing.T) {
 	tests := []struct {
 		name         string
 		url          string
-		queryTimeout time.Duration
 		wantOk       bool
 	}{
-		{"bad url", "bad url", 0, false},
-		{"happy path", "mongodb://localhost:27017/", 15 * time.Hour, true},
+		{"bad url", "bad url", false},
+		{"happy path", "mongodb://localhost:27017/", true},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			d, err := NewDatabase(test.url, test.queryTimeout)
+			ctx := context.Background()
+			d, err := NewDatabase(ctx, test.url)
 			switch {
 			case !test.wantOk:
 				if err == nil {
@@ -38,8 +38,6 @@ func TestNewDatabase(t *testing.T) {
 				t.Errorf("books collection not set")
 			case d.usersCollection == nil:
 				t.Errorf("users collection not set")
-			case d.QueryTimeout != test.queryTimeout:
-				t.Errorf("query timeout: wanted %v, got %v", d.QueryTimeout, test.queryTimeout)
 			}
 		})
 	}
@@ -147,9 +145,9 @@ func TestCreateBooks(t *testing.T) {
 				booksCollection: mockCollection{
 					InsertManyFunc: test.InsertManyFunc,
 				},
-				QueryTimeout: time.Hour,
 			}
-			got, err := d.CreateBooks(test.insertBooks...)
+			ctx := context.Background()
+			got, err := d.CreateBooks(ctx, test.insertBooks...)
 			switch {
 			case !test.wantOk:
 				if err == nil {
@@ -234,9 +232,9 @@ func TestReadBookSubjects(t *testing.T) {
 				booksCollection: mockCollection{
 					AggregateFunc: test.AggregateFunc,
 				},
-				QueryTimeout: time.Hour,
 			}
-			got, err := d.ReadBookSubjects(test.limit, test.offset)
+			ctx := context.Background()
+			got, err := d.ReadBookSubjects(ctx, test.limit, test.offset)
 			switch {
 			case !test.wantOk:
 				if err == nil {
@@ -336,9 +334,9 @@ func TestReadBookHeaders(t *testing.T) {
 				booksCollection: mockCollection{
 					FindFunc: test.FindFunc,
 				},
-				QueryTimeout: time.Hour,
 			}
-			got, err := d.ReadBookHeaders(test.filter, test.limit, test.offset)
+			ctx := context.Background()
+			got, err := d.ReadBookHeaders(ctx, test.filter, test.limit, test.offset)
 			switch {
 			case !test.wantOk:
 				if err == nil {
@@ -407,9 +405,9 @@ func TestReadBook(t *testing.T) {
 				booksCollection: mockCollection{
 					FindOneFunc: test.FindOneFunc,
 				},
-				QueryTimeout: time.Hour,
 			}
-			got, err := d.ReadBook(test.bookID)
+			ctx := context.Background()
+			got, err := d.ReadBook(ctx, test.bookID)
 			switch {
 			case !test.wantOk:
 				if err == nil {
@@ -530,9 +528,9 @@ func TestUpdateBook(t *testing.T) {
 				booksCollection: mockCollection{
 					UpdateOneFunc: test.UpdateOneFunc,
 				},
-				QueryTimeout: time.Hour,
 			}
-			err := d.UpdateBook(test.book, test.updateImage)
+			ctx := context.Background()
+			err := d.UpdateBook(ctx, test.book, test.updateImage)
 			switch {
 			case !test.wantOk:
 				if err == nil {
@@ -603,9 +601,9 @@ func TestDeleteBook(t *testing.T) {
 				booksCollection: mockCollection{
 					DeleteOneFunc: test.DeleteOneFunc,
 				},
-				QueryTimeout: time.Hour,
 			}
-			err := d.DeleteBook(test.bookID)
+			ctx := context.Background()
+			err := d.DeleteBook(ctx, test.bookID)
 			switch {
 			case !test.wantOk:
 				if err == nil {
@@ -660,9 +658,9 @@ func TestReadAdminPassword(t *testing.T) {
 				usersCollection: mockCollection{
 					FindOneFunc: test.FindOneFunc,
 				},
-				QueryTimeout: time.Hour,
 			}
-			got, err := d.ReadAdminPassword()
+			ctx := context.Background()
+			got, err := d.ReadAdminPassword(ctx)
 			switch {
 			case !test.wantOk:
 				if err == nil {
@@ -732,9 +730,9 @@ func TestUpdateAdminPassword(t *testing.T) {
 				usersCollection: mockCollection{
 					UpdateOneFunc: test.UpdateOneFunc,
 				},
-				QueryTimeout: time.Hour,
 			}
-			err := d.UpdateAdminPassword(test.hashedPassword)
+			ctx := context.Background()
+			err := d.UpdateAdminPassword(ctx, test.hashedPassword)
 			switch {
 			case !test.wantOk:
 				if err == nil {

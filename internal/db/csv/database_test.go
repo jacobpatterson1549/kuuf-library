@@ -1,6 +1,7 @@
 package csv
 
 import (
+	"context"
 	"reflect"
 	"strings"
 	"testing"
@@ -105,7 +106,8 @@ func TestReadBookHeaders(t *testing.T) {
 			d := Database{
 				Books: books,
 			}
-			got, err := d.ReadBookHeaders(book.Filter{}, test.limit, test.offset)
+			ctx := context.Background()
+			got, err := d.ReadBookHeaders(ctx, book.Filter{}, test.limit, test.offset)
 			switch {
 			case err != nil:
 				t.Errorf("unwanted error: %v", err)
@@ -144,7 +146,8 @@ func TestReadBookSubjects(t *testing.T) {
 			d := Database{
 				Books: books,
 			}
-			got, err := d.ReadBookSubjects(test.limit, test.offset)
+			ctx := context.Background()
+			got, err := d.ReadBookSubjects(ctx, test.limit, test.offset)
 			switch {
 			case err != nil:
 				t.Errorf("unwanted error: %v", err)
@@ -190,7 +193,8 @@ func TestReadBook(t *testing.T) {
 			d := Database{
 				Books: test.books,
 			}
-			got, err := d.ReadBook(test.id)
+			ctx := context.Background()
+			got, err := d.ReadBook(ctx, test.id)
 			switch {
 			case !test.wantOk:
 				if err == nil {
@@ -210,11 +214,11 @@ func TestNotAllowed(t *testing.T) {
 		name string
 		f    func(d *Database) error
 	}{
-		{"CreateBooks", func(d *Database) error { _, err := d.CreateBooks(); return err }},
-		{"UpdateBook", func(d *Database) error { return d.UpdateBook(book.Book{}, false) }},
-		{"DeleteBook", func(d *Database) error { return d.DeleteBook("id") }},
-		{"ReadAdminPassword", func(d *Database) error { _, err := d.ReadAdminPassword(); return err }},
-		{"UpdateAdminPassword", func(d *Database) error { return d.UpdateAdminPassword("Bilbo123") }},
+		{"CreateBooks", func(d *Database) error { _, err := d.CreateBooks(context.Background()); return err }},
+		{"UpdateBook", func(d *Database) error { return d.UpdateBook(context.Background(), book.Book{}, false) }},
+		{"DeleteBook", func(d *Database) error { return d.DeleteBook(context.Background(), "id") }},
+		{"ReadAdminPassword", func(d *Database) error { _, err := d.ReadAdminPassword(context.Background()); return err }},
+		{"UpdateAdminPassword", func(d *Database) error { return d.UpdateAdminPassword(context.Background(), "Bilbo123") }},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

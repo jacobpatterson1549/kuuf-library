@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"strings"
@@ -29,26 +30,26 @@ func (cfg Config) databaseScheme() string {
 	return beforeColon
 }
 
-func (cfg Config) setup(db database, ph passwordHandler, out io.Writer) error {
+func (cfg Config) setup(ctx context.Context, db database, ph passwordHandler, out io.Writer) error {
 	if len(cfg.AdminPassword) != 0 {
-		if err := cfg.initAdminPassword(db, ph); err != nil {
+		if err := cfg.initAdminPassword(ctx, db, ph); err != nil {
 			return fmt.Errorf("initializing admin password from server configuration: %w", err)
 		}
 	}
 	if cfg.BackfillCSV {
-		if err := cfg.backfillCSV(db); err != nil {
+		if err := cfg.backfillCSV(ctx, db); err != nil {
 			return fmt.Errorf("backfilling database from internal CSV file: %w", err)
 		}
 	}
 	if cfg.UpdateImages || cfg.DumpCSV {
-		if err := cfg.updateImages(db, out); err != nil {
+		if err := cfg.updateImages(ctx, db, out); err != nil {
 			return fmt.Errorf("updating images / dumping csv;: %w", err)
 		}
 	}
 	return nil
 }
 
-func (cfg Config) initAdminPassword(db database, ph passwordHandler) error {
+func (cfg Config) initAdminPassword(ctx context.Context, db database, ph passwordHandler) error {
 	if err := validatePassword(cfg.AdminPassword); err != nil {
 		return err
 	}
@@ -56,29 +57,31 @@ func (cfg Config) initAdminPassword(db database, ph passwordHandler) error {
 	if err != nil {
 		return fmt.Errorf("hashing admin password: %w", err)
 	}
-	if err := db.UpdateAdminPassword(string(hashedPassword)); err != nil {
+	if err := db.UpdateAdminPassword(ctx, string(hashedPassword)); err != nil {
 		return fmt.Errorf("setting admin password: %w", err)
 	}
 	return nil
 }
 
-func (cfg Config) backfillCSV(db database) error {
+func (cfg Config) backfillCSV(ctx context.Context, db database) error {
 	src, err := embeddedCSVDatabase()
 	if err != nil {
 		return fmt.Errorf("loading csv database: %w", err)
 	}
 	books := src.Books
-	if _, err := db.CreateBooks(books...); err != nil {
+	if _, err := db.CreateBooks(ctx, books...); err != nil {
 		return fmt.Errorf("creating books: %w", err)
 	}
 	return nil
 }
 
-func (cfg Config) updateImages(db database, out io.Writer) error {
+func (cfg Config) updateImages(ctx context.Context, db database, out io.Writer) error {
 	d := csv.NewDump(out)
 	offset := 0
 	for {
-		headers, err := db.ReadBookHeaders(book.Filter{}, cfg.MaxRows+1, offset)
+		filter := book.Filter{}
+		limit := cfg.MaxRows + 1
+		headers, err := db.ReadBookHeaders(ctx, filter, limit, offset)
 		if err != nil {
 			return fmt.Errorf("reading books at offset %v: %w", offset, err)
 		}
@@ -87,7 +90,7 @@ func (cfg Config) updateImages(db database, out io.Writer) error {
 			headers = headers[:cfg.MaxRows]
 		}
 		for _, h := range headers {
-			if err := cfg.updateImage(h, db, *d); err != nil {
+			if err := cfg.updateImage(ctx, h, db, *d); err != nil {
 				return err
 			}
 		}
@@ -98,8 +101,8 @@ func (cfg Config) updateImages(db database, out io.Writer) error {
 	}
 }
 
-func (cfg Config) updateImage(h book.Header, db database, d csv.Dump) error {
-	b, err := db.ReadBook(h.ID)
+func (cfg Config) updateImage(ctx context.Context, h book.Header, db database, d csv.Dump) error {
+	b, err := db.ReadBook(ctx, h.ID)
 	if err != nil {
 		return fmt.Errorf("reading book %q: %w", h.ID, err)
 	}
@@ -109,7 +112,7 @@ func (cfg Config) updateImage(h book.Header, db database, d csv.Dump) error {
 			return fmt.Errorf("updating image for book %q: %w", b.ID, err)
 		}
 		b.ImageBase64 = string(imageBase64)
-		if err := db.UpdateBook(*b, true); err != nil {
+		if err := db.UpdateBook(ctx, *b, true); err != nil {
 			return fmt.Errorf("writing updated image to db for book %q: %w", b.ID, err)
 		}
 	}

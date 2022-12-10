@@ -17,7 +17,6 @@ type (
 	Database struct {
 		booksCollection mCollection
 		usersCollection mCollection
-		QueryTimeout    time.Duration
 	}
 	mCollection interface {
 		InsertMany(ctx context.Context, documents []interface{}, opts ...*options.InsertManyOptions) (*mongo.InsertManyResult, error)
@@ -80,35 +79,24 @@ const (
 	dateLayout             = book.HyphenatedYYYYMMDD
 )
 
-func NewDatabase(url string, queryTimeout time.Duration) (*Database, error) {
-	d := Database{
-		QueryTimeout: queryTimeout,
-	}
+func NewDatabase(ctx context.Context, url string) (*Database, error) {
 	opts := options.Client().
 		ApplyURI(url)
-	if err := d.withTimeoutContext(func(ctx context.Context) error {
-		client, err := mongo.Connect(ctx, opts)
-		if err != nil {
-			return err
-		}
-		database := client.Database(libraryDatabase)
-		d.booksCollection = database.Collection(booksCollection)
-		d.usersCollection = database.Collection(usersCollection)
-		return nil
-	}); err != nil {
+	client, err := mongo.Connect(ctx, opts)
+	if err != nil {
 		return nil, fmt.Errorf("connecting to mongo: %w", err)
+	}
+	database := client.Database(libraryDatabase)
+	booksCollection := database.Collection(booksCollection)
+	usersCollection := database.Collection(usersCollection)
+	d := Database{
+		booksCollection: booksCollection,
+		usersCollection: usersCollection,
 	}
 	return &d, nil
 }
 
-func (d *Database) withTimeoutContext(f func(ctx context.Context) error) error {
-	ctx := context.Background()
-	ctx, cancelFunc := context.WithTimeout(ctx, d.QueryTimeout)
-	defer cancelFunc()
-	return f(ctx)
-}
-
-func (d *Database) CreateBooks(books ...book.Book) ([]book.Book, error) {
+func (d *Database) CreateBooks(ctx context.Context, books ...book.Book) ([]book.Book, error) {
 	if len(books) == 0 {
 		return nil, nil
 	}
@@ -119,29 +107,24 @@ func (d *Database) CreateBooks(books ...book.Book) ([]book.Book, error) {
 	}
 	opts := options.InsertMany()
 	coll := d.booksCollection
-	if err := d.withTimeoutContext(func(ctx context.Context) error {
-		ids, err := coll.InsertMany(ctx, docs, opts)
+	ids, err := coll.InsertMany(ctx, docs, opts)
+	if err != nil {
+		return nil, fmt.Errorf("inserting documents: %w", err)
+	}
+	if want, got := len(books), len(ids.InsertedIDs); want != got {
+		return nil, fmt.Errorf("unwanted length of created book ids: wanted %v, got %v", want, got)
+	}
+	for i, id := range ids.InsertedIDs {
+		objID, err := primitive.ToObjectID(id)
 		if err != nil {
-			return err
+			return nil, fmt.Errorf("converting inserted object id: %w", err)
 		}
-		if want, got := len(books), len(ids.InsertedIDs); want != got {
-			return fmt.Errorf("unwanted length of created book ids: wanted %v, got %v", want, got)
-		}
-		for i, id := range ids.InsertedIDs {
-			objID, err := primitive.ToObjectID(id)
-			if err != nil {
-				return err
-			}
-			books[i].ID = objID.Hex()
-		}
-		return nil
-	}); err != nil {
-		return nil, fmt.Errorf("creating books: %w", err)
+		books[i].ID = objID.Hex()
 	}
 	return books, nil
 }
 
-func (d *Database) ReadBookSubjects(limit, offset int) ([]book.Subject, error) {
+func (d *Database) ReadBookSubjects(ctx context.Context, limit, offset int) ([]book.Subject, error) {
 	pipeline := mongo.Pipeline{
 		bson.D(bson.E("$group", bson.D(
 			bson.E(subjectNameField, "$"+bookSubjectField),
@@ -156,17 +139,12 @@ func (d *Database) ReadBookSubjects(limit, offset int) ([]book.Subject, error) {
 	opts := options.Aggregate()
 	coll := d.booksCollection
 	var all []mSubject
-	if err := d.withTimeoutContext(func(ctx context.Context) error {
-		cur, err := coll.Aggregate(ctx, pipeline, opts)
-		if err != nil {
-			return err
-		}
-		if err := cur.All(ctx, &all); err != nil {
-			return err
-		}
-		return nil
-	}); err != nil {
-		return nil, fmt.Errorf("reading book subjects: %w", err)
+	cur, err := coll.Aggregate(ctx, pipeline, opts)
+	if err != nil {
+		return nil, fmt.Errorf("aggregating documents: %w", err)
+	}
+	if err := cur.All(ctx, &all); err != nil {
+		return nil, fmt.Errorf("decoding subjects: %w", err)
 	}
 	subjects := make([]book.Subject, len(all))
 	for i, m := range all {
@@ -175,7 +153,7 @@ func (d *Database) ReadBookSubjects(limit, offset int) ([]book.Subject, error) {
 	return subjects, nil
 }
 
-func (d *Database) ReadBookHeaders(filter book.Filter, limit, offset int) ([]book.Header, error) {
+func (d *Database) ReadBookHeaders(ctx context.Context, filter book.Filter, limit, offset int) ([]book.Header, error) {
 	bsonFilter := bson.Filter{
 		SubjectKey: bookSubjectField,
 		HeaderKeys: []string{
@@ -200,17 +178,12 @@ func (d *Database) ReadBookHeaders(filter book.Filter, limit, offset int) ([]boo
 		))
 	coll := d.booksCollection
 	var all []mHeader
-	if err := d.withTimeoutContext(func(ctx context.Context) error {
-		cur, err := coll.Find(ctx, mongoFilter, opts)
-		if err != nil {
-			return err
-		}
-		if err := cur.All(ctx, &all); err != nil {
-			return err
-		}
-		return nil
-	}); err != nil {
-		return nil, fmt.Errorf("reading book headers: %w", err)
+	cur, err := coll.Find(ctx, mongoFilter, opts)
+	if err != nil {
+		return nil, fmt.Errorf("finding documents: %w", err)
+	}
+	if err := cur.All(ctx, &all); err != nil {
+		return nil, fmt.Errorf("decoding headers: %w", err)
 	}
 	headers := make([]book.Header, len(all))
 	for i, m := range all {
@@ -219,7 +192,7 @@ func (d *Database) ReadBookHeaders(filter book.Filter, limit, offset int) ([]boo
 	return headers, nil
 }
 
-func (d *Database) ReadBook(id string) (*book.Book, error) {
+func (d *Database) ReadBook(ctx context.Context, id string) (*book.Book, error) {
 	filter, err := d.idFilter(id)
 	if err != nil {
 		return nil, err
@@ -227,20 +200,15 @@ func (d *Database) ReadBook(id string) (*book.Book, error) {
 	coll := d.booksCollection
 	opts := options.FindOne()
 	var m mBook
-	if err := d.withTimeoutContext(func(ctx context.Context) error {
-		result := coll.FindOne(ctx, filter, opts)
-		if err := result.Decode(&m); err != nil {
-			return err
-		}
-		return nil
-	}); err != nil {
-		return nil, fmt.Errorf("reading book: %w", err)
+	result := coll.FindOne(ctx, filter, opts)
+	if err := result.Decode(&m); err != nil {
+		return nil, fmt.Errorf("decoding book: %w", err)
 	}
 	b := m.Book()
 	return &b, nil
 }
 
-func (d *Database) UpdateBook(b book.Book, updateImage bool) error {
+func (d *Database) UpdateBook(ctx context.Context, b book.Book, updateImage bool) error {
 	filter, err := d.idFilter(b.ID)
 	if err != nil {
 		return err
@@ -264,71 +232,51 @@ func (d *Database) UpdateBook(b book.Book, updateImage bool) error {
 	update := bson.D(bson.E("$set", sets))
 	opts := options.Update()
 	coll := d.booksCollection
-	if err := d.withTimeoutContext(func(ctx context.Context) error {
-		result, err := coll.UpdateOne(ctx, filter, update, opts)
-		if err != nil {
-			return err
-		}
-		return d.expectSingleModify(result.ModifiedCount)
-	}); err != nil {
-		return fmt.Errorf("updating book: %w", err)
+	result, err := coll.UpdateOne(ctx, filter, update, opts)
+	if err != nil {
+		return fmt.Errorf("updating one document: %w", err)
 	}
-	return nil
+	return d.expectSingleModify(result.ModifiedCount)
 }
 
-func (d *Database) DeleteBook(id string) error {
+func (d *Database) DeleteBook(ctx context.Context, id string) error {
 	filter, err := d.idFilter(id)
 	if err != nil {
 		return err
 	}
 	opts := options.Delete()
 	coll := d.booksCollection
-	if err := d.withTimeoutContext(func(ctx context.Context) error {
-		result, err := coll.DeleteOne(ctx, filter, opts)
-		if err != nil {
-			return err
-		}
-		return d.expectSingleModify(result.DeletedCount)
-	}); err != nil {
-		return fmt.Errorf("deleting book: %w", err)
+	result, err := coll.DeleteOne(ctx, filter, opts)
+	if err != nil {
+		return fmt.Errorf("deleting one document: %w", err)
 	}
-	return nil
+	return d.expectSingleModify(result.DeletedCount)
 }
 
-func (d *Database) ReadAdminPassword() (hashedPassword []byte, err error) {
+func (d *Database) ReadAdminPassword(ctx context.Context) (hashedPassword []byte, err error) {
 	filter := bson.D(bson.E(usernameField, adminUsername))
 	coll := d.usersCollection
 	opts := options.FindOne()
 	var u mUser
-	if err = d.withTimeoutContext(func(ctx context.Context) error {
-		result := coll.FindOne(ctx, filter, opts)
-		if err = result.Decode(&u); err != nil {
-			return err
-		}
-		return nil
-	}); err != nil {
-		return nil, fmt.Errorf("reading admin password: %w", err)
+	result := coll.FindOne(ctx, filter, opts)
+	if err = result.Decode(&u); err != nil {
+		return nil, fmt.Errorf("finding one document: %w", err)
 	}
 	hashedPassword = []byte(u.Password)
 	return hashedPassword, nil
 }
 
-func (d *Database) UpdateAdminPassword(hashedPassword string) error {
+func (d *Database) UpdateAdminPassword(ctx context.Context, hashedPassword string) error {
 	filter := bson.D(bson.E(usernameField, adminUsername))
 	update := bson.D(bson.E("$set", bson.D(bson.E(passwordField, hashedPassword))))
 	opts := options.Update().
 		SetUpsert(true)
 	coll := d.usersCollection
-	if err := d.withTimeoutContext(func(ctx context.Context) error {
-		result, err := coll.UpdateOne(ctx, filter, update, opts)
-		if err != nil {
-			return err
-		}
-		return d.expectSingleModify(result.ModifiedCount)
-	}); err != nil {
-		return fmt.Errorf("updating admin password: %w", err)
+	result, err := coll.UpdateOne(ctx, filter, update, opts)
+	if err != nil {
+		return fmt.Errorf("updating one document: %w", err)
 	}
-	return nil
+	return d.expectSingleModify(result.ModifiedCount)
 }
 
 func (d Database) idFilter(id string) (interface{}, error) {

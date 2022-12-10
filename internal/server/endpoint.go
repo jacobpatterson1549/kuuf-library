@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"fmt"
 	"html"
 	"net/http"
@@ -23,8 +24,8 @@ func (s *Server) getBookHeaders(w http.ResponseWriter, r *http.Request) {
 	if !parseFormValue(w, r, "s", &filter.Subject, 256) {
 		return
 	}
-	pageLoader := func(limit, offset int) ([]book.Header, error) {
-		return s.db.ReadBookHeaders(filter, limit, offset)
+	pageLoader := func(ctx context.Context, limit, offset int) ([]book.Header, error) {
+		return s.db.ReadBookHeaders(ctx, filter, limit, offset)
 	}
 	if data, ok := loadPage(w, r, s.cfg.MaxRows, "Books", pageLoader); ok {
 		data["Filter"] = filter.HeaderPart
@@ -38,8 +39,10 @@ func (s *Server) getBook(w http.ResponseWriter, r *http.Request) {
 	if !parseFormValue(w, r, "id", &id, 64) {
 		return
 	}
-	b, err := s.db.ReadBook(id)
+	ctx := r.Context()
+	b, err := s.db.ReadBook(ctx, id)
 	if err != nil {
+		err = fmt.Errorf("reading book: %w", err)
 		httpInternalServerError(w, err)
 		return
 	}
@@ -56,8 +59,10 @@ func (s *Server) getAdmin(w http.ResponseWriter, r *http.Request) {
 	hasID := r.URL.Query().Has("book-id")
 	if hasID {
 		id := r.URL.Query().Get("book-id")
-		b, err := s.db.ReadBook(id)
+		ctx := r.Context()
+		b, err := s.db.ReadBook(ctx, id)
 		if err != nil {
+			err = fmt.Errorf("reading book: %w", err)
 			httpInternalServerError(w, err)
 			return
 		}
@@ -72,8 +77,10 @@ func (s *Server) postBook(w http.ResponseWriter, r *http.Request) {
 		httpBadRequest(w, err)
 		return
 	}
-	books, err := s.db.CreateBooks(*b)
+	ctx := r.Context()
+	books, err := s.db.CreateBooks(ctx, *b)
 	if err != nil {
+		err = fmt.Errorf("creating book: %w", err)
 		httpInternalServerError(w, err)
 		return
 	}
@@ -98,8 +105,10 @@ func (s *Server) putBook(w http.ResponseWriter, r *http.Request) {
 		updateImage = true
 		b.ImageBase64 = ""
 	}
-	err = s.db.UpdateBook(*b, updateImage)
+	ctx := r.Context()
+	err = s.db.UpdateBook(ctx, *b, updateImage)
 	if err != nil {
+		err = fmt.Errorf("updating book: %w", err)
 		httpInternalServerError(w, err)
 		return
 	}
@@ -111,7 +120,9 @@ func (s *Server) deleteBook(w http.ResponseWriter, r *http.Request) {
 	if !parseFormValue(w, r, "id", &id, 64) {
 		return
 	}
-	if err := s.db.DeleteBook(id); err != nil {
+	ctx := r.Context()
+	if err := s.db.DeleteBook(ctx, id); err != nil {
+		err := fmt.Errorf("deleting book: %w", err)
 		httpInternalServerError(w, err)
 		return
 	}
@@ -135,10 +146,13 @@ func (s *Server) putAdminPassword(w http.ResponseWriter, r *http.Request) {
 	}
 	hashedPassword, err := s.ph.Hash([]byte(p1))
 	if err != nil {
+		err = fmt.Errorf("hashing password: %w", err)
 		httpInternalServerError(w, err)
 		return
 	}
-	if err := s.db.UpdateAdminPassword(string(hashedPassword)); err != nil {
+	ctx := context.Background()
+	if err := s.db.UpdateAdminPassword(ctx, string(hashedPassword)); err != nil {
+		err = fmt.Errorf("updating password: %w", err)
 		httpInternalServerError(w, err)
 		return
 	}
@@ -147,8 +161,11 @@ func (s *Server) putAdminPassword(w http.ResponseWriter, r *http.Request) {
 
 func withAdminPassword(h http.HandlerFunc, db database, ph passwordHandler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		hashedPassword, err := db.ReadAdminPassword()
+		ctx := r.Context()
+		// TODO: read password after checking form input
+		hashedPassword, err := db.ReadAdminPassword(ctx)
 		if err != nil {
+			err = fmt.Errorf("reading password: %w", err)
 			httpInternalServerError(w, err)
 			return
 		}
@@ -162,6 +179,7 @@ func withAdminPassword(h http.HandlerFunc, db database, ph passwordHandler) http
 		}
 		ok, err := ph.IsCorrectPassword(hashedPassword, []byte(password))
 		if err != nil {
+			err = fmt.Errorf("checking password: %w", err)
 			httpInternalServerError(w, err)
 			return
 		}
@@ -214,7 +232,7 @@ func bookFrom(w http.ResponseWriter, r *http.Request) (*book.Book, error) {
 	return b, nil
 }
 
-func loadPage[V interface{}](w http.ResponseWriter, r *http.Request, maxRows int, sliceName string, pageLoader func(limit, offset int) ([]V, error)) (data map[string]interface{}, ok bool) {
+func loadPage[V interface{}](w http.ResponseWriter, r *http.Request, maxRows int, sliceName string, pageLoader func(cxt context.Context, limit, offset int) ([]V, error)) (data map[string]interface{}, ok bool) {
 	var a string
 	if !parseFormValue(w, r, "page", &a, 32) {
 		return nil, false
@@ -231,8 +249,10 @@ func loadPage[V interface{}](w http.ResponseWriter, r *http.Request, maxRows int
 	}
 	offset := (page - 1) * maxRows
 	limit := maxRows + 1
-	slice, err := pageLoader(limit, offset)
+	ctx := r.Context()
+	slice, err := pageLoader(ctx, limit, offset)
 	if err != nil {
+		err = fmt.Errorf("loading page: %w", err)
 		httpInternalServerError(w, err)
 		return nil, false
 	}

@@ -1,6 +1,7 @@
 package sql
 
 import (
+	"context"
 	"database/sql"
 	"database/sql/driver"
 	"fmt"
@@ -34,22 +35,19 @@ func databaseHelper(t *testing.T, conn mock.Conn) *Database {
 		t.Fatalf("opening database: %v", err)
 	}
 	d := Database{
-		db:           db,
-		QueryTimeout: time.Hour,
+		db: db,
 	}
 	return &d
 }
 
 func TestNewDatabase(t *testing.T) {
 	tests := []struct {
-		name             string
-		driverName       string
-		url              string
-		queryTimeout     time.Duration
-		openFunc         func(name string) (mock.Conn, error)
-		wantOk           bool
-		wantDriver       driverInfo
-		wantQueryTimeout time.Duration
+		name         string
+		driverName   string
+		url          string
+		openFunc     func(name string) (mock.Conn, error)
+		wantOk       bool
+		wantDriver   driverInfo
 	}{
 		{
 			name:       "unknown driverName",
@@ -61,7 +59,6 @@ func TestNewDatabase(t *testing.T) {
 			openFunc: func(name string) (mock.Conn, error) {
 				return mock.Conn{}, fmt.Errorf("open error (on tx)")
 			},
-			queryTimeout: time.Hour,
 		},
 		{
 			name:       "happy path (create user)",
@@ -69,10 +66,8 @@ func TestNewDatabase(t *testing.T) {
 			openFunc: func(name string) (mock.Conn, error) {
 				return mock.NewTransactionConn(*mock.NewAnyQuery(0), *mock.NewAnyQuery(0), *mock.NewAnyQuery(1)), nil
 			},
-			queryTimeout:     time.Hour,
-			wantOk:           true,
-			wantDriver:       testDriveInfo,
-			wantQueryTimeout: time.Hour,
+			wantOk:       true,
+			wantDriver:   testDriveInfo,
 		},
 		{
 			name:       "happy path",
@@ -80,16 +75,15 @@ func TestNewDatabase(t *testing.T) {
 			openFunc: func(name string) (mock.Conn, error) {
 				return mock.NewTransactionConn(*mock.NewAnyQuery(0), *mock.NewAnyQuery(0), *mock.NewAnyQuery(0)), nil
 			},
-			queryTimeout:     37 * time.Hour,
-			wantOk:           true,
-			wantDriver:       testDriveInfo,
-			wantQueryTimeout: 37 * time.Hour,
+			wantOk:       true,
+			wantDriver:   testDriveInfo,
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			testDriver.OpenFunc = test.openFunc
-			got, err := NewDatabase(test.driverName, test.url, test.queryTimeout)
+			ctx := context.Background()
+			got, err := NewDatabase(ctx, test.driverName, test.url)
 			switch {
 			case !test.wantOk:
 				if err == nil {
@@ -99,8 +93,6 @@ func TestNewDatabase(t *testing.T) {
 				t.Errorf("unwanted error: %v", err)
 			case test.wantDriver != got.driver:
 				t.Errorf("drivers not equal: \n wanted: %v \n got:    %v", test.wantDriver, got.driver)
-			case test.wantQueryTimeout != got.QueryTimeout:
-				t.Errorf("query timeouts not equal: \n wanted: %v \n got:    %v", test.wantQueryTimeout, got.QueryTimeout)
 			}
 		})
 	}
@@ -219,7 +211,8 @@ func TestExecTxError(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			d := databaseHelper(t, test.conn)
-			if err := d.execTx(test.queries...); err == nil {
+			ctx := context.Background()
+			if err := d.execTx(ctx, test.queries...); err == nil {
 				t.Errorf("wanted error")
 			}
 		})
@@ -260,7 +253,8 @@ func TestQueryScanError(t *testing.T) {
 		cmd:  "any",
 		args: []interface{}{},
 	}
-	if err := d.query(q, dest); err == nil {
+	ctx := context.Background()
+	if err := d.query(ctx, q, dest); err == nil {
 		t.Errorf("wanted error when query expects 1 argument")
 	}
 }
@@ -333,7 +327,8 @@ func TestCreateBooks(t *testing.T) {
 			want := make([]book.Book, len(test.books))
 			copy(want, test.books)
 			d := databaseHelper(t, test.conn)
-			got, err := d.CreateBooks(test.books...)
+			ctx := context.Background()
+			got, err := d.CreateBooks(ctx, test.books...)
 			switch {
 			case !test.wantOk:
 				if err == nil {
@@ -410,7 +405,8 @@ func TestReadBookSubjects(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			d := databaseHelper(t, test.conn)
 			d.driver.ILike = "LK"
-			got, err := d.ReadBookSubjects(test.limit, test.offset)
+			ctx := context.Background()
+			got, err := d.ReadBookSubjects(ctx, test.limit, test.offset)
 			switch {
 			case !test.wantOk:
 				if err == nil {
@@ -494,7 +490,8 @@ func TestReadBookHeaders(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			d := databaseHelper(t, test.conn)
 			d.driver.ILike = "LK"
-			got, err := d.ReadBookHeaders(test.filter, test.limit, test.offset)
+			ctx := context.Background()
+			got, err := d.ReadBookHeaders(ctx, test.filter, test.limit, test.offset)
 			switch {
 			case !test.wantOk:
 				if err == nil {
@@ -562,7 +559,8 @@ func TestReadBook(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			d := databaseHelper(t, test.conn)
-			got, err := d.ReadBook(test.bookID)
+			ctx := context.Background()
+			got, err := d.ReadBook(ctx, test.bookID)
 			switch {
 			case !test.wantOk:
 				if err == nil {
@@ -637,7 +635,8 @@ func TestUpdateBook(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			d := databaseHelper(t, test.conn)
-			err := d.UpdateBook(test.b, test.updateImage)
+			ctx := context.Background()
+			err := d.UpdateBook(ctx, test.b, test.updateImage)
 			switch {
 			case !test.wantOk:
 				if err == nil {
@@ -681,7 +680,8 @@ func TestDeleteBook(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			d := databaseHelper(t, test.conn)
-			err := d.DeleteBook(test.bookID)
+			ctx := context.Background()
+			err := d.DeleteBook(ctx, test.bookID)
 			switch {
 			case !test.wantOk:
 				if err == nil {
@@ -740,7 +740,8 @@ func TestReadAdminPassword(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			d := databaseHelper(t, test.conn)
-			hashedPassword, err := d.ReadAdminPassword()
+			ctx := context.Background()
+			hashedPassword, err := d.ReadAdminPassword(ctx)
 			switch {
 			case !test.wantOk:
 				if err == nil {
@@ -798,7 +799,8 @@ func TestUpdateAdminPassword(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			d := databaseHelper(t, test.conn)
-			err := d.UpdateAdminPassword(test.hashedPassword)
+			ctx := context.Background()
+			err := d.UpdateAdminPassword(ctx, test.hashedPassword)
 			switch {
 			case !test.wantOk:
 				if err == nil {

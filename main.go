@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"io"
@@ -12,6 +13,7 @@ import (
 )
 
 func main() {
+	ctx := context.Background()
 	out := os.Stdout
 	programName, programArgs := os.Args[0], os.Args[1:]
 	logFlags := log.Ldate | log.Ltime | log.LUTC | log.Lshortfile | log.Lmsgprefix
@@ -20,11 +22,12 @@ func main() {
 	if err != nil {
 		log.Fatalf("parsing server config: %v", err)
 	}
-	s, err := cfg.NewServer(out)
+	s, err := cfg.NewServer(ctx, out)
 	if err != nil {
 		log.Fatalf("creating server: %v", err)
 	}
-	if err := s.Run(); err != nil {
+	// TODO: Cancel context when syscall stop or termination signal is handled. 
+	if err := s.Run(ctx); err != nil {
 		log.Fatalf("running server: %v", err)
 	}
 }
