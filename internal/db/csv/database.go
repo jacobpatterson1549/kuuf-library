@@ -53,7 +53,7 @@ func NewDatabase(r io.Reader) (*Database, error) {
 	return &d, nil
 }
 
-func (d *Database) ReadBookSubjects(limit, offset int) ([]book.Subject, error) {
+func (d Database) ReadBookSubjects(limit, offset int) ([]book.Subject, error) {
 	if limit < 0 {
 		return []book.Subject{}, nil
 	}
@@ -83,7 +83,7 @@ func (d *Database) ReadBookSubjects(limit, offset int) ([]book.Subject, error) {
 	return subjects, nil
 }
 
-func (d *Database) ReadBookHeaders(filter book.Filter, limit, offset int) ([]book.Header, error) {
+func (d Database) ReadBookHeaders(filter book.Filter, limit, offset int) ([]book.Header, error) {
 	books := d.Books
 	if limit < 0 || offset > len(books) {
 		return []book.Header{}, nil
@@ -107,7 +107,7 @@ func (d *Database) ReadBookHeaders(filter book.Filter, limit, offset int) ([]boo
 	return headers, nil
 }
 
-func (d *Database) ReadBook(id string) (*book.Book, error) {
+func (d Database) ReadBook(id string) (*book.Book, error) {
 	for _, b := range d.Books {
 		if b.ID == id {
 			return &b, nil
