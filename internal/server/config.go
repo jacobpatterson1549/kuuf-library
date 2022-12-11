@@ -81,47 +81,35 @@ func (cfg Config) backfillCSV(ctx context.Context, db database) error {
 
 func (cfg Config) updateImages(ctx context.Context, db database, out io.Writer) error {
 	d := csv.NewDump(out)
-	offset := 0
-	for {
-		filter := book.Filter{}
-		limit := cfg.MaxRows + 1
-		headers, err := db.ReadBookHeaders(ctx, filter, limit, offset)
+	iter := newBookIterator(db, cfg.MaxRows)
+	for iter.HasNext(ctx) {
+		b, err := iter.Next(ctx)
 		if err != nil {
-			return fmt.Errorf("reading books at offset %v: %w", offset, err)
+			return err
 		}
-		hasMore := len(headers) > cfg.MaxRows
-		if hasMore {
-			headers = headers[:cfg.MaxRows]
+		if err := cfg.updateImage(ctx, *b, db, *d); err != nil {
+			return err
 		}
-		for _, h := range headers {
-			if err := cfg.updateImage(ctx, h, db, *d); err != nil {
-				return err
-			}
-		}
-		if !hasMore {
-			return nil
-		}
-		offset += cfg.MaxRows
 	}
+	if err := iter.Err(); err != nil {
+		return err
+	}
+	return nil
 }
 
-func (cfg Config) updateImage(ctx context.Context, h book.Header, db database, d csv.Dump) error {
-	b, err := db.ReadBook(ctx, h.ID)
-	if err != nil {
-		return fmt.Errorf("reading book %q: %w", h.ID, err)
-	}
+func (cfg Config) updateImage(ctx context.Context, b book.Book, db database, d csv.Dump) error {
 	if cfg.UpdateImages && imageNeedsUpdating(b.ImageBase64) {
 		imageBase64, err := updateImage(b.ImageBase64, b.ID)
 		if err != nil {
 			return fmt.Errorf("updating image for book %q: %w", b.ID, err)
 		}
 		b.ImageBase64 = string(imageBase64)
-		if err := db.UpdateBook(ctx, *b, true); err != nil {
+		if err := db.UpdateBook(ctx, b, true); err != nil {
 			return fmt.Errorf("writing updated image to db for book %q: %w", b.ID, err)
 		}
 	}
 	if cfg.DumpCSV {
-		d.Write(*b)
+		d.Write(b)
 	}
 	return nil
 }
