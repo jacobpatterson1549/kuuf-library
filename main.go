@@ -7,7 +7,9 @@ import (
 	"io"
 	"log"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 
 	"github.com/jacobpatterson1549/kuuf-library/internal/server"
 )
@@ -22,14 +24,19 @@ func main() {
 	if err != nil {
 		log.Fatalf("parsing server config: %v", err)
 	}
-	s, err := cfg.NewServer(ctx, out)
-	if err != nil {
-		log.Fatalf("creating server: %v", err)
-	}
-	// TODO: Cancel context when syscall stop or termination signal is handled. 
-	if err := s.Run(ctx); err != nil {
-		log.Fatalf("running server: %v", err)
-	}
+	go func() {
+		s, err := cfg.NewServer(ctx, out)
+		if err != nil {
+			log.Fatalf("creating server: %v", err)
+		}
+		if err := s.Run(ctx); err != nil { // BLOCKING
+			log.Fatalf("running server: %v", err)
+		}
+	}()
+	done := make(chan os.Signal, 2)
+	signal.Notify(done, syscall.SIGINT, syscall.SIGTERM)
+	signal := <-done // BLOCKING
+	log.Printf("handled signal: %v", signal)
 }
 
 func newServerConfig(out io.Writer, programName string, programArgs ...string) (*server.Config, error) {
