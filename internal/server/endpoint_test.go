@@ -622,9 +622,6 @@ func TestWithAdminPassword(t *testing.T) {
 		},
 		{
 			name: "password too long",
-			readAdminPassword: func() (hashedPassword []byte, err error) {
-				return nil, nil
-			},
 			form: url.Values{
 				"p": {"TOO_LONG_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"},
 			},

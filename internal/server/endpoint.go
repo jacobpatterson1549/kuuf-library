@@ -161,16 +161,15 @@ func (s *Server) putAdminPassword(w http.ResponseWriter, r *http.Request) {
 
 func withAdminPassword(h http.HandlerFunc, db database, ph passwordHandler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		var password string
+		if !parseFormValue(w, r, "p", &password, 128) {
+			return
+		}
 		ctx := r.Context()
-		// TODO: read password after checking form input
 		hashedPassword, err := db.ReadAdminPassword(ctx)
 		if err != nil {
 			err = fmt.Errorf("reading password: %w", err)
 			httpInternalServerError(w, err)
-			return
-		}
-		var password string
-		if !parseFormValue(w, r, "p", &password, 128) {
 			return
 		}
 		if len(hashedPassword) == 0 {
