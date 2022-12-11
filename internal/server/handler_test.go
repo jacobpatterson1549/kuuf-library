@@ -9,6 +9,44 @@ import (
 	"time"
 )
 
+func TestWithContextTimeout(t *testing.T) {
+	tests := []struct {
+		name        string
+		maxDuration time.Duration
+		wantTimeout bool
+	}{
+		{
+			name:        "timeout",
+			wantTimeout: true,
+		},
+		{
+			name:        "long maxDuration",
+			maxDuration: 2 * time.Hour,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var gotTimeout bool
+			h1 := func(w http.ResponseWriter, r *http.Request) {
+				ctx := r.Context()
+				select {
+				case <-ctx.Done():
+					gotTimeout = true
+				default:
+					gotTimeout = false
+				}
+			}
+			h2 := withContextTimeout(http.HandlerFunc(h1), test.maxDuration)
+			w := httptest.NewRecorder()
+			r := httptest.NewRequest("GET", "/", nil)
+			h2.ServeHTTP(w, r)
+			if test.wantTimeout != gotTimeout {
+				t.Error()
+			}
+		})
+	}
+}
+
 func TestWithCacheControl(t *testing.T) {
 	msg := "OK_1549"
 	h1 := func(w http.ResponseWriter, r *http.Request) {

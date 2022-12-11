@@ -2,6 +2,7 @@ package server
 
 import (
 	"compress/gzip"
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -9,6 +10,16 @@ import (
 	"strings"
 	"time"
 )
+
+func withContextTimeout(h http.Handler, maxDuration time.Duration) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		ctx, cancelFunc := context.WithTimeout(ctx, maxDuration)
+		defer cancelFunc()
+		r = r.WithContext(ctx)
+		h.ServeHTTP(w, r)
+	}
+}
 
 // withCacheControl adds a cache-control to GET requests that are not to edit a book
 func withCacheControl(h http.Handler, d time.Duration) http.HandlerFunc {
