@@ -64,11 +64,15 @@ func (cfg Config) initAdminPassword(ctx context.Context, db database, ph passwor
 }
 
 func (cfg Config) backfillCSV(ctx context.Context, db database) error {
-	src, err := embeddedCSVDatabase()
+	csvD, err := embeddedCSVDatabase()
 	if err != nil {
 		return fmt.Errorf("loading csv database: %w", err)
 	}
-	books := src.Books
+	iter := newBookIterator(csvD, cfg.MaxRows)
+	books, err := iter.AllBooks(ctx)
+	if err != nil {
+		return fmt.Errorf("reading all books to backfill: %v", err)
+	}
 	if _, err := db.CreateBooks(ctx, books...); err != nil {
 		return fmt.Errorf("creating books: %w", err)
 	}

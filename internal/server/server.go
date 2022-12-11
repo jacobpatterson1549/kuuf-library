@@ -121,9 +121,24 @@ func (cfg Config) createDatabase(ctx context.Context) (database, error) {
 	}
 }
 
-func embeddedCSVDatabase() (*csv.Database, error) {
+func embeddedCSVDatabase() (readOnlyDatabase, error) {
 	r := strings.NewReader(libraryCSV)
-	return csv.NewDatabase(r)
+	d, err := csv.NewDatabase(r)
+	if err != nil {
+		return readOnlyDatabase{}, fmt.Errorf("initializing csv database: %w", err)
+	}
+	d2 := readOnlyDatabase{
+		ReadBookSubjectsFunc: func(ctx context.Context, limit, offset int) ([]book.Subject, error) {
+			return d.ReadBookSubjects(limit, offset)
+		},
+		ReadBookHeadersFunc: func(ctx context.Context, filter book.Filter, limit, offset int) ([]book.Header, error) {
+			return d.ReadBookHeaders(filter, limit, offset)
+		},
+		ReadBookFunc: func(ctx context.Context, id string) (*book.Book, error) {
+			return d.ReadBook(id)
+		},
+	}
+	return d2, nil
 }
 
 func parseTemplate() *template.Template {

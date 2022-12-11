@@ -1,7 +1,6 @@
 package csv
 
 import (
-	"context"
 	"reflect"
 	"strings"
 	"testing"
@@ -106,8 +105,7 @@ func TestReadBookHeaders(t *testing.T) {
 			d := Database{
 				Books: books,
 			}
-			ctx := context.Background()
-			got, err := d.ReadBookHeaders(ctx, book.Filter{}, test.limit, test.offset)
+			got, err := d.ReadBookHeaders(book.Filter{}, test.limit, test.offset)
 			switch {
 			case err != nil:
 				t.Errorf("unwanted error: %v", err)
@@ -146,8 +144,7 @@ func TestReadBookSubjects(t *testing.T) {
 			d := Database{
 				Books: books,
 			}
-			ctx := context.Background()
-			got, err := d.ReadBookSubjects(ctx, test.limit, test.offset)
+			got, err := d.ReadBookSubjects(test.limit, test.offset)
 			switch {
 			case err != nil:
 				t.Errorf("unwanted error: %v", err)
@@ -193,8 +190,7 @@ func TestReadBook(t *testing.T) {
 			d := Database{
 				Books: test.books,
 			}
-			ctx := context.Background()
-			got, err := d.ReadBook(ctx, test.id)
+			got, err := d.ReadBook(test.id)
 			switch {
 			case !test.wantOk:
 				if err == nil {
@@ -204,27 +200,6 @@ func TestReadBook(t *testing.T) {
 				t.Errorf("unwanted error: %v", err)
 			case !reflect.DeepEqual(test.want, got):
 				t.Errorf("not equal: \n wanted: %v \n got:    %v", test.want, got)
-			}
-		})
-	}
-}
-
-func TestNotAllowed(t *testing.T) {
-	tests := []struct {
-		name string
-		f    func(d *Database) error
-	}{
-		{"CreateBooks", func(d *Database) error { _, err := d.CreateBooks(context.Background()); return err }},
-		{"UpdateBook", func(d *Database) error { return d.UpdateBook(context.Background(), book.Book{}, false) }},
-		{"DeleteBook", func(d *Database) error { return d.DeleteBook(context.Background(), "id") }},
-		{"ReadAdminPassword", func(d *Database) error { _, err := d.ReadAdminPassword(context.Background()); return err }},
-		{"UpdateAdminPassword", func(d *Database) error { return d.UpdateAdminPassword(context.Background(), "Bilbo123") }},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			db := new(Database)
-			if err := test.f(db); err == nil {
-				t.Errorf("wanted error")
 			}
 		})
 	}

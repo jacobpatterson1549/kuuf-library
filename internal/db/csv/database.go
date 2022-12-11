@@ -2,7 +2,6 @@
 package csv
 
 import (
-	"context"
 	"encoding/csv"
 	"fmt"
 	"io"
@@ -54,11 +53,7 @@ func NewDatabase(r io.Reader) (*Database, error) {
 	return &d, nil
 }
 
-func (d *Database) CreateBooks(ctx context.Context, books ...book.Book) ([]book.Book, error) {
-	return nil, d.notAllowed()
-}
-
-func (d *Database) ReadBookSubjects(ctx context.Context, limit, offset int) ([]book.Subject, error) {
+func (d *Database) ReadBookSubjects(limit, offset int) ([]book.Subject, error) {
 	if limit < 0 {
 		return []book.Subject{}, nil
 	}
@@ -88,7 +83,7 @@ func (d *Database) ReadBookSubjects(ctx context.Context, limit, offset int) ([]b
 	return subjects, nil
 }
 
-func (d *Database) ReadBookHeaders(ctx context.Context, filter book.Filter, limit, offset int) ([]book.Header, error) {
+func (d *Database) ReadBookHeaders(filter book.Filter, limit, offset int) ([]book.Header, error) {
 	books := d.Books
 	if limit < 0 || offset > len(books) {
 		return []book.Header{}, nil
@@ -112,33 +107,13 @@ func (d *Database) ReadBookHeaders(ctx context.Context, filter book.Filter, limi
 	return headers, nil
 }
 
-func (d *Database) ReadBook(ctx context.Context, id string) (*book.Book, error) {
+func (d *Database) ReadBook(id string) (*book.Book, error) {
 	for _, b := range d.Books {
 		if b.ID == id {
 			return &b, nil
 		}
 	}
 	return nil, fmt.Errorf("no book with id of %q", id)
-}
-
-func (d *Database) UpdateBook(ctx context.Context, b book.Book, updateImage bool) error {
-	return d.notAllowed()
-}
-
-func (d *Database) DeleteBook(ctx context.Context, id string) error {
-	return d.notAllowed()
-}
-
-func (d *Database) ReadAdminPassword(ctx context.Context) (hashedPassword []byte, err error) {
-	return nil, d.notAllowed()
-}
-
-func (d *Database) UpdateAdminPassword(ctx context.Context, hashedPassword string) error {
-	return d.notAllowed()
-}
-
-func (d Database) notAllowed() error {
-	return fmt.Errorf("not supported by %T", d)
 }
 
 func bookFromRecord(r []string) (*book.Book, error) {

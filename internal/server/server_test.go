@@ -67,11 +67,19 @@ func TestNewServer(t *testing.T) {
 
 func TestEmbeddedCSVDatabase(t *testing.T) {
 	db, err := embeddedCSVDatabase()
+	if err != nil {
+		t.Fatalf("unwanted error: %v", err)
+	}
+	ctx := context.Background()
+	var filter book.Filter
+	limit := 1
+	offset := 0
+	headers, err := db.ReadBookHeaders(ctx, filter, limit, offset)
 	switch {
 	case err != nil:
 		t.Errorf("unwanted error: %v", err)
-	case len(db.Books) != 0:
-		t.Errorf("wanted no books in saved library, got %v [Disable this test when backfilling books]", len(db.Books))
+	case len(headers) != 0:
+		t.Errorf("wanted no books in saved library, got at least %v", len(headers))
 	}
 }
 
