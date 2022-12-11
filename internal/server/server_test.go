@@ -74,12 +74,17 @@ func TestEmbeddedCSVDatabase(t *testing.T) {
 	var filter book.Filter
 	limit := 1
 	offset := 0
-	headers, err := db.ReadBookHeaders(ctx, filter, limit, offset)
-	switch {
-	case err != nil:
-		t.Errorf("unwanted error: %v", err)
-	case len(headers) != 0:
-		t.Errorf("wanted no books in saved library, got at least %v", len(headers))
+	if headers, err := db.ReadBookHeaders(ctx, filter, limit, offset); err != nil || len(headers) != 0 {
+		t.Errorf("wanted no headers and no error, got: %v, %v", headers, err)
+	}
+	if subjects, err := db.ReadBookSubjects(ctx, 0, 0); err != nil || len(subjects) != 0 {
+		t.Errorf("wanted no subjects and no error, got: %v, %v", subjects, err)
+	}
+	if _, err := db.ReadBook(ctx, "unknown-id"); err == nil {
+		t.Errorf("wanted error reading book with unknown id")
+	}
+	if _, ok := db.(AllBooksDatabase); !ok {
+		t.Fatalf("source is not an allBookIterator")
 	}
 }
 

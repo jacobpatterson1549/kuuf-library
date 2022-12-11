@@ -121,7 +121,7 @@ func (cfg Config) createDatabase(ctx context.Context) (database, error) {
 	}
 }
 
-func embeddedCSVDatabase() (readOnlyDatabase, error) {
+func embeddedCSVDatabase() (database, error) {
 	r := strings.NewReader(libraryCSV)
 	d, err := csv.NewDatabase(r)
 	if err != nil {
@@ -138,7 +138,13 @@ func embeddedCSVDatabase() (readOnlyDatabase, error) {
 			return d.ReadBook(id)
 		},
 	}
-	return d2, nil
+	d3 := allBooksDatabase{
+		database: d2,
+		AllBooksFunc: func() ([]book.Book, error) {
+			return d.Books, nil
+		},
+	}
+	return d3, nil
 }
 
 func parseTemplate() *template.Template {

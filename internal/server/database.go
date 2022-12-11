@@ -18,6 +18,19 @@ type bookIterator struct {
 	nextErr      error
 }
 
+type AllBooksDatabase interface {
+	AllBooks() ([]book.Book, error)
+}
+
+type allBooksDatabase struct {
+	database
+	AllBooksFunc func() ([]book.Book, error)
+}
+
+func (abi allBooksDatabase) AllBooks() ([]book.Book, error) {
+	return abi.AllBooksFunc()
+}
+
 func newBookIterator(database database, batchSize int) *bookIterator {
 	iter := bookIterator{
 		database:  database,
@@ -44,7 +57,7 @@ func (iter *bookIterator) HasNext(ctx context.Context) bool {
 		if err != nil {
 			iter.closed = true
 			iter.nextErr = fmt.Errorf("requesting more headers: %w", err)
-			return false 
+			return false
 		}
 		iter.batchHeaders = headers
 		iter.batchIndex++
@@ -81,7 +94,9 @@ func (iter *bookIterator) Err() error {
 }
 
 func (iter *bookIterator) AllBooks(ctx context.Context) ([]book.Book, error) {
-	// TODO: return all books if database is csv or implements allBooks() interface (AllBooker)
+	if abi, ok := iter.database.(AllBooksDatabase); ok {
+		return abi.AllBooks()
+	}
 	var books []book.Book
 	for iter.HasNext(ctx) {
 		b, err := iter.Next(ctx)

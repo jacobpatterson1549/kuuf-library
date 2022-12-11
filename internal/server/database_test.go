@@ -320,6 +320,24 @@ func TestBookIteratorAllBooks(t *testing.T) {
 			}
 		})
 	}
+	t.Run("AllBookIterator", func(t *testing.T) {
+		allBooksCalled := false
+		d := allBooksDatabase{
+			AllBooksFunc: func() ([]book.Book, error) {
+				allBooksCalled = true
+				return nil, nil
+			},
+		}
+		iter := newBookIterator(d, 100)
+		ctx := context.Background()
+		_, err := iter.AllBooks(ctx)
+		switch {
+		case err != nil:
+			t.Errorf("unwanted error: %v", err)
+		case !allBooksCalled:
+			t.Errorf("AllBooks() not called on database")
+		}
+	})
 }
 
 func TestReadBookSubjects(t *testing.T) {
