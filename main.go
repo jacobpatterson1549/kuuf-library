@@ -48,7 +48,7 @@ func newServerConfig(out io.Writer, programName string, programArgs ...string) (
 	fs.SetOutput(out)
 	fs.Usage = func() {
 		for _, u := range usage {
-			fmt.Fprintln(fs.Output(), u)
+			fmt.Fprintln(out, u)
 		}
 		fs.PrintDefaults()
 	}
@@ -77,7 +77,8 @@ func ParseFlags(fs *flag.FlagSet, programArgs []string) error {
 	}
 	var lastErr error
 	fs.VisitAll(func(f *flag.Flag) {
-		name := strings.ReplaceAll(strings.ToUpper(f.Name), "-", "_")
+		upperName := strings.ToUpper(f.Name)
+		name := strings.ReplaceAll(upperName, "-", "_")
 		val, ok := os.LookupEnv(name)
 		if !ok {
 			return

@@ -23,9 +23,17 @@ func withContextTimeout(h http.Handler, maxDuration time.Duration) http.HandlerF
 
 // withCacheControl adds a cache-control to GET requests that are not to edit a book
 func withCacheControl(h http.Handler, d time.Duration) http.HandlerFunc {
+	shouldCache := func(r *http.Request) bool {
+		switch {
+		case r.Method != http.MethodGet,
+			r.URL.Path == "/admin" && r.URL.Query().Has("book-id"): // do not cache book edit read requests
+			return false
+		}
+		return true
+	}
 	maxAge := "max-age=" + strconv.Itoa(int(d.Seconds()))
 	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodGet && (r.URL.Path != "/admin" || len(r.URL.Query()["book-id"]) == 0) {
+		if shouldCache(r) {
 			w.Header().Add("Cache-Control", maxAge)
 		}
 		h.ServeHTTP(w, r)
@@ -43,7 +51,8 @@ func (wrw wrappedResponseWriter) Write(p []byte) (n int, err error) {
 
 func withContentEncoding(h http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+		acceptEncoding := r.Header.Get("Accept-Encoding")
+		if !strings.Contains(acceptEncoding, "gzip") {
 			h.ServeHTTP(w, r)
 			return
 		}

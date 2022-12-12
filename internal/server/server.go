@@ -192,9 +192,10 @@ func (s *Server) mux(postRateLimiter rateLimiter) http.Handler {
 		}
 	}
 	duration := time.Hour * 24 // update message in admin.html when updating cache age
+	queryTimeout := s.cfg.queryTimeout()
 	h := withContentEncoding(m)
 	h = withCacheControl(h, duration)
-	h = withContextTimeout(h, s.cfg.queryTimeout())
+	h = withContextTimeout(h, queryTimeout)
 	return h
 }
 

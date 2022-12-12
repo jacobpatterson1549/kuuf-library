@@ -56,9 +56,10 @@ func (s *Server) getAdmin(w http.ResponseWriter, r *http.Request) {
 	}{
 		ValidPasswordRunes: html.EscapeString(validPasswordRunes),
 	}
-	hasID := r.URL.Query().Has("book-id")
+	query := r.URL.Query()
+	hasID := query.Has("book-id")
 	if hasID {
-		id := r.URL.Query().Get("book-id")
+		id := query.Get("book-id")
 		ctx := r.Context()
 		b, err := s.db.ReadBook(ctx, id)
 		if err != nil {
@@ -84,7 +85,7 @@ func (s *Server) postBook(w http.ResponseWriter, r *http.Request) {
 		httpInternalServerError(w, err)
 		return
 	}
-	httpRedirect(w, r, "/book?id="+string(books[0].ID))
+	httpRedirect(w, r, "/book?id="+books[0].ID)
 }
 
 func (s *Server) putBook(w http.ResponseWriter, r *http.Request) {
@@ -173,7 +174,8 @@ func (s *Server) withAdminPassword(h http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 		if len(hashedPassword) == 0 {
-			httpError(w, http.StatusServiceUnavailable, fmt.Errorf("password not set"))
+			err = fmt.Errorf("password not set")
+			httpError(w, http.StatusServiceUnavailable, err)
 			return
 		}
 		ok, err := s.ph.IsCorrectPassword(hashedPassword, []byte(password))
