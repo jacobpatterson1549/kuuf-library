@@ -42,12 +42,12 @@ func databaseHelper(t *testing.T, conn mock.Conn) *Database {
 
 func TestNewDatabase(t *testing.T) {
 	tests := []struct {
-		name         string
-		driverName   string
-		url          string
-		openFunc     func(name string) (mock.Conn, error)
-		wantOk       bool
-		wantDriver   driverInfo
+		name       string
+		driverName string
+		url        string
+		openFunc   func(name string) (mock.Conn, error)
+		wantOk     bool
+		wantDriver driverInfo
 	}{
 		{
 			name:       "unknown driverName",
@@ -66,8 +66,8 @@ func TestNewDatabase(t *testing.T) {
 			openFunc: func(name string) (mock.Conn, error) {
 				return mock.NewTransactionConn(*mock.NewAnyQuery(0), *mock.NewAnyQuery(0), *mock.NewAnyQuery(1)), nil
 			},
-			wantOk:       true,
-			wantDriver:   testDriveInfo,
+			wantOk:     true,
+			wantDriver: testDriveInfo,
 		},
 		{
 			name:       "happy path",
@@ -75,8 +75,8 @@ func TestNewDatabase(t *testing.T) {
 			openFunc: func(name string) (mock.Conn, error) {
 				return mock.NewTransactionConn(*mock.NewAnyQuery(0), *mock.NewAnyQuery(0), *mock.NewAnyQuery(0)), nil
 			},
-			wantOk:       true,
-			wantDriver:   testDriveInfo,
+			wantOk:     true,
+			wantDriver: testDriveInfo,
 		},
 	}
 	for _, test := range tests {

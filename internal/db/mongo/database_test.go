@@ -16,9 +16,9 @@ import (
 
 func TestNewDatabase(t *testing.T) {
 	tests := []struct {
-		name         string
-		url          string
-		wantOk       bool
+		name   string
+		url    string
+		wantOk bool
 	}{
 		{"bad url", "bad url", false},
 		{"happy path", "mongodb://localhost:27017/", true},
