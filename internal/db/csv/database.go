@@ -21,23 +21,9 @@ const dateLayout = book.SlashMMDDYYYY
 var headerRecord = strings.Split(header, ",")
 
 func NewDatabase(r io.Reader) (*Database, error) {
-	csvR := csv.NewReader(r)
-	records, err := csvR.ReadAll()
+	records, err := readRecords(r)
 	if err != nil {
-		return nil, fmt.Errorf("reading library csv: %v", err)
-	}
-	if len(records) != 0 {
-		wantHeader := headerRecord
-		gotHeader := records[0]
-		if len(wantHeader) != len(gotHeader) {
-			return nil, fmt.Errorf("header too short/long: wanted %q", header)
-		}
-		for i := range wantHeader {
-			if want, got := wantHeader[i], gotHeader[i]; want != got {
-				return nil, fmt.Errorf("header column %v: wanted %q, got %q", i, want, got)
-			}
-		}
-		records = records[1:] // skip header row
+		return nil, err
 	}
 	d := Database{
 		Books: make([]book.Book, len(records)),
@@ -51,6 +37,29 @@ func NewDatabase(r io.Reader) (*Database, error) {
 	}
 	book.Books(d.Books).Sort()
 	return &d, nil
+}
+
+func readRecords(r io.Reader) ([][]string, error) {
+	csvR := csv.NewReader(r)
+	records, err := csvR.ReadAll()
+	if err != nil {
+		return nil, fmt.Errorf("reading library csv: %v", err)
+	}
+	if len(records) == 0 {
+		return nil, nil
+	}
+	wantHeader := headerRecord
+	gotHeader := records[0]
+	if len(wantHeader) != len(gotHeader) {
+		return nil, fmt.Errorf("header too short/long: wanted %q", header)
+	}
+	for i := range wantHeader {
+		if want, got := wantHeader[i], gotHeader[i]; want != got {
+			return nil, fmt.Errorf("header column %v: wanted %q, got %q", i, want, got)
+		}
+	}
+	records = records[1:] // skip header row
+	return records, nil
 }
 
 func (d Database) ReadBookSubjects(limit, offset int) ([]book.Subject, error) {
@@ -93,11 +102,12 @@ func (d Database) ReadBookHeaders(filter book.Filter, limit, offset int) ([]book
 	}
 	headers := make([]book.Header, 0, limit+offset)
 	for _, b := range books {
-		if filter.Matches(b) {
-			headers = append(headers, b.Header)
-			if len(headers) == cap(headers) {
-				break
-			}
+		if !filter.Matches(b) {
+			continue
+		}
+		headers = append(headers, b.Header)
+		if len(headers) == cap(headers) {
+			break
 		}
 	}
 	headers = headers[offset:]
@@ -120,20 +130,21 @@ func bookFromRecord(r []string) (*book.Book, error) {
 	if want, got := len(headerRecord), len(r); want != got {
 		return nil, fmt.Errorf("expected %v columns, got %v", want, got)
 	}
-	var sb book.StringBook
-	sb.ID = r[0]
-	sb.Title = r[1]
-	sb.Author = r[2]
-	sb.Description = r[3]
-	sb.Subject = r[4]
-	sb.DeweyDecClass = r[5]
-	sb.Pages = r[6]
-	sb.Publisher = r[7]
-	sb.PublishDate = r[8]
-	sb.AddedDate = r[9]
-	sb.EanIsbn13 = r[10]
-	sb.UpcIsbn10 = r[11]
-	sb.ImageBase64 = r[12]
+	sb := book.StringBook{
+		ID:            r[0],
+		Title:         r[1],
+		Author:        r[2],
+		Description:   r[3],
+		Subject:       r[4],
+		DeweyDecClass: r[5],
+		Pages:         r[6],
+		Publisher:     r[7],
+		PublishDate:   r[8],
+		AddedDate:     r[9],
+		EanIsbn13:     r[10],
+		UpcIsbn10:     r[11],
+		ImageBase64:   r[12],
+	}
 	return sb.Book(dateLayout)
 }
 

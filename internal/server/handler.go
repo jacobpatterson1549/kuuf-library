@@ -34,19 +34,18 @@ func withCacheControl(h http.Handler, d time.Duration) http.HandlerFunc {
 
 func withContentEncoding(h http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		switch {
-		case strings.Contains(r.Header.Get("Accept-Encoding"), "gzip"):
-			gzw := gzip.NewWriter(w)
-			defer gzw.Close()
-			wrw := wrappedResponseWriter{
-				Writer:         gzw,
-				ResponseWriter: w,
-			}
-			wrw.Header().Set("Content-Encoding", "gzip")
-			h.ServeHTTP(wrw, r)
-		default:
+		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
 			h.ServeHTTP(w, r)
+			return
 		}
+		gzw := gzip.NewWriter(w)
+		defer gzw.Close()
+		wrw := wrappedResponseWriter{
+			Writer:         gzw,
+			ResponseWriter: w,
+		}
+		wrw.Header().Set("Content-Encoding", "gzip")
+		h.ServeHTTP(wrw, r)
 	}
 }
 

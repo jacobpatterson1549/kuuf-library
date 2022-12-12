@@ -62,25 +62,28 @@ func newServerConfig(out io.Writer, programName string, programArgs ...string) (
 	fs.IntVar(&cfg.DBTimeoutSec, "db-timeout-sec", 5, "the number of seconds each database operation can take")
 	fs.IntVar(&cfg.PostLimitSec, "post-rate-sec", 5, "the limit on number of seconds that must pas between posts")
 	fs.IntVar(&cfg.PostMaxBurst, "post-max-burst", 2, "the maximum number of posts that can take place in a post-rate-sec period")
-	if err := parseFlags(fs, programArgs); err != nil {
+	if err := ParseFlags(fs, programArgs); err != nil {
 		return nil, err
 	}
 	return &cfg, nil
 }
 
-// parseFlags parses the flagSet after overlaying environment flags.
-// Flags that match the uppercase version of their name, with underscores instead of hyphens are overwritten.
-func parseFlags(fs *flag.FlagSet, programArgs []string) error {
+// ParseFlags parses the FlagSet and overlays environment flags.
+// Flags that match environment variables with an uppercase version of their
+// names, with underscores instead of hyphens are overwritten.
+func ParseFlags(fs *flag.FlagSet, programArgs []string) error {
 	if err := fs.Parse(programArgs); err != nil {
 		return fmt.Errorf("parsing program args: %w", err)
 	}
 	var lastErr error
 	fs.VisitAll(func(f *flag.Flag) {
 		name := strings.ReplaceAll(strings.ToUpper(f.Name), "-", "_")
-		if val, ok := os.LookupEnv(name); ok {
-			if err := f.Value.Set(val); err != nil {
-				lastErr = err
-			}
+		val, ok := os.LookupEnv(name)
+		if !ok {
+			return
+		}
+		if err := f.Value.Set(val); err != nil {
+			lastErr = err
 		}
 	})
 	if lastErr != nil {

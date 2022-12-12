@@ -87,25 +87,27 @@ func TestReadBookHeaders(t *testing.T) {
 	}
 	tests := []struct {
 		name   string
+		filter book.Filter
 		limit  int
 		offset int
 		want   []book.Header
 	}{
-		{"zero offset", 2, 0, []book.Header{{Title: "Apple"}, {Title: "Blueberry"}}},
-		{"middle", 3, 1, []book.Header{{Title: "Blueberry"}, {Title: "Cranberry"}, {Title: "Durian"}}},
-		{"Last only", 3, 4, []book.Header{{Title: "Eggplant"}}},
-		{"Past end", 2, 5, []book.Header{}},
-		{"Past end by many", 2, 8, []book.Header{}},
-		{"none", 0, 0, []book.Header{}},
-		{"negative limit", -1, 0, []book.Header{}},
-		{"negative offset", 0, -1, []book.Header{}},
+		{"zero offset", book.Filter{}, 2, 0, []book.Header{{Title: "Apple"}, {Title: "Blueberry"}}},
+		{"middle", book.Filter{}, 3, 1, []book.Header{{Title: "Blueberry"}, {Title: "Cranberry"}, {Title: "Durian"}}},
+		{"Last only", book.Filter{}, 3, 4, []book.Header{{Title: "Eggplant"}}},
+		{"Past end", book.Filter{}, 2, 5, []book.Header{}},
+		{"Past end by many", book.Filter{}, 2, 8, []book.Header{}},
+		{"none", book.Filter{}, 0, 0, []book.Header{}},
+		{"negative limit", book.Filter{}, -1, 0, []book.Header{}},
+		{"negative offset", book.Filter{}, 0, -1, []book.Header{}},
+		{"Berry filter", book.Filter{HeaderPart: "Berry"}, 10, 0, []book.Header{{Title: "Blueberry"}, {Title: "Cranberry"}}},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			d := Database{
 				Books: books,
 			}
-			got, err := d.ReadBookHeaders(book.Filter{}, test.limit, test.offset)
+			got, err := d.ReadBookHeaders(test.filter, test.limit, test.offset)
 			switch {
 			case err != nil:
 				t.Errorf("unwanted error: %v", err)

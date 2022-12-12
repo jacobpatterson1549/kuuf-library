@@ -146,7 +146,7 @@ func TestParseFlagSet(t *testing.T) {
 			var p string
 			fs := flag.NewFlagSet("", 0)
 			fs.StringVar(&p, "p", "defaultV", "")
-			if err := parseFlags(fs, test.args); err != nil {
+			if err := ParseFlags(fs, test.args); err != nil {
 				t.Fatalf("unwanted error: %v", err)
 			}
 			if want, got := test.want, p; want != got {
@@ -179,7 +179,7 @@ func TestParseFlagSetInteger(t *testing.T) {
 			fs.SetOutput(io.Discard)
 			var p int
 			fs.IntVar(&p, "p", 1, "")
-			err := parseFlags(fs, test.args)
+			err := ParseFlags(fs, test.args)
 			switch {
 			case !test.wantOk:
 				if err == nil {

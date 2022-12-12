@@ -87,31 +87,46 @@ func TestWithCacheControl(t *testing.T) {
 }
 
 func TestWithContentEncoding(t *testing.T) {
-	msg := "OK_gzip"
-	h1 := func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(msg))
+	tests := []struct {
+		name     string
+		header   http.Header
+		wantGzip bool
+	}{
+		{"no gzip", http.Header{}, false},
+		{"with gzip", http.Header{"Accept-Encoding": {"gzip, deflate, br"}}, true},
 	}
-	h2 := withContentEncoding(http.HandlerFunc(h1))
-	w := httptest.NewRecorder()
-	r := httptest.NewRequest("", "/", nil)
-	r.Header.Add("Accept-Encoding", "gzip, deflate, br")
-	h2.ServeHTTP(w, r)
-	got := w.Result()
-	switch {
-	case got.Header.Get("Content-Encoding") != "gzip":
-		t.Errorf("wanted gzip Content-Encoding, got: %q", got.Header.Get("Content-Encoding"))
-	default:
-		r, err := gzip.NewReader(got.Body)
-		if err != nil {
-			t.Fatalf("creating gzip reader: %v", err)
-		}
-		b, err := io.ReadAll(r)
-		if err != nil {
-			t.Fatalf("reading gzip encoded message: %v", err)
-		}
-		if want, got := msg, string(b); want != got {
-			t.Errorf("body not encoded as desired: wanted %q, got %q", want, got)
-		}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			h1 := func(w http.ResponseWriter, r *http.Request) {
+				w.Write([]byte(test.name))
+			}
+			h2 := withContentEncoding(http.HandlerFunc(h1))
+			w := httptest.NewRecorder()
+			r := httptest.NewRequest("", "/", nil)
+			r.Header = test.header
+			h2.ServeHTTP(w, r)
+			got := w.Result()
+			switch {
+			case !test.wantGzip:
+				if want, got := test.name, w.Body.String(); want != got {
+					t.Errorf("response body not plaintext: \n wanted: %q \n got:    %q", want, got)
+				}
+			case got.Header.Get("Content-Encoding") != "gzip":
+				t.Errorf("wanted gzip Content-Encoding, got: %q", got.Header.Get("Content-Encoding"))
+			default:
+				r, err := gzip.NewReader(got.Body)
+				if err != nil {
+					t.Fatalf("creating gzip reader: %v", err)
+				}
+				b, err := io.ReadAll(r)
+				if err != nil {
+					t.Fatalf("reading gzip encoded message: %v", err)
+				}
+				if want, got := test.name, string(b); want != got {
+					t.Errorf("body not encoded as desired: wanted %q, got %q", want, got)
+				}
+			}
+		})
 	}
 }
 
