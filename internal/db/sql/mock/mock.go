@@ -1,3 +1,7 @@
+// Package mock provides a mock sql driver for tests.
+// Register the driver with the database/sql package:
+//
+//	sql.Register("mock-driver-name", &mock.Driver{})
 package mock
 
 import (

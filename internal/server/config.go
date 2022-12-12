@@ -90,6 +90,9 @@ func (cfg Config) updateImages(ctx context.Context, db database, out io.Writer) 
 		if err := cfg.updateImage(ctx, *b, db, *d); err != nil {
 			return err
 		}
+		if cfg.DumpCSV {
+			d.Write(*b)
+		}
 	}
 	if err := iter.Err(); err != nil {
 		return err
@@ -98,18 +101,16 @@ func (cfg Config) updateImages(ctx context.Context, db database, out io.Writer) 
 }
 
 func (cfg Config) updateImage(ctx context.Context, b book.Book, db database, d csv.Dump) error {
-	if cfg.UpdateImages && imageNeedsUpdating(b.ImageBase64) {
-		imageBase64, err := updateImage(b.ImageBase64, b.ID)
-		if err != nil {
-			return fmt.Errorf("updating image for book %q: %w", b.ID, err)
-		}
-		b.ImageBase64 = string(imageBase64)
-		if err := db.UpdateBook(ctx, b, true); err != nil {
-			return fmt.Errorf("writing updated image to db for book %q: %w", b.ID, err)
-		}
+	if !cfg.UpdateImages || !imageNeedsUpdating(b.ImageBase64) {
+		return nil
 	}
-	if cfg.DumpCSV {
-		d.Write(b)
+	imageBase64, err := updateImage(b.ImageBase64, b.ID)
+	if err != nil {
+		return fmt.Errorf("updating image for book %q: %w", b.ID, err)
+	}
+	b.ImageBase64 = string(imageBase64)
+	if err := db.UpdateBook(ctx, b, true); err != nil {
+		return fmt.Errorf("writing updated image to db for book %q: %w", b.ID, err)
 	}
 	return nil
 }

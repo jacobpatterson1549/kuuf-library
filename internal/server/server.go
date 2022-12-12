@@ -180,7 +180,7 @@ func (s *Server) mux(postRateLimiter rateLimiter) http.Handler {
 	}
 	for _, n := range authenticatedMethods {
 		for p, h := range m[n] {
-			h1 := withAdminPassword(h, s.db, s.ph)
+			h1 := s.withAdminPassword(h)
 			h2 := withRateLimiter(h1, postRateLimiter)
 			m[n][p] = h2
 		}

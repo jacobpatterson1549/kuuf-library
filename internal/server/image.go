@@ -88,24 +88,15 @@ func convertImage(r io.Reader, title, contentType string) ([]byte, error) {
 }
 
 func readImage(r io.Reader, contentType string) (image.Image, error) {
-	var (
-		img image.Image
-		err error
-	)
 	switch contentType {
 	case "image/jpeg":
-		img, err = jpeg.Decode(r)
+		return jpeg.Decode(r)
 	case "image/png":
-		img, err = png.Decode(r)
+		return png.Decode(r)
 	case "image/webp":
-		img, err = webp.Decode(r)
-	default:
-		return nil, fmt.Errorf("unknown image type: %q", contentType)
+		return webp.Decode(r)
 	}
-	if err != nil {
-		return nil, fmt.Errorf("decoding image: %w", err)
-	}
-	return img, nil
+	return nil, fmt.Errorf("unknown image type: %q", contentType)
 }
 
 // scaleImages scales the image up/down to fit in a square

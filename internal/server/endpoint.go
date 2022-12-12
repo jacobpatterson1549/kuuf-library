@@ -122,7 +122,7 @@ func (s *Server) deleteBook(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx := r.Context()
 	if err := s.db.DeleteBook(ctx, id); err != nil {
-		err := fmt.Errorf("deleting book: %w", err)
+		err = fmt.Errorf("deleting book: %w", err)
 		httpInternalServerError(w, err)
 		return
 	}
@@ -150,7 +150,7 @@ func (s *Server) putAdminPassword(w http.ResponseWriter, r *http.Request) {
 		httpInternalServerError(w, err)
 		return
 	}
-	ctx := context.Background()
+	ctx := r.Context()
 	if err := s.db.UpdateAdminPassword(ctx, string(hashedPassword)); err != nil {
 		err = fmt.Errorf("updating password: %w", err)
 		httpInternalServerError(w, err)
@@ -159,14 +159,14 @@ func (s *Server) putAdminPassword(w http.ResponseWriter, r *http.Request) {
 	httpRedirect(w, r, "/")
 }
 
-func withAdminPassword(h http.HandlerFunc, db database, ph passwordHandler) http.HandlerFunc {
+func (s *Server) withAdminPassword(h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var password string
 		if !parseFormValue(w, r, "p", &password, 128) {
 			return
 		}
 		ctx := r.Context()
-		hashedPassword, err := db.ReadAdminPassword(ctx)
+		hashedPassword, err := s.db.ReadAdminPassword(ctx)
 		if err != nil {
 			err = fmt.Errorf("reading password: %w", err)
 			httpInternalServerError(w, err)
@@ -176,7 +176,7 @@ func withAdminPassword(h http.HandlerFunc, db database, ph passwordHandler) http
 			httpError(w, http.StatusServiceUnavailable, fmt.Errorf("password not set"))
 			return
 		}
-		ok, err := ph.IsCorrectPassword(hashedPassword, []byte(password))
+		ok, err := s.ph.IsCorrectPassword(hashedPassword, []byte(password))
 		if err != nil {
 			err = fmt.Errorf("checking password: %w", err)
 			httpInternalServerError(w, err)

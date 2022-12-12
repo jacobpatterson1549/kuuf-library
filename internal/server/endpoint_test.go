@@ -692,7 +692,11 @@ func TestWithAdminPassword(t *testing.T) {
 			ph := mockPasswordHandler{
 				isCorrectPasswordFunc: test.isCorrectPassword,
 			}
-			h2 := withAdminPassword(h1, db, ph)
+			s := Server{
+				db: db,
+				ph: ph,
+			}
+			h2 := s.withAdminPassword(h1)
 			h2.ServeHTTP(w, &r)
 			if test.wantCode != w.Code {
 				t.Errorf("codes not equal: wanted %v, got %v", test.wantCode, w.Code)
