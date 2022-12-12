@@ -32,6 +32,15 @@ func withCacheControl(h http.Handler, d time.Duration) http.HandlerFunc {
 	}
 }
 
+type wrappedResponseWriter struct {
+	io.Writer
+	http.ResponseWriter
+}
+
+func (wrw wrappedResponseWriter) Write(p []byte) (n int, err error) {
+	return wrw.Writer.Write(p)
+}
+
 func withContentEncoding(h http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
@@ -49,13 +58,8 @@ func withContentEncoding(h http.Handler) http.HandlerFunc {
 	}
 }
 
-type wrappedResponseWriter struct {
-	io.Writer
-	http.ResponseWriter
-}
-
-func (wrw wrappedResponseWriter) Write(p []byte) (n int, err error) {
-	return wrw.Writer.Write(p)
+type rateLimiter interface {
+	Allow() bool
 }
 
 func withRateLimiter(h http.HandlerFunc, lim rateLimiter) http.HandlerFunc {
@@ -67,10 +71,6 @@ func withRateLimiter(h http.HandlerFunc, lim rateLimiter) http.HandlerFunc {
 		}
 		h.ServeHTTP(w, r)
 	}
-}
-
-type rateLimiter interface {
-	Allow() bool
 }
 
 // mux is http Handler that maps methods to paths to handlers.

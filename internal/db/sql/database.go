@@ -19,6 +19,11 @@ type (
 	driverInfo struct {
 		ILike string
 	}
+	query struct {
+		cmd                string
+		args               []interface{}
+		wantedRowsAffected []int64
+	}
 )
 
 var drivers = map[string]driverInfo{
@@ -80,12 +85,6 @@ func (d *Database) setupTables(ctx context.Context) error {
 		},
 	}
 	return d.execTx(ctx, queries...)
-}
-
-type query struct {
-	cmd                string
-	args               []interface{}
-	wantedRowsAffected []int64
 }
 
 func (q query) execute(ctx context.Context, tx *sql.Tx) error {

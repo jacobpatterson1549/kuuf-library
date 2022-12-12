@@ -69,6 +69,12 @@ type (
 		ReadAdminPassword(ctx context.Context) (hashedPassword []byte, err error)
 		UpdateAdminPassword(ctx context.Context, hashedPassword string) error
 	}
+	// page is sent to templates
+	page struct {
+		Favicon string
+		Name    string
+		Data    interface{}
+	}
 )
 
 func (cfg Config) NewServer(ctx context.Context, out io.Writer) (*Server, error) {
@@ -193,12 +199,7 @@ func (s *Server) mux(postRateLimiter rateLimiter) http.Handler {
 }
 
 func (s *Server) serveTemplate(w http.ResponseWriter, name string, data interface{}) {
-	type Page struct {
-		Favicon string
-		Name    string
-		Data    interface{}
-	}
-	p := Page{s.favicon, name, data}
+	p := page{s.favicon, name, data}
 	if err := s.tmpl.Execute(w, p); err != nil {
 		fmt.Fprintln(s.out, err)
 	}

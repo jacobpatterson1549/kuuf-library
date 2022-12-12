@@ -7,25 +7,34 @@ import (
 	"github.com/jacobpatterson1549/kuuf-library/internal/book"
 )
 
-// bookIterator reads books in batches
-type bookIterator struct {
-	database     database
-	batchSize    int
-	batchIndex   int
-	headerIndex  int
-	batchHeaders []book.Header
-	closed       bool
-	nextErr      error
-}
+type (
+	// bookIterator reads books in batches
+	bookIterator struct {
+		database     database
+		batchSize    int
+		batchIndex   int
+		headerIndex  int
+		batchHeaders []book.Header
+		closed       bool
+		nextErr      error
+	}
+	AllBooksDatabase interface {
+		AllBooks() ([]book.Book, error)
+	}
+	allBooksDatabase struct {
+		database
+		AllBooksFunc func() ([]book.Book, error)
+	}
 
-type AllBooksDatabase interface {
-	AllBooks() ([]book.Book, error)
-}
+	// readOnlyDatabase is a database that only reads books.
+	readOnlyDatabase struct {
+		ReadBookSubjectsFunc func(ctx context.Context, limit, offset int) ([]book.Subject, error)
+		ReadBookHeadersFunc  func(ctx context.Context, filter book.Filter, limit, offset int) ([]book.Header, error)
+		ReadBookFunc         func(ctx context.Context, id string) (*book.Book, error)
+	}
+)
 
-type allBooksDatabase struct {
-	database
-	AllBooksFunc func() ([]book.Book, error)
-}
+var _ database = readOnlyDatabase{}
 
 func (abi allBooksDatabase) AllBooks() ([]book.Book, error) {
 	return abi.AllBooksFunc()
@@ -110,15 +119,6 @@ func (iter *bookIterator) AllBooks(ctx context.Context) ([]book.Book, error) {
 	}
 	return books, nil
 }
-
-// readOnlyDatabase is a database that only reads books.
-type readOnlyDatabase struct {
-	ReadBookSubjectsFunc func(ctx context.Context, limit, offset int) ([]book.Subject, error)
-	ReadBookHeadersFunc  func(ctx context.Context, filter book.Filter, limit, offset int) ([]book.Header, error)
-	ReadBookFunc         func(ctx context.Context, id string) (*book.Book, error)
-}
-
-var _ database = readOnlyDatabase{}
 
 func (d readOnlyDatabase) CreateBooks(ctx context.Context, books ...book.Book) ([]book.Book, error) {
 	return nil, d.notAllowed()

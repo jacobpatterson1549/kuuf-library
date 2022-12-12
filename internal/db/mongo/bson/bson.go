@@ -7,20 +7,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
-func D(e ...bson.E) bson.D {
-	return bson.D(e)
-}
-
-func E(key string, value interface{}) bson.E {
-	return bson.E{
-		Key:   key,
-		Value: value,
-	}
-}
-func A(d ...interface{}) bson.A {
-	return bson.A(d)
-}
-
 type Filter struct {
 	SubjectKey string
 	HeaderKeys []string
@@ -45,4 +31,18 @@ func (f Filter) From(filter book.Filter) []bson.E {
 		parts = append(parts, E("", nil))
 	}
 	return parts
+}
+
+func D(e ...bson.E) bson.D {
+	return bson.D(e)
+}
+
+func E(key string, value interface{}) bson.E {
+	return bson.E{
+		Key:   key,
+		Value: value,
+	}
+}
+func A(d ...interface{}) bson.A {
+	return bson.A(d)
 }

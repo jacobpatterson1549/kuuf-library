@@ -48,10 +48,16 @@ type (
 		ImageBase64   string
 	}
 	DateLayout string
-
-	Subject struct {
+	Subject    struct {
 		Name  string
 		Count int
+	}
+	Books    []Book
+	Subjects []Subject
+	// Filter is used to match books weth the exact subject (if set) or a whole word match to any of the header parts.
+	Filter struct {
+		Subject    string
+		HeaderPart string
 	}
 )
 
@@ -69,8 +75,6 @@ func NewID() string {
 	return base64.URLEncoding.EncodeToString(src[:])
 }
 
-type Books []Book
-
 func (books Books) Sort() {
 	sort.Slice(books, func(i, j int) bool {
 		return books[i].less(books[j].Header)
@@ -84,8 +88,6 @@ func (h Header) less(other Header) bool {
 	return h.Title != other.Title
 }
 
-type Subjects []Subject
-
 func (subjects Subjects) Sort() {
 	sort.Slice(subjects, func(i, j int) bool {
 		return subjects[i].less(subjects[j])
@@ -97,12 +99,6 @@ func (s Subject) less(other Subject) bool {
 		return s.Name < other.Name
 	}
 	return s.Count > other.Count // max first
-}
-
-// Filter is used to match books weth the exact subject (if set) or a whole word match to any of the header parts.
-type Filter struct {
-	Subject    string
-	HeaderPart string
 }
 
 func (f Filter) Matches(b Book) bool {

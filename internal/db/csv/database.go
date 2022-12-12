@@ -15,8 +15,10 @@ type Database struct {
 	Books []book.Book
 }
 
-const header = "id,title,author,description,subject,dewey-dec-class,pages,publisher,publish-date,added-date,ean-isbn13,upc-isbn10,image-base64"
-const dateLayout = book.SlashMMDDYYYY
+const (
+	header     = "id,title,author,description,subject,dewey-dec-class,pages,publisher,publish-date,added-date,ean-isbn13,upc-isbn10,image-base64"
+	dateLayout = book.SlashMMDDYYYY
+)
 
 var headerRecord = strings.Split(header, ",")
 

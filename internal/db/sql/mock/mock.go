@@ -11,24 +11,56 @@ import (
 	"reflect"
 )
 
-// Driver implements the sql/driver.Conn interface.
-type Driver struct {
-	OpenFunc func(name string) (Conn, error)
-}
+type (
+	// Driver implements the sql/driver.Conn interface.
+	Driver struct {
+		OpenFunc func(name string) (Conn, error)
+	}
+	// Query simplifies sending arguments/constraints to custom connections.
+	Query struct {
+		Name         string
+		Args         []interface{}
+		RowsAffected int64
+	}
+	// Conn implements the sql/driver.Conn interface.
+	Conn struct {
+		PrepareFunc func(query string) (driver.Stmt, error)
+		BeginFunc   func() (driver.Tx, error)
+	}
+	// Stmt implements the sql/driver.Stmt interface.
+	Stmt struct {
+		CloseFunc    func() error
+		NumInputFunc func() int
+		ExecFunc     func(args []driver.Value) (driver.Result, error)
+		QueryFunc    func(args []driver.Value) (driver.Rows, error)
+	}
+	// Tx implements the sql/driver/Tx interface.
+	Tx struct {
+		CommitFunc   func() error
+		RollbackFunc func() error
+	}
+	// Result implements the sql/driver.Result interface.
+	Result struct {
+		RowsAffectedFunc func() (int64, error)
+	}
+	// Rows implements the sql/driver.Rows interface.
+	Rows struct {
+		ColumnsFunc func() []string
+		CloseFunc   func() error
+		NextFunc    func(dest []driver.Value) error
+	}
+)
+
+var (
+	// AnyArg represents an argument whose value might be dynamic (randomized).
+	AnyArg       = &struct{ name string }{"any argument"}
+	anyQueryName = "magic_value"
+	anyQueryArgs = []interface{}{"should+match+any+query+1549"}
+)
 
 func (m *Driver) Open(name string) (driver.Conn, error) {
 	return m.OpenFunc(name)
 }
-
-type Query struct {
-	Name         string
-	Args         []interface{}
-	RowsAffected int64
-}
-
-var anyQueryName = "magic_value"
-var anyQueryArgs = []interface{}{"should+match+any+query+1549"}
-var AnyArg = &struct{ name string }{"any argument"}
 
 // NewAnyQuery creates a query that allows any name/args.
 func NewAnyQuery(rowsAffected int64) *Query {
@@ -165,12 +197,6 @@ func NewTransactionConn(commands ...Query) Conn {
 	}
 }
 
-// Conn implements the sql/driver.Conn interface.
-type Conn struct {
-	PrepareFunc func(query string) (driver.Stmt, error)
-	BeginFunc   func() (driver.Tx, error)
-}
-
 func (m Conn) Prepare(query string) (driver.Stmt, error) {
 	return m.PrepareFunc(query)
 }
@@ -181,14 +207,6 @@ func (m Conn) Close() error {
 
 func (m Conn) Begin() (driver.Tx, error) {
 	return m.BeginFunc()
-}
-
-// Stmt implements the sql/driver.Stmt interface.
-type Stmt struct {
-	CloseFunc    func() error
-	NumInputFunc func() int
-	ExecFunc     func(args []driver.Value) (driver.Result, error)
-	QueryFunc    func(args []driver.Value) (driver.Rows, error)
 }
 
 func (m Stmt) Close() error {
@@ -207,12 +225,6 @@ func (m Stmt) Query(args []driver.Value) (driver.Rows, error) {
 	return m.QueryFunc(args)
 }
 
-// Tx implements the sql/driver/Tx interface.
-type Tx struct {
-	CommitFunc   func() error
-	RollbackFunc func() error
-}
-
 func (m Tx) Commit() error {
 	return m.CommitFunc()
 }
@@ -221,24 +233,12 @@ func (m Tx) Rollback() error {
 	return m.RollbackFunc()
 }
 
-// Result implements the sql/driver.Result interface.
-type Result struct {
-	RowsAffectedFunc func() (int64, error)
-}
-
 func (m Result) LastInsertId() (int64, error) {
 	return 0, fmt.Errorf("not implemented")
 }
 
 func (m Result) RowsAffected() (int64, error) {
 	return m.RowsAffectedFunc()
-}
-
-// Rows implements the sql/driver.Rows interface.
-type Rows struct {
-	ColumnsFunc func() []string
-	CloseFunc   func() error
-	NextFunc    func(dest []driver.Value) error
 }
 
 func (m Rows) Columns() []string {
