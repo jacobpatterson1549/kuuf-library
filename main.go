@@ -24,6 +24,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("parsing server config: %v", err)
 	}
+	done := make(chan os.Signal, 2)
 	go func() {
 		s, err := cfg.NewServer(ctx, out)
 		if err != nil {
@@ -32,8 +33,8 @@ func main() {
 		if err := s.Run(ctx); err != nil { // BLOCKING
 			log.Fatalf("running server: %v", err)
 		}
+		done <- syscall.SIGTERM
 	}()
-	done := make(chan os.Signal, 2)
 	signal.Notify(done, syscall.SIGINT, syscall.SIGTERM)
 	signal := <-done // BLOCKING
 	log.Printf("handled signal: %v", signal)
