@@ -94,11 +94,11 @@ func (s *Server) putBook(w http.ResponseWriter, r *http.Request) {
 		httpBadRequest(w, err)
 		return
 	}
-	var updateImage bool
 	var updateImageVal string
 	if !parseFormValue(w, r, "update-image", &updateImageVal, 10) {
 		return
 	}
+	var updateImage bool
 	switch updateImageVal {
 	case "true":
 		updateImage = true
@@ -194,21 +194,20 @@ func (s *Server) withAdminPassword(h http.HandlerFunc) http.HandlerFunc {
 
 func bookFrom(w http.ResponseWriter, r *http.Request) (*book.Book, error) {
 	var sb book.StringBook
-	if !parseFormValue(w, r, "id", &sb.ID, 256) ||
-		!parseFormValue(w, r, "title", &sb.Title, 256) ||
-		!parseFormValue(w, r, "author", &sb.Author, 256) ||
-		!parseFormValue(w, r, "description", &sb.Description, 10000) ||
-		!parseFormValue(w, r, "subject", &sb.Subject, 256) ||
-		!parseFormValue(w, r, "dewey-dec-class", &sb.DeweyDecClass, 256) ||
-		!parseFormValue(w, r, "pages", &sb.Pages, 32) ||
-		!parseFormValue(w, r, "publisher", &sb.Publisher, 256) ||
-		!parseFormValue(w, r, "publish-date", &sb.PublishDate, 32) ||
-		!parseFormValue(w, r, "added-date", &sb.AddedDate, 32) ||
-		!parseFormValue(w, r, "ean-isbn-13", &sb.EanIsbn13, 32) ||
-		!parseFormValue(w, r, "upc-isbn-10", &sb.UpcIsbn10, 32) {
-		return nil, fmt.Errorf("parse error")
-	}
 	switch {
+	case !parseFormValue(w, r, "id", &sb.ID, 256),
+		!parseFormValue(w, r, "title", &sb.Title, 256),
+		!parseFormValue(w, r, "author", &sb.Author, 256),
+		!parseFormValue(w, r, "description", &sb.Description, 10000),
+		!parseFormValue(w, r, "subject", &sb.Subject, 256),
+		!parseFormValue(w, r, "dewey-dec-class", &sb.DeweyDecClass, 256),
+		!parseFormValue(w, r, "pages", &sb.Pages, 32),
+		!parseFormValue(w, r, "publisher", &sb.Publisher, 256),
+		!parseFormValue(w, r, "publish-date", &sb.PublishDate, 32),
+		!parseFormValue(w, r, "added-date", &sb.AddedDate, 32),
+		!parseFormValue(w, r, "ean-isbn-13", &sb.EanIsbn13, 32),
+		!parseFormValue(w, r, "upc-isbn-10", &sb.UpcIsbn10, 32):
+		return nil, fmt.Errorf("parse error")
 	case len(sb.Title) == 0:
 		return nil, fmt.Errorf("title required")
 	case len(sb.Author) == 0:

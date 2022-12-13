@@ -44,7 +44,6 @@ func newServerConfig(out io.Writer, programName string, programArgs ...string) (
 	usage := []string{
 		programName + " runs a library web server",
 	}
-	var cfg server.Config
 	fs := flag.NewFlagSet(programName, flag.ContinueOnError)
 	fs.SetOutput(out)
 	fs.Usage = func() {
@@ -53,6 +52,7 @@ func newServerConfig(out io.Writer, programName string, programArgs ...string) (
 		}
 		fs.PrintDefaults()
 	}
+	var cfg server.Config
 	fs.StringVar(&cfg.Port, "port", "8000", "the port to run the server on, required")
 	fs.StringVar(&cfg.DatabaseURL, "database-url", "csv://", "the url of the database to use, defaults to the readonly internal library.csv file")
 	fs.StringVar(&cfg.AdminPassword, "admin-password", "", "password to set for the administrator, if supplied")

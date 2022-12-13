@@ -138,11 +138,11 @@ func (d *Database) ReadBookSubjects(ctx context.Context, limit, offset int) ([]b
 	}
 	opts := options.Aggregate()
 	coll := d.booksCollection
-	var all []mSubject
 	cur, err := coll.Aggregate(ctx, pipeline, opts)
 	if err != nil {
 		return nil, fmt.Errorf("aggregating documents: %w", err)
 	}
+	var all []mSubject
 	if err := cur.All(ctx, &all); err != nil {
 		return nil, fmt.Errorf("decoding subjects: %w", err)
 	}
@@ -177,11 +177,11 @@ func (d *Database) ReadBookHeaders(ctx context.Context, filter book.Filter, limi
 			bson.E(bookSubjectField, 1),
 		))
 	coll := d.booksCollection
-	var all []mHeader
 	cur, err := coll.Find(ctx, mongoFilter, opts)
 	if err != nil {
 		return nil, fmt.Errorf("finding documents: %w", err)
 	}
+	var all []mHeader
 	if err := cur.All(ctx, &all); err != nil {
 		return nil, fmt.Errorf("decoding headers: %w", err)
 	}
@@ -199,8 +199,8 @@ func (d *Database) ReadBook(ctx context.Context, id string) (*book.Book, error) 
 	}
 	coll := d.booksCollection
 	opts := options.FindOne()
-	var m mBook
 	result := coll.FindOne(ctx, filter, opts)
+	var m mBook
 	if err := result.Decode(&m); err != nil {
 		return nil, fmt.Errorf("decoding book: %w", err)
 	}
@@ -257,8 +257,8 @@ func (d *Database) ReadAdminPassword(ctx context.Context) (hashedPassword []byte
 	filter := bson.D(bson.E(usernameField, adminUsername))
 	coll := d.usersCollection
 	opts := options.FindOne()
-	var u mUser
 	result := coll.FindOne(ctx, filter, opts)
+	var u mUser
 	if err = result.Decode(&u); err != nil {
 		return nil, fmt.Errorf("finding one document: %w", err)
 	}

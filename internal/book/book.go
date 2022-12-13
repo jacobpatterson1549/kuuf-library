@@ -118,33 +118,36 @@ func (f Filter) Matches(b Book) bool {
 	return false
 }
 
-func (sb StringBook) Book(dl DateLayout) (*Book, error) {
-	var b Book
+func (sb StringBook) Book(dateLayout DateLayout) (*Book, error) {
+	b := Book{
+		Header: Header{
+			ID:      sb.ID,
+			Title:   sb.Title,
+			Author:  sb.Author,
+			Subject: sb.Subject,
+		},
+		Description:   sb.Description,
+		DeweyDecClass: sb.DeweyDecClass,
+		Publisher:     sb.Publisher,
+		EanIsbn13:     sb.EanIsbn13,
+		UpcIsbn10:     sb.UpcIsbn10,
+		ImageBase64:   sb.ImageBase64,
+	}
 	var err error
-	b.ID = sb.ID
-	b.Title = sb.Title
-	b.Author = sb.Author
-	b.Description = sb.Description
-	b.Subject = sb.Subject
-	b.DeweyDecClass = sb.DeweyDecClass
 	if len(sb.Pages) != 0 {
 		if b.Pages, err = strconv.Atoi(sb.Pages); err != nil {
 			return nil, fmt.Errorf("pages: %w", err)
 		}
 	}
-	b.Publisher = sb.Publisher
 	if len(sb.PublishDate) != 0 {
-		if b.PublishDate, err = time.Parse(string(dl), sb.PublishDate); err != nil {
+		if b.PublishDate, err = time.Parse(string(dateLayout), sb.PublishDate); err != nil {
 			return nil, fmt.Errorf("publish date: %w", err)
 		}
 	}
 	if len(sb.AddedDate) != 0 {
-		if b.AddedDate, err = time.Parse(string(dl), sb.AddedDate); err != nil {
+		if b.AddedDate, err = time.Parse(string(dateLayout), sb.AddedDate); err != nil {
 			return nil, fmt.Errorf("added date: %w", err)
 		}
 	}
-	b.EanIsbn13 = sb.EanIsbn13
-	b.UpcIsbn10 = sb.UpcIsbn10
-	b.ImageBase64 = sb.ImageBase64
 	return &b, nil
 }

@@ -13,7 +13,7 @@ type Filter struct {
 }
 
 func (f Filter) From(filter book.Filter) []bson.E {
-	var parts []bson.E
+	parts := make([]bson.E, 0, 2)
 	if len(filter.Subject) != 0 {
 		subjectPart := E(f.SubjectKey, filter.Subject)
 		parts = append(parts, subjectPart)

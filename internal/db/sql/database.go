@@ -250,11 +250,11 @@ func (d *Database) ReadBook(ctx context.Context, id string) (*book.Book, error) 
 	cmd := "SELECT id, title, author, subject, description, dewey_dec_class, pages, publisher, publish_date, added_date, ean_isbn13, upc_isbn10, image_base64" +
 		" FROM books" +
 		" WHERE id = $1"
-	var b book.Book
 	q := query{
 		cmd:  cmd,
 		args: []interface{}{id},
 	}
+	var b book.Book
 	dest := []interface{}{&b.ID, &b.Title, &b.Author, &b.Subject, &b.Description, &b.DeweyDecClass, &b.Pages, &b.Publisher, &b.PublishDate, &b.AddedDate, &b.EanIsbn13, &b.UpcIsbn10, &b.ImageBase64}
 	if err := d.queryRow(ctx, q, dest...); err != nil {
 		return nil, fmt.Errorf("reading book: %w", err)
