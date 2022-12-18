@@ -14,7 +14,7 @@ import (
 )
 
 var testDriver mock.Driver
-var testDriveInfo = driverInfo{
+var testDriverInfo = driverInfo{
 	ILike: "mock_ILIKE",
 }
 
@@ -22,7 +22,7 @@ const testDriverName = "mock driver"
 
 func init() {
 	sql.Register(testDriverName, &testDriver)
-	drivers[testDriverName] = testDriveInfo
+	drivers[testDriverName] = testDriverInfo
 }
 
 func databaseHelper(t *testing.T, conn mock.Conn) *Database {
@@ -67,7 +67,7 @@ func TestNewDatabase(t *testing.T) {
 				return mock.NewTransactionConn(*mock.NewAnyQuery(0), *mock.NewAnyQuery(0), *mock.NewAnyQuery(1)), nil
 			},
 			wantOk:     true,
-			wantDriver: testDriveInfo,
+			wantDriver: testDriverInfo,
 		},
 		{
 			name:       "happy path",
@@ -76,7 +76,7 @@ func TestNewDatabase(t *testing.T) {
 				return mock.NewTransactionConn(*mock.NewAnyQuery(0), *mock.NewAnyQuery(0), *mock.NewAnyQuery(0)), nil
 			},
 			wantOk:     true,
-			wantDriver: testDriveInfo,
+			wantDriver: testDriverInfo,
 		},
 	}
 	for _, test := range tests {
