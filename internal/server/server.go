@@ -53,6 +53,7 @@ type (
 		tmpl    *template.Template
 		db      database
 		ph      passwordHandler
+		pv      passwordValidator
 		out     io.Writer
 	}
 	passwordHandler interface {
@@ -75,6 +76,14 @@ type (
 		Name    string
 		Data    interface{}
 	}
+	passwordValidatorConfig struct {
+		minLength  int
+		validRunes string
+	}
+	passwordValidator struct {
+		passwordValidatorConfig
+		validRunes map[rune]struct{}
+	}
 )
 
 func (cfg Config) NewServer(ctx context.Context, out io.Writer) (*Server, error) {
@@ -85,12 +94,18 @@ func (cfg Config) NewServer(ctx context.Context, out io.Writer) (*Server, error)
 	favicon := faviconBase64()
 	ph := bcrypt.NewPasswordHandler()
 	tmpl := parseTemplate()
+	pvc := passwordValidatorConfig{
+		minLength:  8,
+		validRunes: validPasswordRunes,
+	}
+	pv := pvc.NewPasswordValidator()
 	s := Server{
 		cfg:     cfg,
 		favicon: favicon,
 		tmpl:    tmpl,
 		db:      db,
 		ph:      ph,
+		pv:      pv,
 		out:     out,
 	}
 	return &s, nil
@@ -99,7 +114,7 @@ func (cfg Config) NewServer(ctx context.Context, out io.Writer) (*Server, error)
 // Run initializes the server and then serves it.
 // Initialization reads the config to set the admin password and backfill books from the csv database if desired.
 func (s *Server) Run(ctx context.Context) error {
-	if err := s.cfg.setup(ctx, s.db, s.ph, s.out); err != nil {
+	if err := s.cfg.setup(ctx, s.db, s.ph, s.pv, s.out); err != nil {
 		return fmt.Errorf("setting up server: %w", err)
 	}
 	dbScheme, _, _ := strings.Cut(s.cfg.DatabaseURL, ":")

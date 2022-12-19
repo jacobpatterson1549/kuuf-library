@@ -140,8 +140,8 @@ func (s *Server) putAdminPassword(w http.ResponseWriter, r *http.Request) {
 		httpBadRequest(w, err)
 		return
 	}
-	if err := validatePassword(p1); err != nil {
-		err := fmt.Errorf("password invalid")
+	if err := s.pv.validate(p1); err != nil {
+		err := fmt.Errorf("password invalid: %w", err)
 		httpBadRequest(w, err)
 		return
 	}

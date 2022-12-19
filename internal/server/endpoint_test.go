@@ -584,6 +584,10 @@ func TestPostRequest(t *testing.T) {
 						return string(hashedPassword) == "H#shed+P" && string(password) == "v4lid_P", nil
 					},
 				},
+				pv: passwordValidatorConfig{
+					minLength:  8,
+					validRunes: "bilbo123",
+				}.NewPasswordValidator(),
 				tmpl: parseTemplate(),
 			}
 			w := httptest.NewRecorder()
@@ -692,9 +696,14 @@ func TestWithAdminPassword(t *testing.T) {
 			ph := mockPasswordHandler{
 				isCorrectPasswordFunc: test.isCorrectPassword,
 			}
+			pv := passwordValidatorConfig{
+				minLength:  8,
+				validRunes: validPasswordRunes,
+			}.NewPasswordValidator()
 			s := Server{
 				db: db,
 				ph: ph,
+				pv: pv,
 			}
 			h2 := s.withAdminPassword(h1)
 			h2.ServeHTTP(w, &r)

@@ -139,12 +139,16 @@ func TestSetupInitAdminPassword(t *testing.T) {
 			db := mockDatabase{
 				updateAdminPasswordFunc: test.updateAdminPassword,
 			}
+			pv := passwordValidatorConfig{
+				minLength:  5,
+				validRunes: "Bilbo+3Xr,tiny",
+			}.NewPasswordValidator()
 			cfg := Config{
 				AdminPassword: test.adminPassword,
 			}
 			var w io.Writer
 			ctx := context.Background()
-			err := cfg.setup(ctx, db, ph, w)
+			err := cfg.setup(ctx, db, ph, pv, w)
 			switch {
 			case !test.wantOk:
 				if err == nil {
@@ -196,9 +200,10 @@ func TestSetupBackfillCSV(t *testing.T) {
 				BackfillCSV: true,
 			}
 			var ph passwordHandler
+			var pv passwordValidator
 			var w io.Writer
 			ctx := context.Background()
-			err := cfg.setup(ctx, test.db, ph, w)
+			err := cfg.setup(ctx, test.db, ph, pv, w)
 			switch {
 			case !test.wantOk:
 				if err == nil {
@@ -281,9 +286,10 @@ bk3,,,bk3_description,,,0,,01/01/0001,01/01/0001,,,
 				MaxRows: 2,
 			}
 			var ph passwordHandler
+			var pv passwordValidator
 			var sb strings.Builder
 			ctx := context.Background()
-			err := cfg.setup(ctx, db, ph, &sb)
+			err := cfg.setup(ctx, db, ph, pv, &sb)
 			switch {
 			case !test.wantOk:
 				if err == nil {
@@ -310,7 +316,12 @@ func TestValidatePassword(t *testing.T) {
 		{validPasswordRunes, true},
 	}
 	for i, test := range tests {
-		err := validatePassword(test.p)
+		pvc := passwordValidatorConfig{
+			minLength:  6,
+			validRunes: validPasswordRunes,
+		}
+		pv := pvc.NewPasswordValidator()
+		err := pv.validate(test.p)
 		gotOk := err == nil
 		if test.wantOk != gotOk {
 			t.Errorf("test %v: wanted valid: %v for %q", i, test.wantOk, test.p)

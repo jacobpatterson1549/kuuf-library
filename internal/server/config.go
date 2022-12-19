@@ -30,9 +30,9 @@ func (cfg Config) databaseScheme() string {
 	return beforeColon
 }
 
-func (cfg Config) setup(ctx context.Context, db database, ph passwordHandler, out io.Writer) error {
+func (cfg Config) setup(ctx context.Context, db database, ph passwordHandler, pv passwordValidator, out io.Writer) error {
 	if len(cfg.AdminPassword) != 0 {
-		if err := cfg.initAdminPassword(ctx, db, ph); err != nil {
+		if err := cfg.initAdminPassword(ctx, db, ph, pv); err != nil {
 			return fmt.Errorf("initializing admin password from server configuration: %w", err)
 		}
 	}
@@ -49,8 +49,8 @@ func (cfg Config) setup(ctx context.Context, db database, ph passwordHandler, ou
 	return nil
 }
 
-func (cfg Config) initAdminPassword(ctx context.Context, db database, ph passwordHandler) error {
-	if err := validatePassword(cfg.AdminPassword); err != nil {
+func (cfg Config) initAdminPassword(ctx context.Context, db database, ph passwordHandler, pv passwordValidator) error {
+	if err := pv.validate(cfg.AdminPassword); err != nil {
 		return err
 	}
 	hashedPassword, err := ph.Hash([]byte(cfg.AdminPassword))
@@ -115,16 +115,24 @@ func (cfg Config) updateImage(ctx context.Context, b book.Book, db database, d c
 	return nil
 }
 
-func validatePassword(p string) error {
-	if len(p) < 8 {
+func (pvc passwordValidatorConfig) NewPasswordValidator() passwordValidator {
+	validRunes := make(map[rune]struct{})
+	for _, r := range pvc.validRunes {
+		validRunes[r] = struct{}{}
+	}
+	pv := passwordValidator{
+		passwordValidatorConfig: pvc,
+		validRunes:              validRunes,
+	}
+	return pv
+}
+
+func (pv passwordValidator) validate(password string) error {
+	if len(password) < pv.minLength {
 		return fmt.Errorf("password too short")
 	}
-	m := make(map[rune]struct{}, len(validPasswordRunes))
-	for _, r := range validPasswordRunes {
-		m[r] = struct{}{}
-	}
-	for _, r := range p {
-		if _, ok := m[r]; !ok {
+	for _, r := range password {
+		if _, ok := pv.validRunes[r]; !ok {
 			return fmt.Errorf("password contains characters that are not allowed")
 		}
 	}
