@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"fmt"
 	"mime/multipart"
 	"net/http"
@@ -784,7 +785,8 @@ func TestBookFrom(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			w := httptest.NewRecorder()
 			r := multipartFormHelper(t, "/", test.form)
-			got, err := bookFrom(w, r)
+			ctx := context.Background()
+			got, err := bookFrom(ctx, w, r)
 			switch {
 			case !test.wantOk:
 				if err == nil {

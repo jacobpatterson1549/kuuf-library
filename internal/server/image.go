@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"image"
@@ -30,7 +31,7 @@ func faviconBase64() string {
 	return sb.String()
 }
 
-func parseImage(r *http.Request) (imageBase64 []byte, err error) {
+func parseImage(ctx context.Context, r *http.Request) (imageBase64 []byte, err error) {
 	f, fh, err := r.FormFile("image")
 	if err != nil {
 		if err == http.ErrMissingFile {
@@ -43,7 +44,7 @@ func parseImage(r *http.Request) (imageBase64 []byte, err error) {
 	}
 	title := fh.Filename
 	contentType := fh.Header.Get("Content-Type")
-	return convertImage(f, title, contentType)
+	return convertImage(ctx, f, title, contentType)
 }
 
 // imageNeedsUpdating checks to see if the image needs to be updated with the following criteria:
@@ -69,20 +70,20 @@ func imageNeedsUpdating(imageBase64 string) bool {
 	return true
 }
 
-func updateImage(imageBase64 string, id string) ([]byte, error) {
+func updateImage(ctx context.Context, imageBase64 string, id string) ([]byte, error) {
 	sr := strings.NewReader(imageBase64)
 	r := base64.NewDecoder(base64.StdEncoding, sr)
 	title, contentType := id+"_converted", "image/webp"
-	return convertImage(r, title, contentType)
+	return convertImage(ctx, r, title, contentType)
 }
 
-func convertImage(r io.Reader, title, contentType string) ([]byte, error) {
+func convertImage(ctx context.Context, r io.Reader, title, contentType string) ([]byte, error) {
 	img, err := readImage(r, contentType)
 	if err != nil {
 		return nil, fmt.Errorf("reading image: %w", err)
 	}
 	img = scaleImage(img)
-	b2, err := webP(img, title)
+	b2, err := webP(ctx, img, title)
 	if err != nil {
 		return nil, fmt.Errorf("converting image to webp: %w", err)
 	}
@@ -129,7 +130,7 @@ func scaleRect(srcR, boundsR image.Rectangle) image.Rectangle {
 }
 
 // webP should be used in the kuuf-library server to encode uploaded jpg/png images
-func webP(img image.Image, title string) ([]byte, error) {
+func webP(ctx context.Context, img image.Image, title string) ([]byte, error) {
 	// It would be nice if the image bytes could be streamed to the cwebp command.
 	// As of 2022, this is not possible, a file must be provided.
 	f, err := os.CreateTemp(".", title)
@@ -141,7 +142,7 @@ func webP(img image.Image, title string) ([]byte, error) {
 		return nil, fmt.Errorf("writing image to temporary file: %w", err)
 	}
 	defer os.Remove(n)
-	cmd := exec.Command("cwebp", n, "-lossless", "-o", "-")
+	cmd := exec.CommandContext(ctx, "cwebp", n, "-lossless", "-o", "-")
 	b2, err := cmd.Output()
 	if err != nil {
 		return nil, fmt.Errorf("running cwebp: %w", err)

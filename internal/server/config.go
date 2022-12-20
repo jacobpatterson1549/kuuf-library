@@ -104,7 +104,7 @@ func (cfg Config) updateImage(ctx context.Context, b book.Book, db database, d c
 	if !cfg.UpdateImages || !imageNeedsUpdating(b.ImageBase64) {
 		return nil
 	}
-	imageBase64, err := updateImage(b.ImageBase64, b.ID)
+	imageBase64, err := updateImage(ctx, b.ImageBase64, b.ID)
 	if err != nil {
 		return fmt.Errorf("updating image for book %q: %w", b.ID, err)
 	}

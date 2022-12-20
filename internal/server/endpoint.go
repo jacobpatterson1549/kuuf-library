@@ -73,12 +73,12 @@ func (s *Server) getAdmin(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) postBook(w http.ResponseWriter, r *http.Request) {
-	b, err := bookFrom(w, r)
+	ctx := r.Context()
+	b, err := bookFrom(ctx, w, r)
 	if err != nil {
 		httpBadRequest(w, err)
 		return
 	}
-	ctx := r.Context()
 	books, err := s.db.CreateBooks(ctx, *b)
 	if err != nil {
 		err = fmt.Errorf("creating book: %w", err)
@@ -89,7 +89,8 @@ func (s *Server) postBook(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) putBook(w http.ResponseWriter, r *http.Request) {
-	b, err := bookFrom(w, r)
+	ctx := r.Context()
+	b, err := bookFrom(ctx, w, r)
 	if err != nil {
 		httpBadRequest(w, err)
 		return
@@ -106,7 +107,6 @@ func (s *Server) putBook(w http.ResponseWriter, r *http.Request) {
 		updateImage = true
 		b.ImageBase64 = ""
 	}
-	ctx := r.Context()
 	err = s.db.UpdateBook(ctx, *b, updateImage)
 	if err != nil {
 		err = fmt.Errorf("updating book: %w", err)
@@ -192,7 +192,7 @@ func (s *Server) withAdminPassword(h http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-func bookFrom(w http.ResponseWriter, r *http.Request) (*book.Book, error) {
+func bookFrom(ctx context.Context, w http.ResponseWriter, r *http.Request) (*book.Book, error) {
 	var sb book.StringBook
 	switch {
 	case !parseFormValue(w, r, "id", &sb.ID, 256),
@@ -224,7 +224,7 @@ func bookFrom(w http.ResponseWriter, r *http.Request) (*book.Book, error) {
 	case b.Pages <= 0:
 		return nil, fmt.Errorf("pages required")
 	}
-	imageBase64, err := parseImage(r)
+	imageBase64, err := parseImage(ctx, r)
 	if err != nil {
 		return nil, err
 	}
