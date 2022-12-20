@@ -12,7 +12,7 @@ type mockCollection struct {
 	AggregateFunc  func(ctx context.Context, pipeline interface{}, opts ...*options.AggregateOptions) (*mongo.Cursor, error)
 	FindFunc       func(ctx context.Context, filter interface{}, opts ...*options.FindOptions) (cur *mongo.Cursor, err error)
 	FindOneFunc    func(ctx context.Context, filter interface{}, opts ...*options.FindOneOptions) *mongo.SingleResult
-	UpdateOneFunc  func(ctx context.Context, filter interface{}, update interface{}, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error)
+	UpdateOneFunc  func(ctx context.Context, filter, update interface{}, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error)
 	DeleteOneFunc  func(ctx context.Context, filter interface{}, opts ...*options.DeleteOptions) (*mongo.DeleteResult, error)
 }
 
@@ -32,7 +32,7 @@ func (m mockCollection) FindOne(ctx context.Context, filter interface{}, opts ..
 	return m.FindOneFunc(ctx, filter, opts...)
 }
 
-func (m mockCollection) UpdateOne(ctx context.Context, filter interface{}, update interface{}, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error) {
+func (m mockCollection) UpdateOne(ctx context.Context, filter, update interface{}, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error) {
 	return m.UpdateOneFunc(ctx, filter, update, opts...)
 }
 

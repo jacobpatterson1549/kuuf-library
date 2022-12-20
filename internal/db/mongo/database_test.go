@@ -423,9 +423,9 @@ func TestReadBook(t *testing.T) {
 }
 
 func TestUpdateBook(t *testing.T) {
-	happyPathUpdateOneFunc := func(t *testing.T, wantUpdate interface{}) func(ctx context.Context, filter interface{}, update interface{}, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error) {
+	happyPathUpdateOneFunc := func(t *testing.T, wantUpdate interface{}) func(ctx context.Context, filter, update interface{}, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error) {
 		t.Helper()
-		return func(ctx context.Context, filter interface{}, update interface{}, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error) {
+		return func(ctx context.Context, filter, update interface{}, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error) {
 			wantFilter := bson.D(bson.E(bookIDField, objectIDHelper(t, okID1)))
 			gotFilter := filter
 			gotUpdate := update
@@ -480,7 +480,7 @@ func TestUpdateBook(t *testing.T) {
 		name          string
 		book          book.Book
 		updateImage   bool
-		UpdateOneFunc func(ctx context.Context, filter interface{}, update interface{}, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error)
+		UpdateOneFunc func(ctx context.Context, filter, update interface{}, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error)
 		wantOk        bool
 	}{
 		{
@@ -679,31 +679,31 @@ func TestUpdateAdminPassword(t *testing.T) {
 	tests := []struct {
 		name           string
 		hashedPassword string
-		UpdateOneFunc  func(ctx context.Context, filter interface{}, update interface{}, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error)
+		UpdateOneFunc  func(ctx context.Context, filter, update interface{}, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error)
 		wantOk         bool
 	}{
 		{
 			name: "delete error",
-			UpdateOneFunc: func(ctx context.Context, filter interface{}, update interface{}, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error) {
+			UpdateOneFunc: func(ctx context.Context, filter, update interface{}, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error) {
 				return nil, fmt.Errorf("delete error")
 			},
 		},
 		{
 			name: "bad ModifiedCount: 0",
-			UpdateOneFunc: func(ctx context.Context, filter interface{}, update interface{}, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error) {
+			UpdateOneFunc: func(ctx context.Context, filter, update interface{}, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error) {
 				return &mongo.UpdateResult{ModifiedCount: 0}, nil
 			},
 		},
 		{
 			name: "bad ModifiedCount: 66",
-			UpdateOneFunc: func(ctx context.Context, filter interface{}, update interface{}, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error) {
+			UpdateOneFunc: func(ctx context.Context, filter, update interface{}, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error) {
 				return &mongo.UpdateResult{ModifiedCount: 2}, nil
 			},
 		},
 		{
 			name:           "happy path",
 			hashedPassword: "t0p_S3cr3t!",
-			UpdateOneFunc: func(ctx context.Context, filter interface{}, update interface{}, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error) {
+			UpdateOneFunc: func(ctx context.Context, filter, update interface{}, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error) {
 				wantFilter := bson.D(bson.E(usernameField, adminUsername))
 				gotFilter := filter
 				wantUpdate := bson.D(bson.E("$set", bson.D(bson.E(passwordField, "t0p_S3cr3t!"))))
