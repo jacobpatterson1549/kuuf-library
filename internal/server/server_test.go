@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 	"text/template"
+	"time"
 
 	"github.com/jacobpatterson1549/kuuf-library/internal/book"
 )
@@ -60,6 +61,64 @@ func TestNewServer(t *testing.T) {
 				t.Errorf("password handler not set")
 			case got.out != &sb:
 				t.Errorf("output writers not equal: \n wanted: %v \n got:    %v", got.out, &sb)
+			}
+		})
+	}
+}
+
+func TestRunInvalidServer(t *testing.T) {
+	tests := []struct {
+		name     string
+		s        Server
+		wantLogs []string
+	}{
+		{
+			name: "setup failure",
+			s: Server{
+				cfg: Config{
+					AdminPassword: "Backfill-M3",
+				},
+			},
+		},
+		{
+			name: "no setup, bad port",
+			s: Server{
+				cfg: Config{
+					Port: "@_bad:P0rt!",
+				},
+				db: mockDatabase{},
+			},
+			wantLogs: []string{
+				"localhost:@_bad:P0rt!",
+				"mockDatabase",
+			},
+		},
+		// {name: "valid server should fail test"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var sb strings.Builder
+			test.s.out = &sb
+			ctx := context.Background()
+			ctx, cancelFunc := context.WithTimeout(ctx, time.Second)
+			defer cancelFunc()
+			go func() {
+				if err := test.s.Run(ctx); err == nil {
+					t.Errorf("wanted error running server")
+				}
+				cancelFunc()
+			}()
+			select {
+			case <-ctx.Done():
+				// NOOP
+			case <-time.After(1 * time.Second):
+				t.Fatalf("invalid server did not stop")
+			}
+			gotLog := sb.String()
+			for _, wantLog := range test.wantLogs {
+				if !strings.Contains(gotLog, wantLog) {
+					t.Errorf("wanted log to contain %q:\n got %q", wantLog, gotLog)
+				}
 			}
 		})
 	}
