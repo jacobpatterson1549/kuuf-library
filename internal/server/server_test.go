@@ -55,6 +55,10 @@ func TestNewServer(t *testing.T) {
 				t.Errorf("unwanted error: %v", err)
 			case got.cfg != test.cfg:
 				t.Errorf("configs not equal: \n wanted: %v \n got:    %v", test.cfg, got.cfg)
+			case got.tmpl == nil:
+				t.Errorf("template not set")
+			case got.staticFS != staticFS:
+				t.Errorf("staticFS not set")
 			case got.db == nil:
 				t.Errorf("database not set")
 			case got.ph == nil:
@@ -160,7 +164,8 @@ func TestMux(t *testing.T) {
 				return new(book.Book), nil
 			},
 		},
-		tmpl: parseTemplate(),
+		tmpl:     parseTemplate(staticFS),
+		staticFS: staticFS, // used by robots.txt
 	}
 	lim := &countRateLimiter{max: 1}
 	h := s.mux(lim)

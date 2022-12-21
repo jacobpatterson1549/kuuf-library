@@ -236,7 +236,7 @@ func TestGetRequest(t *testing.T) {
 					readBookSubjectsFunc: test.readBookSubjects,
 					readBookHeadersFunc:  test.readBookHeaders,
 				},
-				tmpl: parseTemplate(),
+				tmpl: parseTemplate(staticFS),
 				out:  &sb,
 			}
 			var lim countRateLimiter
@@ -589,7 +589,7 @@ func TestPostRequest(t *testing.T) {
 					minLength:  8,
 					validRunes: "bilbo123",
 				}.NewPasswordValidator(),
-				tmpl: parseTemplate(),
+				tmpl: parseTemplate(staticFS),
 			}
 			w := httptest.NewRecorder()
 			r := multipartFormHelper(t, test.url, test.form)

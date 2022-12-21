@@ -48,13 +48,14 @@ type (
 		PostMaxBurst  int
 	}
 	Server struct {
-		cfg     Config
-		favicon string
-		tmpl    *template.Template
-		db      database
-		ph      passwordHandler
-		pv      passwordValidator
-		out     io.Writer
+		cfg      Config
+		favicon  string
+		tmpl     *template.Template
+		staticFS fs.FS
+		db       database
+		ph       passwordHandler
+		pv       passwordValidator
+		out      io.Writer
 	}
 	passwordHandler interface {
 		Hash(password []byte) (hashedPassword []byte, err error)
@@ -93,20 +94,22 @@ func (cfg Config) NewServer(ctx context.Context, out io.Writer) (*Server, error)
 	}
 	favicon := faviconBase64()
 	ph := bcrypt.NewPasswordHandler()
-	tmpl := parseTemplate()
+	fsys := staticFS
+	tmpl := parseTemplate(fsys)
 	pvc := passwordValidatorConfig{
 		minLength:  8,
 		validRunes: validPasswordRunes,
 	}
 	pv := pvc.NewPasswordValidator()
 	s := Server{
-		cfg:     cfg,
-		favicon: favicon,
-		tmpl:    tmpl,
-		db:      db,
-		ph:      ph,
-		pv:      pv,
-		out:     out,
+		cfg:      cfg,
+		favicon:  favicon,
+		tmpl:     tmpl,
+		staticFS: fsys,
+		db:       db,
+		ph:       ph,
+		pv:       pv,
+		out:      out,
 	}
 	return &s, nil
 }
@@ -168,7 +171,7 @@ func embeddedCSVDatabase() (database, error) {
 	return d3, nil
 }
 
-func parseTemplate() *template.Template {
+func parseTemplate(fsys fs.FS) *template.Template {
 	funcs := template.FuncMap{
 		"pretty":         prettyInputValue,
 		"newDate":        time.Now,
@@ -176,11 +179,11 @@ func parseTemplate() *template.Template {
 	}
 	return template.Must(template.New("index.html").
 		Funcs(funcs).
-		ParseFS(staticFS, "*"))
+		ParseFS(fsys, "*"))
 }
 
 func (s *Server) mux(postRateLimiter rateLimiter) http.Handler {
-	static := http.FileServer(http.FS(staticFS))
+	static := http.FileServer(http.FS(s.staticFS))
 	m := mux{
 		http.MethodGet: map[string]http.HandlerFunc{
 			"/":           s.getBookSubjects,
