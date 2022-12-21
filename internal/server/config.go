@@ -71,7 +71,7 @@ func (cfg Config) backfillCSV(ctx context.Context, db database) error {
 	iter := newBookIterator(csvD, cfg.MaxRows)
 	books, err := iter.AllBooks(ctx)
 	if err != nil {
-		return fmt.Errorf("reading all books to backfill: %v", err)
+		return fmt.Errorf("reading all books to backfill: %w", err)
 	}
 	if _, err := db.CreateBooks(ctx, books...); err != nil {
 		return fmt.Errorf("creating books: %w", err)

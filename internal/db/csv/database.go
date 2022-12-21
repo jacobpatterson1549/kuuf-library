@@ -45,7 +45,7 @@ func readRecords(r io.Reader) ([][]string, error) {
 	csvR := csv.NewReader(r)
 	records, err := csvR.ReadAll()
 	if err != nil {
-		return nil, fmt.Errorf("reading library csv: %v", err)
+		return nil, fmt.Errorf("reading library csv: %w", err)
 	}
 	if len(records) == 0 {
 		return nil, nil
