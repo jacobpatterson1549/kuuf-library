@@ -42,7 +42,7 @@ func (cfg Config) setup(ctx context.Context, db database, ph passwordHandler, pv
 		}
 	}
 	if cfg.UpdateImages || cfg.DumpCSV {
-		if err := cfg.updateImages(ctx, db, out); err != nil {
+		if err := cfg.updateBooks(ctx, db, out); err != nil {
 			return fmt.Errorf("updating images / dumping csv;: %w", err)
 		}
 	}
@@ -79,7 +79,7 @@ func (cfg Config) backfillCSV(ctx context.Context, db database) error {
 	return nil
 }
 
-func (cfg Config) updateImages(ctx context.Context, db database, out io.Writer) error {
+func (cfg Config) updateBooks(ctx context.Context, db database, out io.Writer) error {
 	d := csv.NewDump(out)
 	iter := newBookIterator(db, cfg.MaxRows)
 	for iter.HasNext(ctx) {
