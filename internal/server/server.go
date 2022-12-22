@@ -114,9 +114,9 @@ func (cfg Config) NewServer(ctx context.Context, out io.Writer) (*Server, error)
 	return &s, nil
 }
 
-// Run initializes the server and then serves it.
+// RunSync initializes the server and then serves it.
 // Initialization reads the config to set the admin password and backfill books from the csv database if desired.
-func (s *Server) Run(ctx context.Context) error {
+func (s *Server) RunSync(ctx context.Context) error {
 	if err := s.cfg.setup(ctx, s.db, s.ph, s.pv, s.out); err != nil {
 		return fmt.Errorf("setting up server: %w", err)
 	}
@@ -127,7 +127,7 @@ func (s *Server) Run(ctx context.Context) error {
 	lim := s.cfg.postRateLimiter()
 	addr := ":" + s.cfg.Port
 	handler := s.mux(lim)
-	return http.ListenAndServe(addr, handler)
+	return http.ListenAndServe(addr, handler) // BLOCKING
 }
 
 func (cfg Config) createDatabase(ctx context.Context) (database, error) {

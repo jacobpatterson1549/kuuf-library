@@ -73,12 +73,12 @@ func TestNewServer(t *testing.T) {
 func TestRunInvalidServer(t *testing.T) {
 	tests := []struct {
 		name     string
-		s        Server
+		server   Server
 		wantLogs []string
 	}{
 		{
 			name: "setup failure",
-			s: Server{
+			server: Server{
 				cfg: Config{
 					AdminPassword: "Backfill-M3",
 				},
@@ -86,7 +86,7 @@ func TestRunInvalidServer(t *testing.T) {
 		},
 		{
 			name: "no setup, bad port",
-			s: Server{
+			server: Server{
 				cfg: Config{
 					Port: "@_bad:P0rt!",
 				},
@@ -102,19 +102,17 @@ func TestRunInvalidServer(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			var sb strings.Builder
-			test.s.out = &sb
+			test.server.out = &sb
 			ctx := context.Background()
 			ctx, cancelFunc := context.WithTimeout(ctx, time.Second)
 			defer cancelFunc()
-			go func() {
-				if err := test.s.Run(ctx); err == nil {
+			errC := make(chan error)
+			go func() { errC <- test.server.RunSync(ctx) }()
+			select {
+			case err := <-errC:
+				if err == nil {
 					t.Errorf("wanted error running server")
 				}
-				cancelFunc()
-			}()
-			select {
-			case <-ctx.Done():
-				// NOOP
 			case <-time.After(1 * time.Second):
 				t.Fatalf("invalid server did not stop")
 			}
