@@ -23,14 +23,6 @@ func withContextTimeout(h http.Handler, maxDuration time.Duration) http.HandlerF
 
 // withCacheControl adds a cache-control to GET requests that are not to edit a book
 func withCacheControl(h http.Handler, d time.Duration) http.HandlerFunc {
-	shouldCache := func(r *http.Request) bool {
-		switch {
-		case r.Method != http.MethodGet,
-			r.URL.Path == "/admin" && r.URL.Query().Has("book-id"): // do not cache book edit read requests
-			return false
-		}
-		return true
-	}
 	maxAge := "max-age=" + strconv.Itoa(int(d.Seconds()))
 	return func(w http.ResponseWriter, r *http.Request) {
 		if shouldCache(r) {
@@ -38,6 +30,15 @@ func withCacheControl(h http.Handler, d time.Duration) http.HandlerFunc {
 		}
 		h.ServeHTTP(w, r)
 	}
+}
+
+func shouldCache(r *http.Request) bool {
+	switch {
+	case r.Method != http.MethodGet,
+		r.URL.Path == "/admin" && r.URL.Query().Has("book-id"): // do not cache book edit read requests
+		return false
+	}
+	return true
 }
 
 type wrappedResponseWriter struct {

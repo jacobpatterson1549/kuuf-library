@@ -41,17 +41,9 @@ func main() {
 }
 
 func newServerConfig(out io.Writer, programName string, programArgs ...string) (*server.Config, error) {
-	usage := []string{
-		programName + " runs a library web server",
-	}
 	fs := flag.NewFlagSet(programName, flag.ContinueOnError)
 	fs.SetOutput(out)
-	fs.Usage = func() {
-		for _, u := range usage {
-			fmt.Fprintln(out, u)
-		}
-		fs.PrintDefaults()
-	}
+	fs.Usage = usage(fs, programName+" runs a library web server")
 	var cfg server.Config
 	fs.StringVar(&cfg.Port, "port", "8000", "the port to run the server on, required")
 	fs.StringVar(&cfg.DatabaseURL, "database-url", "csv://", "the url of the database to use, defaults to the readonly internal library.csv file")
@@ -67,6 +59,15 @@ func newServerConfig(out io.Writer, programName string, programArgs ...string) (
 		return nil, err
 	}
 	return &cfg, nil
+}
+
+func usage(fs *flag.FlagSet, usage ...string) func() {
+	return func() {
+		for _, u := range usage {
+			fmt.Fprintln(fs.Output(), u)
+		}
+		fs.PrintDefaults()
+	}
 }
 
 // ParseFlags parses the FlagSet and overlays environment flags.
