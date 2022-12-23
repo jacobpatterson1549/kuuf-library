@@ -87,6 +87,8 @@ type (
 	}
 )
 
+// NewServer creates and initializes a new server.
+// Initialization reads the config to set the admin password and backfill books from the csv database if desired.
 func (cfg Config) NewServer(ctx context.Context, out io.Writer) (*Server, error) {
 	db, err := cfg.createDatabase(ctx)
 	if err != nil {
@@ -101,6 +103,9 @@ func (cfg Config) NewServer(ctx context.Context, out io.Writer) (*Server, error)
 		validRunes: validPasswordRunes,
 	}
 	pv := pvc.NewPasswordValidator()
+	if err := cfg.setup(ctx, db, ph, pv, out); err != nil {
+		return nil, fmt.Errorf("setting up server: %w", err)
+	}
 	s := Server{
 		cfg:      cfg,
 		favicon:  favicon,
@@ -114,12 +119,7 @@ func (cfg Config) NewServer(ctx context.Context, out io.Writer) (*Server, error)
 	return &s, nil
 }
 
-// RunSync initializes the server and then serves it.
-// Initialization reads the config to set the admin password and backfill books from the csv database if desired.
-func (s *Server) RunSync(ctx context.Context) error {
-	if err := s.cfg.setup(ctx, s.db, s.ph, s.pv, s.out); err != nil {
-		return fmt.Errorf("setting up server: %w", err)
-	}
+func (s *Server) RunSync() error {
 	dbScheme, _, _ := strings.Cut(s.cfg.DatabaseURL, ":")
 	fmt.Fprintf(s.out, "Using database: %q (%T).\n", dbScheme, s.db)
 	fmt.Fprintf(s.out, "Serving library at at http://localhost:%v\n", s.cfg.Port)

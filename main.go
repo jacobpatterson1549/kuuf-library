@@ -31,7 +31,7 @@ func main() {
 	errC := make(chan error)
 	done := make(chan os.Signal, 2)
 	signal.Notify(done, syscall.SIGINT, syscall.SIGTERM)
-	go func() { errC <- s.RunSync(ctx) }()
+	go func() { errC <- s.RunSync() }()
 	select {
 	case err := <-errC:
 		log.Fatalf("running server: %v", err)

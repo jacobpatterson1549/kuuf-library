@@ -40,6 +40,13 @@ func TestNewServer(t *testing.T) {
 			},
 			wantOk: true,
 		},
+		{
+			name: "setup failure",
+			cfg: Config{
+				DatabaseURL:   "csv://",
+				AdminPassword: "Backfill-M3",
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -77,14 +84,6 @@ func TestRunInvalidServer(t *testing.T) {
 		wantLogs []string
 	}{
 		{
-			name: "setup failure",
-			server: Server{
-				cfg: Config{
-					AdminPassword: "Backfill-M3",
-				},
-			},
-		},
-		{
 			name: "no setup, bad port",
 			server: Server{
 				cfg: Config{
@@ -103,11 +102,8 @@ func TestRunInvalidServer(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			var sb strings.Builder
 			test.server.out = &sb
-			ctx := context.Background()
-			ctx, cancelFunc := context.WithTimeout(ctx, time.Second)
-			defer cancelFunc()
 			errC := make(chan error)
-			go func() { errC <- test.server.RunSync(ctx) }()
+			go func() { errC <- test.server.RunSync() }()
 			select {
 			case err := <-errC:
 				if err == nil {
