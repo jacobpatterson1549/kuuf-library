@@ -279,7 +279,7 @@ func (d *Database) UpdateAdminPassword(ctx context.Context, hashedPassword strin
 	return d.expectSingleModify(result.ModifiedCount)
 }
 
-func (d Database) idFilter(id string) (interface{}, error) {
+func (*Database) idFilter(id string) (interface{}, error) {
 	objID, err := primitive.ObjectIDFromString(id)
 	if err != nil {
 		return nil, err
@@ -287,7 +287,7 @@ func (d Database) idFilter(id string) (interface{}, error) {
 	return bson.D(bson.E(bookIDField, objID)), nil
 }
 
-func (d Database) expectSingleModify(got int64) error {
+func (*Database) expectSingleModify(got int64) error {
 	if got != 1 {
 		return fmt.Errorf("wanted to modify 1 document, got %v", got)
 	}
