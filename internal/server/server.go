@@ -92,7 +92,7 @@ type (
 func (cfg Config) NewServer(ctx context.Context, out io.Writer) (*Server, error) {
 	db, err := cfg.createDatabase(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("creating database: %W", err)
+		return nil, fmt.Errorf("creating database: %w", err)
 	}
 	favicon := faviconBase64()
 	ph := bcrypt.NewPasswordHandler()
