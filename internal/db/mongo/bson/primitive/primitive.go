@@ -1,4 +1,4 @@
-// Package primitive wraps MongoDB-specific structures
+// Package primitive wraps MongoDB-specific structures.
 package primitive
 
 import (
