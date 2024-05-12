@@ -1,4 +1,4 @@
-// Package bcrypt can be used to hash data
+// Package bcrypt can be used to hash data.
 package bcrypt
 
 import "golang.org/x/crypto/bcrypt"

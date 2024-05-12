@@ -1,4 +1,4 @@
-// Package server runs a web server to display and manage the library
+// Package server is a web server to display and manage the library.
 package server
 
 import (

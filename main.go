@@ -1,3 +1,4 @@
+// Package main runs a library web server.
 package main
 
 import (
