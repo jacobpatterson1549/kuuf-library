@@ -75,7 +75,7 @@ type (
 	page struct {
 		Favicon string
 		Name    string
-		Data    interface{}
+		Data    any
 	}
 	passwordValidatorConfig struct {
 		minLength  int
@@ -217,7 +217,7 @@ func (s *Server) mux(postRateLimiter rateLimiter) http.Handler {
 	return h
 }
 
-func (s *Server) serveTemplate(w http.ResponseWriter, name string, data interface{}) {
+func (s *Server) serveTemplate(w http.ResponseWriter, name string, data any) {
 	p := page{s.favicon, name, data}
 	if err := s.tmpl.Execute(w, p); err != nil {
 		fmt.Fprintln(s.out, err)
@@ -248,7 +248,7 @@ func dateInputValue(t time.Time) string {
 	return t.Format(string(dateLayout))
 }
 
-func prettyInputValue(i interface{}) interface{} {
+func prettyInputValue(i any) any {
 	if s, ok := i.(string); ok {
 		return template.HTMLEscapeString(s)
 	}

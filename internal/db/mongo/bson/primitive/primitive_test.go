@@ -55,7 +55,7 @@ func TestObjectIDFrom(t *testing.T) {
 	}
 	tests := []struct {
 		name   string
-		id     interface{}
+		id     any
 		wantOk bool
 		want   primitive.ObjectID
 	}{

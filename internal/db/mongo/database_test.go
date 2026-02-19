@@ -48,7 +48,7 @@ const (
 	okID2 = "63913898359dc4441bd976e9"
 )
 
-func objectIDHelper(t *testing.T, id string) interface{} {
+func objectIDHelper(t *testing.T, id string) any {
 	objID, err := primitive.ObjectIDFromString(id)
 	if err != nil {
 		t.Errorf("creating object id for test: %v", err)
@@ -67,7 +67,7 @@ func TestCreateBooks(t *testing.T) {
 	b2 := func() book.Book { b2 := b1; b2.ID = "wipeME"; b2.Title += "_EDITED"; return b2 }()
 	tests := []struct {
 		name           string
-		InsertManyFunc func(ctx context.Context, documents []interface{}, opts ...*options.InsertManyOptions) (*mongo.InsertManyResult, error)
+		InsertManyFunc func(ctx context.Context, documents []any, opts ...*options.InsertManyOptions) (*mongo.InsertManyResult, error)
 		insertBooks    []book.Book
 		wantOk         bool
 		want           []book.Book
@@ -79,16 +79,16 @@ func TestCreateBooks(t *testing.T) {
 		{
 			name:        "insert error",
 			insertBooks: []book.Book{b1, b2},
-			InsertManyFunc: func(ctx context.Context, documents []interface{}, opts ...*options.InsertManyOptions) (*mongo.InsertManyResult, error) {
+			InsertManyFunc: func(ctx context.Context, documents []any, opts ...*options.InsertManyOptions) (*mongo.InsertManyResult, error) {
 				return nil, fmt.Errorf("insert error")
 			},
 		},
 		{
 			name:        "bad insert id",
 			insertBooks: []book.Book{b1},
-			InsertManyFunc: func(ctx context.Context, documents []interface{}, opts ...*options.InsertManyOptions) (*mongo.InsertManyResult, error) {
+			InsertManyFunc: func(ctx context.Context, documents []any, opts ...*options.InsertManyOptions) (*mongo.InsertManyResult, error) {
 				result := mongo.InsertManyResult{
-					InsertedIDs: []interface{}{"bad insert id"},
+					InsertedIDs: []any{"bad insert id"},
 				}
 				return &result, nil
 			},
@@ -96,9 +96,9 @@ func TestCreateBooks(t *testing.T) {
 		{
 			name:        "wrong number of insert ids",
 			insertBooks: []book.Book{b1},
-			InsertManyFunc: func(ctx context.Context, documents []interface{}, opts ...*options.InsertManyOptions) (*mongo.InsertManyResult, error) {
+			InsertManyFunc: func(ctx context.Context, documents []any, opts ...*options.InsertManyOptions) (*mongo.InsertManyResult, error) {
 				result := mongo.InsertManyResult{
-					InsertedIDs: []interface{}{
+					InsertedIDs: []any{
 						objectIDHelper(t, okID1),
 						objectIDHelper(t, okID2),
 					},
@@ -109,8 +109,8 @@ func TestCreateBooks(t *testing.T) {
 		{
 			name:        "happy path",
 			insertBooks: []book.Book{b1, b2},
-			InsertManyFunc: func(ctx context.Context, documents []interface{}, opts ...*options.InsertManyOptions) (*mongo.InsertManyResult, error) {
-				wantDocuments := make([]interface{}, 2)
+			InsertManyFunc: func(ctx context.Context, documents []any, opts ...*options.InsertManyOptions) (*mongo.InsertManyResult, error) {
+				wantDocuments := make([]any, 2)
 				for i, b := range []book.Book{b1, b2} {
 					b.ID = ""                       // want to insert not upsert
 					wantDocuments[i] = mongoBook(b) // struct with bson tags
@@ -125,7 +125,7 @@ func TestCreateBooks(t *testing.T) {
 					t.Errorf("opts not equal: \n wanted: %#v \n got:    %#v", wantOpts, gotOpts)
 				}
 				result := mongo.InsertManyResult{
-					InsertedIDs: []interface{}{
+					InsertedIDs: []any{
 						objectIDHelper(t, okID1),
 						objectIDHelper(t, okID2),
 					},
@@ -167,21 +167,21 @@ func TestReadBookSubjects(t *testing.T) {
 		name          string
 		limit         int
 		offset        int
-		AggregateFunc func(ctx context.Context, pipeline interface{}, opts ...*options.AggregateOptions) (*mongo.Cursor, error)
+		AggregateFunc func(ctx context.Context, pipeline any, opts ...*options.AggregateOptions) (*mongo.Cursor, error)
 		wantOk        bool
 		want          []book.Subject
 	}{
 		{
 			name: "aggregate error",
-			AggregateFunc: func(ctx context.Context, pipeline interface{}, opts ...*options.AggregateOptions) (*mongo.Cursor, error) {
+			AggregateFunc: func(ctx context.Context, pipeline any, opts ...*options.AggregateOptions) (*mongo.Cursor, error) {
 				return nil, fmt.Errorf("aggregate error")
 			},
 		},
 		{
 			name: "decode error",
-			AggregateFunc: func(ctx context.Context, pipeline interface{}, opts ...*options.AggregateOptions) (*mongo.Cursor, error) {
-				documents := []interface{}{
-					map[string]interface{}{
+			AggregateFunc: func(ctx context.Context, pipeline any, opts ...*options.AggregateOptions) (*mongo.Cursor, error) {
+				documents := []any{
+					map[string]any{
 						subjectCountField: "cannot decode string into an integer type",
 					},
 				}
@@ -192,7 +192,7 @@ func TestReadBookSubjects(t *testing.T) {
 			name:   "happy path ",
 			limit:  2,
 			offset: 8,
-			AggregateFunc: func(ctx context.Context, pipeline interface{}, opts ...*options.AggregateOptions) (*mongo.Cursor, error) {
+			AggregateFunc: func(ctx context.Context, pipeline any, opts ...*options.AggregateOptions) (*mongo.Cursor, error) {
 				wantPipeline := mongo.Pipeline{
 					bson.D(bson.E("$group", bson.D(
 						bson.E(subjectNameField, "$"+bookSubjectField),
@@ -213,7 +213,7 @@ func TestReadBookSubjects(t *testing.T) {
 				case !reflect.DeepEqual(wantOpts, gotOpts):
 					t.Errorf("opts not equal: \n wanted: %#v \n got:    %#v", wantOpts, gotOpts)
 				}
-				documents := []interface{}{
+				documents := []any{
 					mSubject{Name: "sub-I", Count: 3},
 					mSubject{Name: "sub-J", Count: 4},
 				}
@@ -255,21 +255,21 @@ func TestReadBookHeaders(t *testing.T) {
 		filter   book.Filter
 		limit    int
 		offset   int
-		FindFunc func(ctx context.Context, filter interface{}, opts ...*options.FindOptions) (cur *mongo.Cursor, err error)
+		FindFunc func(ctx context.Context, filter any, opts ...*options.FindOptions) (cur *mongo.Cursor, err error)
 		wantOk   bool
 		want     []book.Header
 	}{
 		{
 			name: "find error",
-			FindFunc: func(ctx context.Context, filter interface{}, opts ...*options.FindOptions) (cur *mongo.Cursor, err error) {
+			FindFunc: func(ctx context.Context, filter any, opts ...*options.FindOptions) (cur *mongo.Cursor, err error) {
 				return nil, fmt.Errorf("find error")
 			},
 		},
 		{
 			name: "decode error",
-			FindFunc: func(ctx context.Context, filter interface{}, opts ...*options.FindOptions) (cur *mongo.Cursor, err error) {
-				documents := []interface{}{
-					map[string]interface{}{
+			FindFunc: func(ctx context.Context, filter any, opts ...*options.FindOptions) (cur *mongo.Cursor, err error) {
+				documents := []any{
+					map[string]any{
 						bookTitleField: -1,
 					},
 				}
@@ -281,7 +281,7 @@ func TestReadBookHeaders(t *testing.T) {
 			filter: book.Filter{HeaderPart: "T"},
 			limit:  3,
 			offset: 9,
-			FindFunc: func(ctx context.Context, filter interface{}, opts ...*options.FindOptions) (cur *mongo.Cursor, err error) {
+			FindFunc: func(ctx context.Context, filter any, opts ...*options.FindOptions) (cur *mongo.Cursor, err error) {
 				bsonFilter := bson.Filter{
 					SubjectKey: bookSubjectField,
 					HeaderKeys: []string{
@@ -313,7 +313,7 @@ func TestReadBookHeaders(t *testing.T) {
 				case !reflect.DeepEqual(wantOpts, gotOpts):
 					t.Errorf("opts not equal: \n wanted: %#v \n got:    %#v", wantOpts, gotOpts)
 				}
-				documents := []interface{}{
+				documents := []any{
 					mHeader{ID: "2b8", Title: "T3", Author: "a8", Subject: "a"},
 					mHeader{ID: "3b7", Title: "T2", Author: "a6", Subject: "b"},
 					mHeader{ID: "1c7", Title: "T4", Author: "a7", Subject: "b"},
@@ -362,7 +362,7 @@ func TestReadBook(t *testing.T) {
 	tests := []struct {
 		name        string
 		bookID      string
-		FindOneFunc func(ctx context.Context, filter interface{}, opts ...*options.FindOneOptions) *mongo.SingleResult
+		FindOneFunc func(ctx context.Context, filter any, opts ...*options.FindOneOptions) *mongo.SingleResult
 		wantOk      bool
 		want        *book.Book
 	}{
@@ -373,7 +373,7 @@ func TestReadBook(t *testing.T) {
 		{
 			name:   "bad book",
 			bookID: okID1,
-			FindOneFunc: func(ctx context.Context, filter interface{}, opts ...*options.FindOneOptions) *mongo.SingleResult {
+			FindOneFunc: func(ctx context.Context, filter any, opts ...*options.FindOneOptions) *mongo.SingleResult {
 				err := fmt.Errorf("bad book")
 				return mongo.NewSingleResultFromDocument(nil, err, nil)
 			},
@@ -381,7 +381,7 @@ func TestReadBook(t *testing.T) {
 		{
 			name:   "happy path",
 			bookID: okID1,
-			FindOneFunc: func(ctx context.Context, filter interface{}, opts ...*options.FindOneOptions) *mongo.SingleResult {
+			FindOneFunc: func(ctx context.Context, filter any, opts ...*options.FindOneOptions) *mongo.SingleResult {
 				wantFilter := bson.D(bson.E(bookIDField, objectIDHelper(t, okID1)))
 				gotFilter := filter
 				wantOpts := options.FindOne()
@@ -423,9 +423,9 @@ func TestReadBook(t *testing.T) {
 }
 
 func TestUpdateBook(t *testing.T) {
-	happyPathUpdateOneFunc := func(t *testing.T, wantUpdate interface{}) func(ctx context.Context, filter, update interface{}, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error) {
+	happyPathUpdateOneFunc := func(t *testing.T, wantUpdate any) func(ctx context.Context, filter, update any, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error) {
 		t.Helper()
-		return func(ctx context.Context, filter, update interface{}, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error) {
+		return func(ctx context.Context, filter, update any, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error) {
 			wantFilter := bson.D(bson.E(bookIDField, objectIDHelper(t, okID1)))
 			gotFilter := filter
 			gotUpdate := update
@@ -480,7 +480,7 @@ func TestUpdateBook(t *testing.T) {
 		name          string
 		book          book.Book
 		updateImage   bool
-		UpdateOneFunc func(ctx context.Context, filter, update interface{}, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error)
+		UpdateOneFunc func(ctx context.Context, filter, update any, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error)
 		wantOk        bool
 	}{
 		{
@@ -490,21 +490,21 @@ func TestUpdateBook(t *testing.T) {
 		{
 			name: "update error",
 			book: b,
-			UpdateOneFunc: func(ctx context.Context, filter, update interface{}, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error) {
+			UpdateOneFunc: func(ctx context.Context, filter, update any, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error) {
 				return nil, fmt.Errorf("update error")
 			},
 		},
 		{
 			name: "bad ModifiedCount: 0",
 			book: b,
-			UpdateOneFunc: func(ctx context.Context, filter, update interface{}, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error) {
+			UpdateOneFunc: func(ctx context.Context, filter, update any, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error) {
 				return &mongo.UpdateResult{ModifiedCount: 0}, nil
 			},
 		},
 		{
 			name: "bad ModifiedCount: 2",
 			book: b,
-			UpdateOneFunc: func(ctx context.Context, filter, update interface{}, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error) {
+			UpdateOneFunc: func(ctx context.Context, filter, update any, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error) {
 				return &mongo.UpdateResult{ModifiedCount: 2}, nil
 			},
 		},
@@ -548,7 +548,7 @@ func TestDeleteBook(t *testing.T) {
 	tests := []struct {
 		name          string
 		bookID        string
-		DeleteOneFunc func(ctx context.Context, filter interface{}, opts ...*options.DeleteOptions) (*mongo.DeleteResult, error)
+		DeleteOneFunc func(ctx context.Context, filter any, opts ...*options.DeleteOptions) (*mongo.DeleteResult, error)
 		wantOk        bool
 	}{
 		{
@@ -558,28 +558,28 @@ func TestDeleteBook(t *testing.T) {
 		{
 			name:   "delete error",
 			bookID: okID,
-			DeleteOneFunc: func(ctx context.Context, filter interface{}, opts ...*options.DeleteOptions) (*mongo.DeleteResult, error) {
+			DeleteOneFunc: func(ctx context.Context, filter any, opts ...*options.DeleteOptions) (*mongo.DeleteResult, error) {
 				return nil, fmt.Errorf("update error")
 			},
 		},
 		{
 			name:   "bad ModifiedCount: 0",
 			bookID: okID,
-			DeleteOneFunc: func(ctx context.Context, filter interface{}, opts ...*options.DeleteOptions) (*mongo.DeleteResult, error) {
+			DeleteOneFunc: func(ctx context.Context, filter any, opts ...*options.DeleteOptions) (*mongo.DeleteResult, error) {
 				return &mongo.DeleteResult{DeletedCount: 0}, nil
 			},
 		},
 		{
 			name:   "bad ModifiedCount: 2",
 			bookID: okID,
-			DeleteOneFunc: func(ctx context.Context, filter interface{}, opts ...*options.DeleteOptions) (*mongo.DeleteResult, error) {
+			DeleteOneFunc: func(ctx context.Context, filter any, opts ...*options.DeleteOptions) (*mongo.DeleteResult, error) {
 				return &mongo.DeleteResult{DeletedCount: 0}, nil
 			},
 		},
 		{
 			name:   "happy path",
 			bookID: okID,
-			DeleteOneFunc: func(ctx context.Context, filter interface{}, opts ...*options.DeleteOptions) (*mongo.DeleteResult, error) {
+			DeleteOneFunc: func(ctx context.Context, filter any, opts ...*options.DeleteOptions) (*mongo.DeleteResult, error) {
 				wantFilter := bson.D(bson.E(bookIDField, objectIDHelper(t, okID)))
 				gotFilter := filter
 				wantOpts := options.Delete()
@@ -619,20 +619,20 @@ func TestDeleteBook(t *testing.T) {
 func TestReadAdminPassword(t *testing.T) {
 	tests := []struct {
 		name        string
-		FindOneFunc func(ctx context.Context, filter interface{}, opts ...*options.FindOneOptions) *mongo.SingleResult
+		FindOneFunc func(ctx context.Context, filter any, opts ...*options.FindOneOptions) *mongo.SingleResult
 		wantOk      bool
 		want        []byte
 	}{
 		{
 			name: "bad hashed password",
-			FindOneFunc: func(ctx context.Context, filter interface{}, opts ...*options.FindOneOptions) *mongo.SingleResult {
+			FindOneFunc: func(ctx context.Context, filter any, opts ...*options.FindOneOptions) *mongo.SingleResult {
 				err := fmt.Errorf("bad hashed password")
 				return mongo.NewSingleResultFromDocument(nil, err, nil)
 			},
 		},
 		{
 			name: "happy path",
-			FindOneFunc: func(ctx context.Context, filter interface{}, opts ...*options.FindOneOptions) *mongo.SingleResult {
+			FindOneFunc: func(ctx context.Context, filter any, opts ...*options.FindOneOptions) *mongo.SingleResult {
 				wantFilter := bson.D(bson.E(usernameField, adminUsername))
 				gotFilter := filter
 				wantOpts := options.FindOne()
@@ -679,31 +679,31 @@ func TestUpdateAdminPassword(t *testing.T) {
 	tests := []struct {
 		name           string
 		hashedPassword string
-		UpdateOneFunc  func(ctx context.Context, filter, update interface{}, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error)
+		UpdateOneFunc  func(ctx context.Context, filter, update any, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error)
 		wantOk         bool
 	}{
 		{
 			name: "delete error",
-			UpdateOneFunc: func(ctx context.Context, filter, update interface{}, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error) {
+			UpdateOneFunc: func(ctx context.Context, filter, update any, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error) {
 				return nil, fmt.Errorf("delete error")
 			},
 		},
 		{
 			name: "bad ModifiedCount: 0",
-			UpdateOneFunc: func(ctx context.Context, filter, update interface{}, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error) {
+			UpdateOneFunc: func(ctx context.Context, filter, update any, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error) {
 				return &mongo.UpdateResult{ModifiedCount: 0}, nil
 			},
 		},
 		{
 			name: "bad ModifiedCount: 66",
-			UpdateOneFunc: func(ctx context.Context, filter, update interface{}, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error) {
+			UpdateOneFunc: func(ctx context.Context, filter, update any, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error) {
 				return &mongo.UpdateResult{ModifiedCount: 2}, nil
 			},
 		},
 		{
 			name:           "happy path",
 			hashedPassword: "t0p_S3cr3t!",
-			UpdateOneFunc: func(ctx context.Context, filter, update interface{}, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error) {
+			UpdateOneFunc: func(ctx context.Context, filter, update any, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error) {
 				wantFilter := bson.D(bson.E(usernameField, adminUsername))
 				gotFilter := filter
 				wantUpdate := bson.D(bson.E("$set", bson.D(bson.E(passwordField, "t0p_S3cr3t!"))))

@@ -16,7 +16,7 @@ func ObjectIDFromString(id string) (primitive.ObjectID, error) {
 	return objID, nil
 }
 
-func ToObjectID(id interface{}) (primitive.ObjectID, error) {
+func ToObjectID(id any) (primitive.ObjectID, error) {
 	objID, ok := id.(primitive.ObjectID)
 	if !ok {
 		return primitive.NilObjectID, fmt.Errorf("%v (%T) is not a valid ObjectID", id, id)

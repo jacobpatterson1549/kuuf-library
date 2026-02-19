@@ -102,8 +102,8 @@ func TestBookIteratorHasNext(t *testing.T) {
 			iter: bookIterator{
 				database: mockDatabase{
 					readBookHeadersFunc: func(f book.Filter, limit, offset int) ([]book.Header, error) {
-						wantArgs := []interface{}{book.Filter{}, 4, 6}
-						gotArgs := []interface{}{f, limit, offset}
+						wantArgs := []any{book.Filter{}, 4, 6}
+						gotArgs := []any{f, limit, offset}
 						if !reflect.DeepEqual(wantArgs, gotArgs) {
 							t.Errorf("arguments not equal: \n wanted: %#v \n got:    %#v", wantArgs, gotArgs)
 						}
@@ -346,8 +346,8 @@ func TestReadBookSubjects(t *testing.T) {
 	wantOffset := 2
 	wantSubjects := []book.Subject{{}}
 	f := func(ctx context.Context, limit, offset int) ([]book.Subject, error) {
-		wantArgs := []interface{}{wantCtx, wantLimit, wantOffset}
-		gotArgs := []interface{}{ctx, limit, offset}
+		wantArgs := []any{wantCtx, wantLimit, wantOffset}
+		gotArgs := []any{ctx, limit, offset}
 		if !reflect.DeepEqual(wantArgs, gotArgs) {
 			t.Errorf("arguments not equal: \n wanted: %#v \n got:    %#v", wantArgs, gotArgs)
 		}
@@ -357,8 +357,8 @@ func TestReadBookSubjects(t *testing.T) {
 		ReadBookSubjectsFunc: f,
 	}
 	got, err := d.ReadBookSubjects(wantCtx, wantLimit, wantOffset)
-	wantResult := []interface{}{wantSubjects, nil}
-	gotResult := []interface{}{got, err}
+	wantResult := []any{wantSubjects, nil}
+	gotResult := []any{got, err}
 	if !reflect.DeepEqual(wantResult, gotResult) {
 		t.Errorf("results not equal: \n wanted: %#v \n got:    %#v", wantResult, gotResult)
 	}
@@ -371,8 +371,8 @@ func TestDatabaseReadBookHeaders(t *testing.T) {
 	wantOffset := 22
 	wantHeaders := []book.Header{{}, {}}
 	f := func(ctx context.Context, filter book.Filter, limit, offset int) ([]book.Header, error) {
-		wantArgs := []interface{}{wantCtx, wantFilter, wantLimit, wantOffset}
-		gotArgs := []interface{}{ctx, filter, limit, offset}
+		wantArgs := []any{wantCtx, wantFilter, wantLimit, wantOffset}
+		gotArgs := []any{ctx, filter, limit, offset}
 		if !reflect.DeepEqual(wantArgs, gotArgs) {
 			t.Errorf("arguments not equal: \n wanted: %#v \n got:    %#v", wantArgs, gotArgs)
 		}
@@ -382,8 +382,8 @@ func TestDatabaseReadBookHeaders(t *testing.T) {
 		ReadBookHeadersFunc: f,
 	}
 	got, err := d.ReadBookHeaders(wantCtx, wantFilter, wantLimit, wantOffset)
-	wantResult := []interface{}{wantHeaders, nil}
-	gotResult := []interface{}{got, err}
+	wantResult := []any{wantHeaders, nil}
+	gotResult := []any{got, err}
 	if !reflect.DeepEqual(wantResult, gotResult) {
 		t.Errorf("results not equal: \n wanted: %#v \n got:    %#v", wantResult, gotResult)
 	}
@@ -394,8 +394,8 @@ func TestDatabaseReadBook(t *testing.T) {
 	wantID := "3"
 	wantBook := new(book.Book)
 	f := func(ctx context.Context, id string) (*book.Book, error) {
-		wantArgs := []interface{}{wantCtx, wantID}
-		gotArgs := []interface{}{ctx, id}
+		wantArgs := []any{wantCtx, wantID}
+		gotArgs := []any{ctx, id}
 		if !reflect.DeepEqual(wantArgs, gotArgs) {
 			t.Errorf("arguments not equal: \n wanted: %#v \n got:    %#v", wantArgs, gotArgs)
 		}
@@ -405,8 +405,8 @@ func TestDatabaseReadBook(t *testing.T) {
 		ReadBookFunc: f,
 	}
 	got, err := d.ReadBook(wantCtx, wantID)
-	wantResult := []interface{}{wantBook, nil}
-	gotResult := []interface{}{got, err}
+	wantResult := []any{wantBook, nil}
+	gotResult := []any{got, err}
 	if !reflect.DeepEqual(wantResult, gotResult) {
 		t.Errorf("results not equal: \n wanted: %#v \n got:    %#v", wantResult, gotResult)
 	}

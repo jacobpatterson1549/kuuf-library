@@ -232,7 +232,7 @@ func bookFrom(ctx context.Context, w http.ResponseWriter, r *http.Request) (*boo
 	return b, nil
 }
 
-func loadPage[V interface{}](w http.ResponseWriter, r *http.Request, maxRows int, sliceName string, pageLoader func(cxt context.Context, limit, offset int) ([]V, error)) (data map[string]interface{}, ok bool) {
+func loadPage[V any](w http.ResponseWriter, r *http.Request, maxRows int, sliceName string, pageLoader func(cxt context.Context, limit, offset int) ([]V, error)) (data map[string]any, ok bool) {
 	var a string
 	if !parseFormValue(w, r, "page", &a, 32) {
 		return nil, false
@@ -256,7 +256,7 @@ func loadPage[V interface{}](w http.ResponseWriter, r *http.Request, maxRows int
 		httpInternalServerError(w, err)
 		return nil, false
 	}
-	data = make(map[string]interface{})
+	data = make(map[string]any)
 	if len(slice) > maxRows {
 		slice = slice[:maxRows]
 		data["NextPage"] = page + 1

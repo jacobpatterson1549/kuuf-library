@@ -21,7 +21,7 @@ type (
 	}
 	query struct {
 		cmd                string
-		args               []interface{}
+		args               []any
 		wantedRowsAffected []int64
 	}
 )
@@ -94,7 +94,7 @@ func (d *Database) CreateBooks(ctx context.Context, books ...book.Book) ([]book.
 		b.ID = book.NewID()
 		queries[i].cmd = "INSERT INTO books (id, title, author, subject, description, dewey_dec_class, pages, publisher, publish_date, added_date, ean_isbn13, upc_isbn10, image_base64)" +
 			" VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)"
-		queries[i].args = []interface{}{b.ID, b.Title, b.Author, b.Subject, b.Description, b.DeweyDecClass, b.Pages, b.Publisher, b.PublishDate, b.AddedDate, b.EanIsbn13, b.UpcIsbn10, b.ImageBase64}
+		queries[i].args = []any{b.ID, b.Title, b.Author, b.Subject, b.Description, b.DeweyDecClass, b.Pages, b.Publisher, b.PublishDate, b.AddedDate, b.EanIsbn13, b.UpcIsbn10, b.ImageBase64}
 		queries[i].wantedRowsAffected = []int64{1}
 		created[i] = b
 	}
@@ -113,17 +113,17 @@ func (d *Database) ReadBookSubjects(ctx context.Context, limit, offset int) ([]b
 		" OFFSET $2"
 	q := query{
 		cmd:  cmd,
-		args: []interface{}{limit, offset},
+		args: []any{limit, offset},
 	}
 	subjects := make([]book.Subject, limit)
 	n := 0
-	dest := func() []interface{} {
+	dest := func() []any {
 		if n >= limit {
 			return nil
 		}
 		s := &subjects[n]
 		n++
-		return []interface{}{&s.Name, &s.Count}
+		return []any{&s.Name, &s.Count}
 	}
 	if err := d.query(ctx, q, dest); err != nil {
 		return nil, fmt.Errorf("reading book subjects: %w", err)
@@ -148,17 +148,17 @@ func (d *Database) ReadBookHeaders(ctx context.Context, filter book.Filter, limi
 		" OFFSET $6"
 	q := query{
 		cmd:  cmd,
-		args: []interface{}{!hasSubject, filter.Subject, !hasHeaderPart, likeHeaderPart, limit, offset},
+		args: []any{!hasSubject, filter.Subject, !hasHeaderPart, likeHeaderPart, limit, offset},
 	}
 	headers := make([]book.Header, limit)
 	n := 0
-	dest := func() []interface{} {
+	dest := func() []any {
 		if n >= limit {
 			return nil
 		}
 		h := &headers[n]
 		n++
-		return []interface{}{&h.ID, &h.Title, &h.Author, &h.Subject}
+		return []any{&h.ID, &h.Title, &h.Author, &h.Subject}
 	}
 	if err := d.query(ctx, q, dest); err != nil {
 		return nil, fmt.Errorf("reading book headers: %w", err)
@@ -173,10 +173,10 @@ func (d *Database) ReadBook(ctx context.Context, id string) (*book.Book, error) 
 		" WHERE id = $1"
 	q := query{
 		cmd:  cmd,
-		args: []interface{}{id},
+		args: []any{id},
 	}
 	var b book.Book
-	dest := []interface{}{&b.ID, &b.Title, &b.Author, &b.Subject, &b.Description, &b.DeweyDecClass, &b.Pages, &b.Publisher, &b.PublishDate, &b.AddedDate, &b.EanIsbn13, &b.UpcIsbn10, &b.ImageBase64}
+	dest := []any{&b.ID, &b.Title, &b.Author, &b.Subject, &b.Description, &b.DeweyDecClass, &b.Pages, &b.Publisher, &b.PublishDate, &b.AddedDate, &b.EanIsbn13, &b.UpcIsbn10, &b.ImageBase64}
 	if err := d.queryRow(ctx, q, dest...); err != nil {
 		return nil, fmt.Errorf("reading book: %w", err)
 	}
@@ -186,7 +186,7 @@ func (d *Database) ReadBook(ctx context.Context, id string) (*book.Book, error) 
 func (d *Database) UpdateBook(ctx context.Context, b book.Book, updateImage bool) error {
 	cmd := "UPDATE books" +
 		" SET title = $1, author = $2, subject = $3, description = $4, dewey_dec_class = $5, pages = $6, publisher = $7, publish_date = $8, added_date = $9, ean_isbn13 = $10, upc_isbn10 = $11"
-	args := []interface{}{b.Title, b.Author, b.Subject, b.Description, b.DeweyDecClass, b.Pages, b.Publisher, b.PublishDate, b.AddedDate, b.EanIsbn13, b.UpcIsbn10}
+	args := []any{b.Title, b.Author, b.Subject, b.Description, b.DeweyDecClass, b.Pages, b.Publisher, b.PublishDate, b.AddedDate, b.EanIsbn13, b.UpcIsbn10}
 	if updateImage {
 		cmd += ", image_base64 = $12 WHERE id = $13"
 		args = append(args, b.ImageBase64, b.ID)
@@ -209,7 +209,7 @@ func (d *Database) DeleteBook(ctx context.Context, id string) error {
 	cmd := "DELETE FROM books WHERE id = $1"
 	q := query{
 		cmd:                cmd,
-		args:               []interface{}{id},
+		args:               []any{id},
 		wantedRowsAffected: []int64{1},
 	}
 	if err := d.execTx(ctx, q); err != nil {
@@ -222,7 +222,7 @@ func (d *Database) ReadAdminPassword(ctx context.Context) (hashedPassword []byte
 	cmd := "SELECT password FROM users WHERE username = $1"
 	q := query{
 		cmd:  cmd,
-		args: []interface{}{"admin"},
+		args: []any{"admin"},
 	}
 	if err := d.queryRow(ctx, q, &hashedPassword); err != nil {
 		return nil, fmt.Errorf("reading admin password: %w", err)
@@ -234,7 +234,7 @@ func (d *Database) UpdateAdminPassword(ctx context.Context, hashedPassword strin
 	cmd := "UPDATE users SET password = $1 WHERE username = $2"
 	q := query{
 		cmd:                cmd,
-		args:               []interface{}{hashedPassword, "admin"},
+		args:               []any{hashedPassword, "admin"},
 		wantedRowsAffected: []int64{1},
 	}
 	if err := d.execTx(ctx, q); err != nil {
