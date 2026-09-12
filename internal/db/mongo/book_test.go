@@ -30,12 +30,10 @@ func TestMBook(t *testing.T) {
 		ImageBase64:   "13",
 	}
 	b := book.Book{
-		Header: book.Header{
-			ID:      "1",
-			Title:   "2",
-			Author:  "3",
-			Subject: "4",
-		},
+		ID:            "1",
+		Title:         "2",
+		Author:        "3",
+		Subject:       "4",
 		Description:   "5",
 		DeweyDecClass: "6",
 		Pages:         7,

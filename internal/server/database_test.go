@@ -292,15 +292,15 @@ func TestBookIteratorAllBooks(t *testing.T) {
 						return nil, fmt.Errorf("unwanted limit and offset: %v and %v", limit, offset)
 					},
 					readBookFunc: func(id string) (*book.Book, error) {
-						return &book.Book{Header: book.Header{ID: id}}, nil
+						return &book.Book{ID: id}, nil
 					},
 				},
 			},
 			wantOk: true,
 			want: []book.Book{
-				{Header: book.Header{ID: "id-b"}},
-				{Header: book.Header{ID: "id-a"}},
-				{Header: book.Header{ID: "id-c"}},
+				{ID: "id-b"},
+				{ID: "id-a"},
+				{ID: "id-c"},
 			},
 		},
 	}

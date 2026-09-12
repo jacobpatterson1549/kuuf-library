@@ -120,7 +120,7 @@ func TestCreateBooks(t *testing.T) {
 			),
 			books: []book.Book{
 				{
-					Header:      book.Header{ID: "", Title: "t1", Author: "a1", Subject: "s1"},
+					ID: "", Title: "t1", Author: "a1", Subject: "s1",
 					Description: "d1", DeweyDecClass: "ddc1", Pages: 2, Publisher: "p1",
 					PublishDate: d1, AddedDate: d2, EanIsbn13: "ean", UpcIsbn10: "upc",
 					ImageBase64: "?",
@@ -144,7 +144,7 @@ func TestCreateBooks(t *testing.T) {
 			),
 			books: []book.Book{
 				{Pages: 14},
-				{Header: book.Header{Title: "Title2"}},
+				{Title: "Title2"},
 			},
 			wantOk: true,
 		},
@@ -377,7 +377,7 @@ func TestReadBook(t *testing.T) {
 			),
 			wantOk: true,
 			want: &book.Book{
-				Header:      book.Header{ID: "id0", Title: "t2", Author: "a3", Subject: "s4"},
+				ID: "id0", Title: "t2", Author: "a3", Subject: "s4",
 				Description: "d5", DeweyDecClass: "ddc6", Pages: 7, Publisher: "p8",
 				PublishDate: d0, AddedDate: d1, EanIsbn13: "EAN", UpcIsbn10: "UPC", ImageBase64: "IMG",
 			},

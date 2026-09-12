@@ -58,7 +58,7 @@ func objectIDHelper(t *testing.T, id string) any {
 
 func TestCreateBooks(t *testing.T) {
 	b1 := book.Book{
-		Header:      book.Header{Title: "2", Author: "3", Subject: "4"},
+		Title: "2", Author: "3", Subject: "4",
 		Description: "5", DeweyDecClass: "6", Pages: 7, Publisher: "8",
 		PublishDate: time.Date(2000, 2, 29, 0, 0, 0, 0, time.UTC),
 		AddedDate:   time.Date(2022, 11, 16, 0, 0, 0, 0, time.UTC),
@@ -353,7 +353,7 @@ func TestReadBookHeaders(t *testing.T) {
 
 func TestReadBook(t *testing.T) {
 	b := book.Book{
-		Header:      book.Header{ID: "1", Title: "2", Author: "3", Subject: "4"},
+		ID: "1", Title: "2", Author: "3", Subject: "4",
 		Description: "5", DeweyDecClass: "6", Pages: 7, Publisher: "8",
 		PublishDate: time.Date(2000, 2, 29, 0, 0, 0, 0, time.UTC),
 		AddedDate:   time.Date(2022, 11, 16, 0, 0, 0, 0, time.UTC),
@@ -443,7 +443,7 @@ func TestUpdateBook(t *testing.T) {
 		}
 	}
 	b := book.Book{
-		Header:      book.Header{ID: okID1, Title: "2", Author: "3", Subject: "4"},
+		ID: okID1, Title: "2", Author: "3", Subject: "4",
 		Description: "5", DeweyDecClass: "6", Pages: 7, Publisher: "8",
 		PublishDate: time.Date(2000, 2, 29, 0, 0, 0, 0, time.UTC),
 		AddedDate:   time.Date(2022, 11, 16, 0, 0, 0, 0, time.UTC),

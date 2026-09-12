@@ -52,9 +52,7 @@ func TestGetRequest(t *testing.T) {
 			wantData: []string{`name="title" value="&#34;Wow,&#34; A Memoir" required`},
 			readBook: func(id string) (*book.Book, error) {
 				b := book.Book{
-					Header: book.Header{
-						Title: `"Wow," A Memoir`,
-					},
+					Title: `"Wow," A Memoir`,
 				}
 				return &b, nil
 			},
@@ -89,7 +87,7 @@ func TestGetRequest(t *testing.T) {
 					return nil, fmt.Errorf("unwanted id: %v", id)
 				}
 				b := book.Book{
-					Header:      book.Header{ID: "5618941"},
+					ID:          "5618941",
 					Description: "info397",
 				}
 				return &b, nil
@@ -128,12 +126,10 @@ func TestGetRequest(t *testing.T) {
 					return nil, fmt.Errorf("unwanted id: %q", id)
 				}
 				b := book.Book{
-					Header: book.Header{
-						ID:      "id7",
-						Title:   "title8",
-						Author:  "a",
-						Subject: "s",
-					},
+					ID:            "id7",
+					Title:         "title8",
+					Author:        "a",
+					Subject:       "s",
 					DeweyDecClass: "ddc",
 					Pages:         18,
 					Publisher:     "pub",
@@ -312,11 +308,9 @@ func TestPostRequest(t *testing.T) {
 			},
 			createBooks: func(books ...book.Book) ([]book.Book, error) {
 				want := book.Book{
-					Header: book.Header{
-						Title:   "t",
-						Author:  "a",
-						Subject: "s",
-					},
+					Title:     "t",
+					Author:    "a",
+					Subject:   "s",
 					Pages:     1,
 					AddedDate: time.Date(2022, 11, 13, 0, 0, 0, 0, time.UTC),
 				}
@@ -326,7 +320,7 @@ func TestPostRequest(t *testing.T) {
 				case want != books[0]:
 					return nil, fmt.Errorf("books not equal: \n wanted: %v \n got:    %v", want, books[0])
 				}
-				return []book.Book{{Header: book.Header{ID: "fg34"}}}, nil
+				return []book.Book{{ID: "fg34"}}, nil
 			},
 			wantCode:     303,
 			wantLocation: "/book?id=fg34",
@@ -373,12 +367,10 @@ func TestPostRequest(t *testing.T) {
 			},
 			updateBook: func(b book.Book, updateImage bool) error {
 				want := book.Book{
-					Header: book.Header{
-						ID:      "keep_me",
-						Title:   "t",
-						Author:  "a",
-						Subject: "s",
-					},
+					ID:        "keep_me",
+					Title:     "t",
+					Author:    "a",
+					Subject:   "s",
 					Pages:     1,
 					AddedDate: time.Date(2022, 11, 13, 0, 0, 0, 0, time.UTC),
 				}
@@ -743,7 +735,7 @@ func TestBookFrom(t *testing.T) {
 		{
 			name:   "minimal",
 			form:   map[string]string{"title": "a", "author": "b", "subject": "c", "added-date": textAD, "pages": "8"},
-			want:   &book.Book{Header: book.Header{Title: "a", Author: "b", Subject: "c"}, AddedDate: dateA, Pages: 8},
+			want:   &book.Book{Title: "a", Author: "b", Subject: "c", AddedDate: dateA, Pages: 8},
 			wantOk: true,
 		},
 		{
@@ -763,12 +755,10 @@ func TestBookFrom(t *testing.T) {
 				"upc-isbn-10":     "i",
 			},
 			want: &book.Book{
-				Header: book.Header{
-					ID:      "d",
-					Title:   "a",
-					Author:  "b",
-					Subject: "c",
-				},
+				ID:            "d",
+				Title:         "a",
+				Author:        "b",
+				Subject:       "c",
 				Description:   "e",
 				DeweyDecClass: "f",
 				Publisher:     "g",
