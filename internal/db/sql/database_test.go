@@ -242,7 +242,7 @@ func TestReadBookSubjects(t *testing.T) {
 			case err != nil:
 				t.Errorf("unwanted error: %v", err)
 			case !reflect.DeepEqual(test.want, got):
-				t.Errorf("books not equal: \n wanted: %q \n got:    %q", test.want, got)
+				t.Errorf("books not equal: \n wanted: %v \n got:    %v", test.want, got)
 			}
 		})
 	}
@@ -396,7 +396,7 @@ func TestReadBook(t *testing.T) {
 			case err != nil:
 				t.Errorf("unwanted error: %v", err)
 			case !reflect.DeepEqual(test.want, got):
-				t.Errorf("books not equal: \n wanted: %q \n got:    %q", test.want, got)
+				t.Errorf("books not equal: \n wanted: %v \n got:    %v", test.want, got)
 			}
 		})
 	}
