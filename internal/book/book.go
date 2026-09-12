@@ -120,12 +120,10 @@ func (f Filter) Matches(b Book) bool {
 
 func (sb StringBook) Book(dateLayout DateLayout) (*Book, error) {
 	b := Book{
-		Header: Header{
-			ID:      sb.ID,
-			Title:   sb.Title,
-			Author:  sb.Author,
-			Subject: sb.Subject,
-		},
+		ID:            sb.ID,
+		Title:         sb.Title,
+		Author:        sb.Author,
+		Subject:       sb.Subject,
 		Description:   sb.Description,
 		DeweyDecClass: sb.DeweyDecClass,
 		Publisher:     sb.Publisher,

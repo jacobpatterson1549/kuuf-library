@@ -20,7 +20,7 @@ func (f Filter) From(filter book.Filter) []bson.E {
 	}
 	if len(filter.HeaderPart) != 0 {
 		regex := primitive.MatchIgnoreCaseRegex(filter.HeaderPart)
-		headerFilters := make([]interface{}, len(f.HeaderKeys))
+		headerFilters := make([]any, len(f.HeaderKeys))
 		for i, k := range f.HeaderKeys {
 			headerFilters[i] = D(E(k, regex))
 		}
@@ -37,12 +37,12 @@ func D(e ...bson.E) bson.D {
 	return bson.D(e)
 }
 
-func E(key string, value interface{}) bson.E {
+func E(key string, value any) bson.E {
 	return bson.E{
 		Key:   key,
 		Value: value,
 	}
 }
-func A(d ...interface{}) bson.A {
+func A(d ...any) bson.A {
 	return bson.A(d)
 }

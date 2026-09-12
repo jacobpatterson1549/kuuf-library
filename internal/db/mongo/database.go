@@ -19,12 +19,12 @@ type (
 		usersCollection mCollection
 	}
 	mCollection interface {
-		InsertMany(ctx context.Context, documents []interface{}, opts ...*options.InsertManyOptions) (*mongo.InsertManyResult, error)
-		Aggregate(ctx context.Context, pipeline interface{}, opts ...*options.AggregateOptions) (*mongo.Cursor, error)
-		Find(ctx context.Context, filter interface{}, opts ...*options.FindOptions) (cur *mongo.Cursor, err error)
-		FindOne(ctx context.Context, filter interface{}, opts ...*options.FindOneOptions) *mongo.SingleResult
-		UpdateOne(ctx context.Context, filter, update interface{}, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error)
-		DeleteOne(ctx context.Context, filter interface{}, opts ...*options.DeleteOptions) (*mongo.DeleteResult, error)
+		InsertMany(ctx context.Context, documents []any, opts ...*options.InsertManyOptions) (*mongo.InsertManyResult, error)
+		Aggregate(ctx context.Context, pipeline any, opts ...*options.AggregateOptions) (*mongo.Cursor, error)
+		Find(ctx context.Context, filter any, opts ...*options.FindOptions) (cur *mongo.Cursor, err error)
+		FindOne(ctx context.Context, filter any, opts ...*options.FindOneOptions) *mongo.SingleResult
+		UpdateOne(ctx context.Context, filter, update any, opts ...*options.UpdateOptions) (*mongo.UpdateResult, error)
+		DeleteOne(ctx context.Context, filter any, opts ...*options.DeleteOptions) (*mongo.DeleteResult, error)
 	}
 	mBook struct {
 		Header        mHeader   `bson:",inline"`
@@ -100,7 +100,7 @@ func (d *Database) CreateBooks(ctx context.Context, books ...book.Book) ([]book.
 	if len(books) == 0 {
 		return nil, nil
 	}
-	docs := make([]interface{}, len(books))
+	docs := make([]any, len(books))
 	for i, b := range books {
 		b.ID = "" // request a new id
 		docs[i] = mongoBook(b)
@@ -279,7 +279,7 @@ func (d *Database) UpdateAdminPassword(ctx context.Context, hashedPassword strin
 	return d.expectSingleModify(result.ModifiedCount)
 }
 
-func (*Database) idFilter(id string) (interface{}, error) {
+func (*Database) idFilter(id string) (any, error) {
 	objID, err := primitive.ObjectIDFromString(id)
 	if err != nil {
 		return nil, err

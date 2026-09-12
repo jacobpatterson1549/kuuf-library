@@ -19,12 +19,12 @@ func init() {
 func TestNewQuery(t *testing.T) {
 	got := Query{
 		Name:         "abc",
-		Args:         []interface{}{1, "Bear", 3.14},
+		Args:         []any{1, "Bear", 3.14},
 		RowsAffected: 8,
 	}
 	want := Query{
 		Name: "abc",
-		Args: []interface{}{
+		Args: []any{
 			1,
 			"Bear",
 			3.14,
@@ -39,7 +39,7 @@ func TestNewQuery(t *testing.T) {
 func TestQueryCheckEquals(t *testing.T) {
 	want := Query{
 		Name:         "Hello, World!",
-		Args:         []interface{}{1, "two", 3.14, AnyArg},
+		Args:         []any{1, "two", 3.14, AnyArg},
 		RowsAffected: 55, // should not be checked
 	}
 	if err := want.checkEquals("Hello, World!", 1, "two", 3.14, 42); err != nil {
@@ -50,12 +50,12 @@ func TestQueryCheckEquals(t *testing.T) {
 func TestDriverValue(t *testing.T) {
 	q := Query{
 		Name:         "xyz",
-		Args:         []interface{}{9, ":)", false},
+		Args:         []any{9, ":)", false},
 		RowsAffected: 7,
 	}
 	want := Query{
 		Name:         "xyz",
-		Args:         []interface{}{int64(9), ":)", false},
+		Args:         []any{int64(9), ":)", false},
 		RowsAffected: 7,
 	}
 	got := q.driverValue()
@@ -74,8 +74,8 @@ func TestQueryConn(t *testing.T) {
 		queryConn Conn
 		wantQuery Query
 		wantOk    bool
-		want      [][]interface{}
-		got       [][]interface{} // should be initialized with zero values of desired types
+		want      [][]any
+		got       [][]any // should be initialized with zero values of desired types
 	}{
 		{
 			name:      "queries not equal",
@@ -84,27 +84,27 @@ func TestQueryConn(t *testing.T) {
 		},
 		{
 			name:      "args not equal",
-			queryConn: NewQueryConn(Query{Name: "A", Args: []interface{}{"C", "D"}}, nil),
-			wantQuery: Query{Name: "A", Args: []interface{}{"C", "E"}},
+			queryConn: NewQueryConn(Query{Name: "A", Args: []any{"C", "D"}}, nil),
+			wantQuery: Query{Name: "A", Args: []any{"C", "E"}},
 		},
 		{
 			name: "happy path",
 			queryConn: NewQueryConn(
-				Query{Name: "SELECT 'mock query', $1;", Args: []interface{}{42}},
-				[][]interface{}{{"mock query", 42}},
+				Query{Name: "SELECT 'mock query', $1;", Args: []any{42}},
+				[][]any{{"mock query", 42}},
 			),
-			wantQuery: Query{Name: "SELECT 'mock query', $1;", Args: []interface{}{42}},
+			wantQuery: Query{Name: "SELECT 'mock query', $1;", Args: []any{42}},
 			wantOk:    true,
-			want:      [][]interface{}{{"mock query", 42}},
-			got:       [][]interface{}{{"", 0}},
+			want:      [][]any{{"mock query", 42}},
+			got:       [][]any{{"", 0}},
 		},
 		{
 			name:      "happy path: no results",
-			queryConn: NewQueryConn(Query{Name: "SELECT 1 WHERE 2 = 3;"}, [][]interface{}{}),
+			queryConn: NewQueryConn(Query{Name: "SELECT 1 WHERE 2 = 3;"}, [][]any{}),
 			wantQuery: Query{Name: "SELECT 1 WHERE 2 = 3;"},
 			wantOk:    true,
-			want:      [][]interface{}{},
-			got:       [][]interface{}{},
+			want:      [][]any{},
+			got:       [][]any{},
 		},
 	}
 	for _, test := range tests {
@@ -128,7 +128,7 @@ func TestQueryConn(t *testing.T) {
 				defer rows.Close()
 				var index int
 				for rows.Next() {
-					dest := make([]interface{}, len(test.got[index]))
+					dest := make([]any, len(test.got[index]))
 					for i := range dest {
 						dest[i] = &test.got[index][i]
 					}
@@ -203,24 +203,24 @@ func TestTransactionConn(t *testing.T) {
 			txConn: NewTransactionConn(
 				Query{
 					Name:         "c1",
-					Args:         []interface{}{"uno", 0.1},
+					Args:         []any{"uno", 0.1},
 					RowsAffected: 1,
 				},
 				Query{
 					Name:         "c2",
-					Args:         []interface{}{"dos", 0.2},
+					Args:         []any{"dos", 0.2},
 					RowsAffected: 2,
 				},
 			),
 			wantCommands: []Query{
 				{
 					Name:         "c1",
-					Args:         []interface{}{"uno", 0.1},
+					Args:         []any{"uno", 0.1},
 					RowsAffected: 1,
 				},
 				{
 					Name:         "c2",
-					Args:         []interface{}{"dos", 0.2},
+					Args:         []any{"dos", 0.2},
 					RowsAffected: 2,
 				},
 			},
@@ -234,7 +234,7 @@ func TestTransactionConn(t *testing.T) {
 			wantCommands: []Query{
 				{
 					Name:         "c1",
-					Args:         []interface{}{"uno", 0.1},
+					Args:         []any{"uno", 0.1},
 					RowsAffected: 1,
 				},
 			},

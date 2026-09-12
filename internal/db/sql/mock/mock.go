@@ -19,7 +19,7 @@ type (
 	// Query simplifies sending arguments/constraints to custom connections.
 	Query struct {
 		Name         string
-		Args         []interface{}
+		Args         []any
 		RowsAffected int64
 	}
 	// Conn implements the sql/driver.Conn interface.
@@ -55,7 +55,7 @@ var (
 	// AnyArg represents an argument whose value might be dynamic (randomized).
 	AnyArg       = &struct{ name string }{"any argument"}
 	anyQueryName = "magic_value"
-	anyQueryArgs = []interface{}{"should+match+any+query+1549"}
+	anyQueryArgs = []any{"should+match+any+query+1549"}
 )
 
 func (m *Driver) Open(name string) (driver.Conn, error) {
@@ -97,7 +97,7 @@ func (q Query) checkEquals(query string, args ...driver.Value) error {
 func (q Query) driverValue() Query {
 	q2 := q
 	args1 := q.Args
-	q2.Args = make([]interface{}, len(args1))
+	q2.Args = make([]any, len(args1))
 	copy(q2.Args, args1)
 	for i, a := range q2.Args {
 		switch a := a.(type) {
@@ -108,7 +108,7 @@ func (q Query) driverValue() Query {
 	return q2
 }
 
-func NewQueryConn(query Query, results [][]interface{}) Conn {
+func NewQueryConn(query Query, results [][]any) Conn {
 	want := query.driverValue()
 	return Conn{
 		PrepareFunc: func(query string) (driver.Stmt, error) {

@@ -35,7 +35,7 @@ func TestE(t *testing.T) {
 	tests := []struct {
 		name  string
 		key   string
-		value interface{}
+		value any
 		want  bson.E
 	}{
 		{"string", "k1", "1", bson.E{Key: "k1", Value: "1"}},
@@ -54,13 +54,13 @@ func TestE(t *testing.T) {
 func TestA(t *testing.T) {
 	tests := []struct {
 		name string
-		vals []interface{}
+		vals []any
 		want bson.A
 	}{
 		{"nil", nil, nil},
-		{"empty", []interface{}{}, bson.A{}},
-		{"single", []interface{}{1}, bson.A{1}},
-		{"multiple", []interface{}{"...", bson.D{{Key: "k1", Value: 1}, {Key: "k2", Value: 2}}, 4}, bson.A{"...", bson.D{{Key: "k1", Value: 1}, {Key: "k2", Value: 2}}, 4}},
+		{"empty", []any{}, bson.A{}},
+		{"single", []any{1}, bson.A{1}},
+		{"multiple", []any{"...", bson.D{{Key: "k1", Value: 1}, {Key: "k2", Value: 2}}, 4}, bson.A{"...", bson.D{{Key: "k1", Value: 1}, {Key: "k2", Value: 2}}, 4}},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

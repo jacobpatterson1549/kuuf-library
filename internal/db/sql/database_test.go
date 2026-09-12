@@ -114,13 +114,13 @@ func TestCreateBooks(t *testing.T) {
 			conn: mock.NewTransactionConn(
 				mock.Query{
 					Name:         wantInsert,
-					Args:         []interface{}{mock.AnyArg, "t1", "a1", "s1", "d1", "ddc1", 2, "p1", d1, d2, "ean", "upc", "?"},
+					Args:         []any{mock.AnyArg, "t1", "a1", "s1", "d1", "ddc1", 2, "p1", d1, d2, "ean", "upc", "?"},
 					RowsAffected: 1,
 				},
 			),
 			books: []book.Book{
 				{
-					Header:      book.Header{ID: "", Title: "t1", Author: "a1", Subject: "s1"},
+					ID: "", Title: "t1", Author: "a1", Subject: "s1",
 					Description: "d1", DeweyDecClass: "ddc1", Pages: 2, Publisher: "p1",
 					PublishDate: d1, AddedDate: d2, EanIsbn13: "ean", UpcIsbn10: "upc",
 					ImageBase64: "?",
@@ -133,18 +133,18 @@ func TestCreateBooks(t *testing.T) {
 			conn: mock.NewTransactionConn(
 				mock.Query{
 					Name:         wantInsert,
-					Args:         []interface{}{mock.AnyArg, "", "", "", "", "", 14, "", time.Time{}, time.Time{}, "", "", ""},
+					Args:         []any{mock.AnyArg, "", "", "", "", "", 14, "", time.Time{}, time.Time{}, "", "", ""},
 					RowsAffected: 1,
 				},
 				mock.Query{
 					Name:         wantInsert,
-					Args:         []interface{}{mock.AnyArg, "Title2", "", "", "", "", 0, "", time.Time{}, time.Time{}, "", "", ""},
+					Args:         []any{mock.AnyArg, "Title2", "", "", "", "", 0, "", time.Time{}, time.Time{}, "", "", ""},
 					RowsAffected: 1,
 				},
 			),
 			books: []book.Book{
 				{Pages: 14},
-				{Header: book.Header{Title: "Title2"}},
+				{Title: "Title2"},
 			},
 			wantOk: true,
 		},
@@ -202,9 +202,9 @@ func TestReadBookSubjects(t *testing.T) {
 			conn: mock.NewQueryConn(
 				mock.Query{
 					Name: wantQuery,
-					Args: []interface{}{0, 0},
+					Args: []any{0, 0},
 				},
-				[][]interface{}{
+				[][]any{
 					{"elephants", 8},
 				}),
 		},
@@ -215,9 +215,9 @@ func TestReadBookSubjects(t *testing.T) {
 			conn: mock.NewQueryConn(
 				mock.Query{
 					Name: wantQuery,
-					Args: []interface{}{2, 3},
+					Args: []any{2, 3},
 				},
-				[][]interface{}{
+				[][]any{
 					{"elephants", 8},
 					{"lizards", 7},
 				}),
@@ -242,7 +242,7 @@ func TestReadBookSubjects(t *testing.T) {
 			case err != nil:
 				t.Errorf("unwanted error: %v", err)
 			case !reflect.DeepEqual(test.want, got):
-				t.Errorf("books not equal: \n wanted: %q \n got:    %q", test.want, got)
+				t.Errorf("books not equal: \n wanted: %v \n got:    %v", test.want, got)
 			}
 		})
 	}
@@ -273,9 +273,9 @@ func TestReadBookHeaders(t *testing.T) {
 			conn: mock.NewQueryConn(
 				mock.Query{
 					Name: wantQuery,
-					Args: []interface{}{true, "", true, "%%", 1, 0},
+					Args: []any{true, "", true, "%%", 1, 0},
 				},
-				[][]interface{}{
+				[][]any{
 					{"x1", "cats", "a3", "SBJ"},
 					{"a0", "cats", "b2", "SBJ"},
 				}),
@@ -286,9 +286,9 @@ func TestReadBookHeaders(t *testing.T) {
 			conn: mock.NewQueryConn(
 				mock.Query{
 					Name: wantQuery,
-					Args: []interface{}{true, "", true, "%%", 0, 0},
+					Args: []any{true, "", true, "%%", 0, 0},
 				},
-				[][]interface{}{}),
+				[][]any{}),
 			wantOk: true,
 			want:   []book.Header{},
 		},
@@ -300,9 +300,9 @@ func TestReadBookHeaders(t *testing.T) {
 			conn: mock.NewQueryConn(
 				mock.Query{
 					Name: wantQuery,
-					Args: []interface{}{false, "SBJ", false, "%cat%", 5, 100},
+					Args: []any{false, "SBJ", false, "%cat%", 5, 100},
 				},
-				[][]interface{}{
+				[][]any{
 					{"x1", "cats", "a3", "SBJ"},
 					{"a0", "cats", "b2", "SBJ"},
 				}),
@@ -358,9 +358,9 @@ func TestReadBook(t *testing.T) {
 			conn: mock.NewQueryConn(
 				mock.Query{
 					Name: wantSelect,
-					Args: []interface{}{"b52"},
+					Args: []any{"b52"},
 				},
-				[][]interface{}{},
+				[][]any{},
 			),
 		},
 		{
@@ -369,15 +369,15 @@ func TestReadBook(t *testing.T) {
 			conn: mock.NewQueryConn(
 				mock.Query{
 					Name: wantSelect,
-					Args: []interface{}{"b52"},
+					Args: []any{"b52"},
 				},
-				[][]interface{}{
+				[][]any{
 					{"id0", "t2", "a3", "s4", "d5", "ddc6", 7, "p8", d0, d1, "EAN", "UPC", "IMG"},
 				},
 			),
 			wantOk: true,
 			want: &book.Book{
-				Header:      book.Header{ID: "id0", Title: "t2", Author: "a3", Subject: "s4"},
+				ID: "id0", Title: "t2", Author: "a3", Subject: "s4",
 				Description: "d5", DeweyDecClass: "ddc6", Pages: 7, Publisher: "p8",
 				PublishDate: d0, AddedDate: d1, EanIsbn13: "EAN", UpcIsbn10: "UPC", ImageBase64: "IMG",
 			},
@@ -396,7 +396,7 @@ func TestReadBook(t *testing.T) {
 			case err != nil:
 				t.Errorf("unwanted error: %v", err)
 			case !reflect.DeepEqual(test.want, got):
-				t.Errorf("books not equal: \n wanted: %q \n got:    %q", test.want, got)
+				t.Errorf("books not equal: \n wanted: %v \n got:    %v", test.want, got)
 			}
 		})
 	}
@@ -434,7 +434,7 @@ func TestUpdateBook(t *testing.T) {
 			conn: mock.NewTransactionConn(
 				mock.Query{
 					Name:         wantUpdateBasic,
-					Args:         []interface{}{"t1", "a1", "s1", "d1", "ddc1", int64(9), "p1", d1, d2, "ean", "upc", "b81"},
+					Args:         []any{"t1", "a1", "s1", "d1", "ddc1", int64(9), "p1", d1, d2, "ean", "upc", "b81"},
 					RowsAffected: 1,
 				},
 			),
@@ -452,7 +452,7 @@ func TestUpdateBook(t *testing.T) {
 			conn: mock.NewTransactionConn(
 				mock.Query{
 					Name:         wantUpdateImage,
-					Args:         []interface{}{"t2", "a2", "s2", "d2", "ddc2", int64(4), "p2", d2, d1, "ean", "upc", "333", "b82"},
+					Args:         []any{"t2", "a2", "s2", "d2", "ddc2", int64(4), "p2", d2, d1, "ean", "upc", "333", "b82"},
 					RowsAffected: 1,
 				},
 			),
@@ -497,7 +497,7 @@ func TestDeleteBook(t *testing.T) {
 			conn: mock.NewTransactionConn(
 				mock.Query{
 					Name:         "DELETE FROM books WHERE id = $1",
-					Args:         []interface{}{"113=zoom"},
+					Args:         []any{"113=zoom"},
 					RowsAffected: 1,
 				},
 			),
@@ -541,9 +541,9 @@ func TestReadAdminPassword(t *testing.T) {
 			conn: mock.NewQueryConn(
 				mock.Query{
 					Name: "SELECT password FROM users WHERE username = $1",
-					Args: []interface{}{"admin"},
+					Args: []any{"admin"},
 				},
-				[][]interface{}{
+				[][]any{
 					{"p3pp3r$"},
 					{"eXtra!"},
 				},
@@ -554,9 +554,9 @@ func TestReadAdminPassword(t *testing.T) {
 			conn: mock.NewQueryConn(
 				mock.Query{
 					Name: "SELECT password FROM users WHERE username = $1",
-					Args: []interface{}{"admin"},
+					Args: []any{"admin"},
 				},
-				[][]interface{}{
+				[][]any{
 					{"p3pp3r$"},
 				},
 			),
@@ -606,7 +606,7 @@ func TestUpdateAdminPassword(t *testing.T) {
 			conn: mock.NewTransactionConn(
 				mock.Query{
 					Name: "UPDATE users SET password = $1 WHERE username = $2",
-					Args: []interface{}{"H4#h", "admin"},
+					Args: []any{"H4#h", "admin"},
 				},
 			),
 		},
@@ -616,7 +616,7 @@ func TestUpdateAdminPassword(t *testing.T) {
 			conn: mock.NewTransactionConn(
 				mock.Query{
 					Name:         "UPDATE users SET password = $1 WHERE username = $2",
-					Args:         []interface{}{"H4#h", "admin"},
+					Args:         []any{"H4#h", "admin"},
 					RowsAffected: 1,
 				},
 			),

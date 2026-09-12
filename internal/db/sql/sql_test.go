@@ -41,7 +41,7 @@ func TestExecOK(t *testing.T) {
 	}
 	c2 := mock.Query{
 		Name:         "UPDATE stuffLog SET recentlyDeleted = true WHERE userID = %1",
-		Args:         []interface{}{"userIDx"},
+		Args:         []any{"userIDx"},
 		RowsAffected: 1,
 	}
 	conn := mock.NewTransactionConn(c1, c2)
@@ -150,14 +150,14 @@ func TestExecTxError(t *testing.T) {
 			conn: mock.NewTransactionConn(
 				mock.Query{
 					Name:         "DELETE FROM users WHERE id = $1",
-					Args:         []interface{}{6},
+					Args:         []any{6},
 					RowsAffected: 66,
 				},
 			),
 			queries: []query{
 				{
 					cmd:                "DELETE FROM users WHERE id = $1",
-					args:               []interface{}{6},
+					args:               []any{6},
 					wantedRowsAffected: []int64{1},
 				},
 			},
@@ -177,7 +177,7 @@ func TestExecTxError(t *testing.T) {
 func TestQueryOK(t *testing.T) {
 	q := query{
 		cmd:  "SELECT fullName FROM users WHERE ID = $1",
-		args: []interface{}{32},
+		args: []any{32},
 	}
 	conn :=
 		mock.NewQueryConn(
@@ -185,7 +185,7 @@ func TestQueryOK(t *testing.T) {
 				Name: q.cmd,
 				Args: q.args,
 			},
-			[][]interface{}{
+			[][]any{
 				{"Fred Flintstone"},
 				{"Barney Rubble"},
 			})
@@ -193,10 +193,10 @@ func TestQueryOK(t *testing.T) {
 
 	var i int
 	got := make([]string, 2)
-	dest := func() []interface{} {
+	dest := func() []any {
 		j := i
 		i++
-		return []interface{}{&got[j]}
+		return []any{&got[j]}
 	}
 	ctx := context.Background()
 	err := d.query(ctx, q, dest)
@@ -257,12 +257,12 @@ func TestQueryError(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			d := dbHelper(t, test.conn)
-			dest := func() []interface{} {
+			dest := func() []any {
 				return nil // expects destination for column1
 			}
 			q := query{
 				cmd:  "any",
-				args: []interface{}{},
+				args: []any{},
 			}
 			ctx := context.Background()
 			if err := d.query(ctx, q, dest); err == nil {
@@ -275,10 +275,10 @@ func TestQueryError(t *testing.T) {
 func TestQueryRowQK(t *testing.T) {
 	wantQuery := mock.Query{
 		Name: "SELECT col1, col2, col3 FROM stuff WHERE id = $1",
-		Args: []interface{}{"arg1"},
+		Args: []any{"arg1"},
 	}
-	wantResult := []interface{}{"arg1", 1, true}
-	conn := mock.NewQueryConn(wantQuery, [][]interface{}{wantResult})
+	wantResult := []any{"arg1", 1, true}
+	conn := mock.NewQueryConn(wantQuery, [][]any{wantResult})
 	d := dbHelper(t, conn)
 	q := query{
 		cmd:  wantQuery.Name,
@@ -291,7 +291,7 @@ func TestQueryRowQK(t *testing.T) {
 	)
 	ctx := context.Background()
 	err := d.queryRow(ctx, q, &gotCol1, &gotCol2, &gotCol3)
-	gotResult := []interface{}{gotCol1, gotCol2, gotCol3}
+	gotResult := []any{gotCol1, gotCol2, gotCol3}
 	switch {
 	case err != nil:
 		t.Errorf("unwanted error: %v", err)
@@ -318,9 +318,9 @@ func TestQueryRowError(t *testing.T) {
 			conn: mock.NewQueryConn(
 				mock.Query{
 					Name: "SELECT fullName FROM users WHERE ID = %1",
-					Args: []interface{}{32},
+					Args: []any{32},
 				},
-				[][]interface{}{
+				[][]any{
 					{"Fred Flintstone"},
 					{"Barney Rubble"},
 				}),
@@ -332,7 +332,7 @@ func TestQueryRowError(t *testing.T) {
 			var fullName string
 			q := query{
 				cmd:  "SELECT fullName FROM users WHERE ID = %1",
-				args: []interface{}{32},
+				args: []any{32},
 			}
 			ctx := context.Background()
 			err := d.queryRow(ctx, q, &fullName)

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"slices"
 )
 
 type db struct {
@@ -26,12 +27,7 @@ func (q query) execute(ctx context.Context, tx *sql.Tx) error {
 }
 
 func (q query) allowsRowsAffected(target int64) bool {
-	for _, v := range q.wantedRowsAffected {
-		if v == target {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(q.wantedRowsAffected, target)
 }
 
 func (d *db) execTx(ctx context.Context, queries ...query) error {
@@ -56,7 +52,7 @@ func (d *db) execTx(ctx context.Context, queries ...query) error {
 	return nil
 }
 
-func (d *db) query(ctx context.Context, q query, dest func() []interface{}) error {
+func (d *db) query(ctx context.Context, q query, dest func() []any) error {
 	rows, err := d.db.QueryContext(ctx, q.cmd, q.args...)
 	if err != nil {
 		return fmt.Errorf("running query: %w", err)
@@ -70,9 +66,9 @@ func (d *db) query(ctx context.Context, q query, dest func() []interface{}) erro
 	return nil
 }
 
-func (d *db) queryRow(ctx context.Context, q query, dest ...interface{}) error {
+func (d *db) queryRow(ctx context.Context, q query, dest ...any) error {
 	n := 0
-	destF := func() []interface{} {
+	destF := func() []any {
 		if n != 0 {
 			return nil
 		}

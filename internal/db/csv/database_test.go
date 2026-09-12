@@ -120,12 +120,12 @@ func TestReadBookHeaders(t *testing.T) {
 
 func TestReadBookSubjects(t *testing.T) {
 	books := []book.Book{
-		{Header: book.Header{Subject: "plants"}},
-		{Header: book.Header{Subject: "animals"}},
-		{Header: book.Header{Subject: "animals"}},
-		{Header: book.Header{Subject: "plants"}},
-		{Header: book.Header{Subject: "animals"}},
-		{Header: book.Header{Subject: "liquids"}},
+		{Subject: "plants"},
+		{Subject: "animals"},
+		{Subject: "animals"},
+		{Subject: "plants"},
+		{Subject: "animals"},
+		{Subject: "liquids"},
 	}
 	tests := []struct {
 		name   string
@@ -172,19 +172,19 @@ func TestReadBook(t *testing.T) {
 			name: "no book with id",
 			id:   "abc",
 			books: []book.Book{
-				{Header: book.Header{ID: "def"}},
+				{ID: "def"},
 			},
 		},
 		{
 			name: "happy path",
 			id:   "def",
 			books: []book.Book{
-				{Header: book.Header{ID: "abc"}},
-				{Header: book.Header{ID: "def"}},
-				{Header: book.Header{ID: "ghi"}},
+				{ID: "abc"},
+				{ID: "def"},
+				{ID: "ghi"},
 			},
 			wantOk: true,
-			want:   &book.Book{Header: book.Header{ID: "def"}},
+			want:   &book.Book{ID: "def"},
 		},
 	}
 	for _, test := range tests {
@@ -224,12 +224,10 @@ func TestBookRecord(t *testing.T) {
 		"13",
 	}
 	b := book.Book{
-		Header: book.Header{
-			ID:      "1",
-			Title:   "2",
-			Author:  "3",
-			Subject: "4",
-		},
+		ID:            "1",
+		Title:         "2",
+		Author:        "3",
+		Subject:       "4",
 		Description:   "5",
 		DeweyDecClass: "6",
 		Pages:         7,
@@ -286,12 +284,10 @@ xyz*34,Thoughts,Anonymous,"Many essays about ""life,"" abridged.",poems,88.79,12
 `,
 	books: []book.Book{
 		{
-			Header: book.Header{
-				ID:      "1",
-				Title:   "2",
-				Author:  "3",
-				Subject: "4",
-			},
+			ID:            "1",
+			Title:         "2",
+			Author:        "3",
+			Subject:       "4",
 			Description:   "5",
 			DeweyDecClass: "6",
 			Pages:         7,
@@ -303,12 +299,10 @@ xyz*34,Thoughts,Anonymous,"Many essays about ""life,"" abridged.",poems,88.79,12
 			ImageBase64:   "13",
 		},
 		{
-			Header: book.Header{
-				ID:      "id1",
-				Title:   "title2",
-				Author:  "author3",
-				Subject: "subject4",
-			},
+			ID:            "id1",
+			Title:         "title2",
+			Author:        "author3",
+			Subject:       "subject4",
 			Description:   "description5",
 			DeweyDecClass: "ddc6",
 			Pages:         32,
@@ -320,12 +314,10 @@ xyz*34,Thoughts,Anonymous,"Many essays about ""life,"" abridged.",poems,88.79,12
 			ImageBase64:   "image13",
 		},
 		{
-			Header: book.Header{
-				ID:      "xyz*34",
-				Title:   "Thoughts",
-				Author:  "Anonymous",
-				Subject: "poems",
-			},
+			ID:            "xyz*34",
+			Title:         "Thoughts",
+			Author:        "Anonymous",
+			Subject:       "poems",
 			Description:   `Many essays about "life," abridged.`,
 			DeweyDecClass: "88.79",
 			Pages:         123,

@@ -24,20 +24,20 @@ func TestBooksSort(t *testing.T) {
 		},
 		{
 			name: "single",
-			s:    Books{{Header: Header{Subject: "s"}}},
-			want: Books{{Header: Header{Subject: "s"}}},
+			s:    Books{{Subject: "s"}},
+			want: Books{{Subject: "s"}},
 		},
 		{
 			name: "by subject, then title",
 			s: Books{
-				{Header: Header{ID: "7", Title: "Zoology", Author: "Boas", Subject: "Animals"}, Pages: 100},
-				{Header: Header{ID: "9", Title: "Secrets", Author: "Everyone", Subject: "Behind others"}, Pages: 5},
-				{Header: Header{ID: "13", Title: "Lemurs", Author: "Anonymous", Subject: "Animals"}, Pages: 400},
+				{ID: "7", Title: "Zoology", Author: "Boas", Subject: "Animals", Pages: 100},
+				{ID: "9", Title: "Secrets", Author: "Everyone", Subject: "Behind others", Pages: 5},
+				{ID: "13", Title: "Lemurs", Author: "Anonymous", Subject: "Animals", Pages: 400},
 			},
 			want: Books{
-				{Header: Header{ID: "13", Title: "Lemurs", Author: "Anonymous", Subject: "Animals"}, Pages: 400},
-				{Header: Header{ID: "7", Title: "Zoology", Author: "Boas", Subject: "Animals"}, Pages: 100},
-				{Header: Header{ID: "9", Title: "Secrets", Author: "Everyone", Subject: "Behind others"}, Pages: 5},
+				{ID: "13", Title: "Lemurs", Author: "Anonymous", Subject: "Animals", Pages: 400},
+				{ID: "7", Title: "Zoology", Author: "Boas", Subject: "Animals", Pages: 100},
+				{ID: "9", Title: "Secrets", Author: "Everyone", Subject: "Behind others", Pages: 5},
 			},
 		},
 	}
@@ -174,11 +174,9 @@ func TestStringBookBook(t *testing.T) {
 			Pages:     "1",
 			AddedDate: "2008-07-04",
 		}, &Book{
-			Header: Header{
-				Title:   "a",
-				Author:  "b",
-				Subject: "c",
-			},
+			Title:     "a",
+			Author:    "b",
+			Subject:   "c",
 			Pages:     1,
 			AddedDate: time.Date(2008, 7, 4, 0, 0, 0, 0, time.UTC),
 		}, true},
@@ -196,12 +194,10 @@ func TestStringBookBook(t *testing.T) {
 			UpcIsbn10:     "1234567890",
 			ImageBase64:   "base64_encoded",
 		}, &Book{
-			Header: Header{
-				ID:      "secret",
-				Title:   "Readings",
-				Author:  "people",
-				Subject: "stuff",
-			},
+			ID:            "secret",
+			Title:         "Readings",
+			Author:        "people",
+			Subject:       "stuff",
 			DeweyDecClass: "¿unknown?",
 			Pages:         42,
 			Publisher:     "Nobody",

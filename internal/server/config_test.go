@@ -260,9 +260,7 @@ func TestSetupDumpCSV(t *testing.T) {
 			},
 			readBook: func(id string) (*book.Book, error) {
 				b := book.Book{
-					Header: book.Header{
-						ID: id,
-					},
+					ID:          id,
 					Description: id + "_description",
 				}
 				return &b, nil
